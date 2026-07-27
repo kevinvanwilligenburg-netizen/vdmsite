@@ -20,11 +20,14 @@ export interface Product {
   price: number; // in centen; bij varianten de "vanaf"-prijs
   compareAtPrice?: number; // adviesprijs in centen, voor voordeel-badge
   unit?: string;
-  colorMixable?: boolean; // verf die in de winkel op RAL-kleur wordt gemengd
+  colorMixable?: boolean; // verf die in de winkel op kleur wordt gemengd
   variants?: ProductVariant[];
   specs?: { label: string; value: string }[];
   tags?: string[];
-  art: { icon: string; hue: number }; // placeholder-afbeelding
+  /** Productfoto uit de feed; ontbreekt die, dan tonen we het icoon. */
+  image?: string;
+  inStock?: boolean;
+  art: { icon: string; hue: number };
 }
 
 export interface Category {
@@ -56,10 +59,26 @@ export interface RalColor {
   group: string;
 }
 
-export interface CartColor {
+/** Kleur in de kleurkiezer: uit de dashboard-feed of de RAL-waaier. */
+export interface PaintColor {
+  /** Stabiele sleutel, bv. "ral:9010" of "hub:<collectionId>:<slug>". */
+  key: string;
+  /** Weergavecode incl. prefix, bv. "RAL 9010" of een merkcode; kan leeg zijn. */
   code: string;
   name: string;
   hex: string;
+  /** Weergavenaam van de collectie/waaier. */
+  group: string;
+  /** Id van de collectie, voor het filter. */
+  collectionId?: string;
+}
+
+export interface CartColor {
+  key?: string;
+  code: string;
+  name: string;
+  hex: string;
+  collection?: string;
 }
 
 /** Winkelwagenregel (client-side, prijzen in centen). */
@@ -180,7 +199,8 @@ export interface Order {
 export interface CheckoutItemInput {
   productId: string;
   variantId?: string;
-  colorCode?: string;
+  /** Kleur-key uit de kleurkiezer (bv. "ral:9010"); oude RAL-codes blijven werken. */
+  colorKey?: string;
   qty: number;
 }
 

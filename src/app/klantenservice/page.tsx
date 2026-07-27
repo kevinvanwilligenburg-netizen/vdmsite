@@ -1,0 +1,142 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Icon } from "@/components/icons";
+import { JsonLd } from "@/components/JsonLd";
+import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Klantenservice – veelgestelde vragen en contact",
+  description:
+    "Vragen over bestellen, bezorgen, afhalen, verf mengen of retourneren? Bekijk de veelgestelde vragen of neem contact op met De Voordeelmarkt.",
+  alternates: { canonical: "/klantenservice" },
+};
+
+const FAQS: { question: string; answer: string }[] = [
+  {
+    question: "Wanneer wordt mijn bestelling bezorgd?",
+    answer:
+      "Bestel je vóór 10:00, dan bezorgt DHL je bestelling dezelfde dag nog. Bestel je tussen 10:00 en 23:59, dan wordt je bestelling morgen bezorgd. Je ontvangt een track & trace-code per e-mail zodra je pakket onderweg is.",
+  },
+  {
+    question: "Wat kost bezorgen?",
+    answer:
+      "Bezorgen is gratis, net als afhalen in de winkel. Je betaalt alleen je producten.",
+  },
+  {
+    question: "Hoe werkt afhalen in de winkel (Click & Collect)?",
+    answer:
+      "Kies bij het afrekenen je winkel: Nijverdal, Apeldoorn, Deventer, Zutphen of Emmen. Je krijgt bericht zodra je bestelling klaarstaat — vaak dezelfde dag nog. Meld je bij de kassa met je afhaalcode; betalen is al gebeurd.",
+  },
+  {
+    question: "Kan ik verf in elke kleur bestellen?",
+    answer:
+      "Ja. Kies je kleur online met de kleurkiezer; wij mengen je muurverf of lak gratis in de winkel. De kleuren op je scherm zijn een indicatie — in de winkel gebruiken we de officiële kleurenwaaier.",
+  },
+  {
+    question: "Hoe kan ik betalen?",
+    answer:
+      "Je rekent veilig af via Mollie met iDEAL, Bancontact, creditcard of Apple Pay.",
+  },
+  {
+    question: "Kan ik mijn bestelling retourneren?",
+    answer:
+      "Je hebt 14 dagen bedenktijd vanaf het moment dat je je bestelling hebt ontvangen. Op kleur gemengde verf is maatwerk en is daarom uitgesloten van het herroepingsrecht. Retourneren kan in al onze winkels; neem je bestelnummer mee.",
+  },
+  {
+    question: "Waar vind ik de status van mijn bestelling?",
+    answer:
+      "Na het afrekenen kom je op je persoonlijke bestelpagina met je bestelnummer (bijvoorbeeld VDM-123456). Bewaar die pagina: daar zie je live de status, je afhaalcode of je track & trace.",
+  },
+];
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: { "@type": "Answer", text: faq.answer },
+  })),
+};
+
+export default function CustomerServicePage() {
+  return (
+    <div className="space-y-8">
+      <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Klantenservice" }]} />
+      <JsonLd data={faqJsonLd} />
+
+      <header className="max-w-3xl">
+        <h1 className="text-3xl font-black uppercase text-ink sm:text-4xl">
+          Klantenservice
+        </h1>
+        <p className="mt-3 text-ink-soft">
+          We helpen je graag — online én in de winkel. Bekijk de veelgestelde
+          vragen of neem direct contact op.
+        </p>
+      </header>
+
+      <section className="grid gap-4 sm:grid-cols-3" aria-label="Contact">
+        <a href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, "")}`} className="card group p-5">
+          <span className="inline-flex text-brand" aria-hidden>
+            <Icon name="phone" className="h-7 w-7" />
+          </span>
+          <p className="mt-2 font-black text-ink group-hover:text-brand">Bel ons</p>
+          <p className="text-sm text-ink-soft">{CONTACT_PHONE}</p>
+          <p className="text-xs text-ink-soft">ma t/m za tijdens winkeltijden</p>
+        </a>
+        <a href={`mailto:${CONTACT_EMAIL}`} className="card group p-5">
+          <span className="inline-flex text-brand" aria-hidden>
+            <Icon name="mail" className="h-7 w-7" />
+          </span>
+          <p className="mt-2 font-black text-ink group-hover:text-brand">Mail ons</p>
+          <p className="break-all text-sm text-ink-soft">{CONTACT_EMAIL}</p>
+          <p className="text-xs text-ink-soft">reactie binnen 1 werkdag</p>
+        </a>
+        <Link href="/winkels" className="card group p-5">
+          <span className="inline-flex text-brand" aria-hidden>
+            <Icon name="store" className="h-7 w-7" />
+          </span>
+          <p className="mt-2 font-black text-ink group-hover:text-brand">Kom langs</p>
+          <p className="text-sm text-ink-soft">5 winkels in Oost-Nederland</p>
+          <p className="text-xs text-ink-soft">adressen &amp; openingstijden →</p>
+        </Link>
+      </section>
+
+      <section aria-labelledby="faq-titel" className="max-w-3xl">
+        <h2 id="faq-titel" className="mb-4 text-2xl font-black uppercase text-ink">
+          Veelgestelde vragen
+        </h2>
+        <div className="space-y-3">
+          {FAQS.map((faq) => (
+            <details key={faq.question} className="card group p-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold text-ink">
+                {faq.question}
+                <span className="shrink-0 transition group-open:rotate-180" aria-hidden>
+                  ▾
+                </span>
+              </summary>
+              <p className="mt-3 leading-relaxed text-ink-soft">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="max-w-3xl rounded-2xl bg-brand-light p-6">
+        <h2 className="font-black text-ink">Meer weten?</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Lees onze{" "}
+          <Link href="/algemene-voorwaarden" className="font-semibold text-brand hover:underline">
+            algemene voorwaarden
+          </Link>{" "}
+          of de{" "}
+          <Link href="/privacy" className="font-semibold text-brand hover:underline">
+            privacyverklaring
+          </Link>
+          .
+        </p>
+      </section>
+    </div>
+  );
+}

@@ -5,9 +5,9 @@ import { Icon } from "@/components/icons";
 import { ProductCard } from "@/components/ProductCard";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
-import { getCategories, getProducts, getStores } from "@/lib/tilroy";
+import { getCategories, getDeals, getStores } from "@/lib/tilroy";
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 const HIGHLIGHTS = [
   {
@@ -33,15 +33,12 @@ const HIGHLIGHTS = [
 ];
 
 export default async function HomePage() {
-  const [products, categories, stores, banner] = await Promise.all([
-    getProducts(),
+  const [deals, categories, stores, banner] = await Promise.all([
+    getDeals(8),
     getCategories(),
     getStores(),
     getBanner("home-hero"),
   ]);
-  const deals = products
-    .filter((product) => product.compareAtPrice && product.compareAtPrice > product.price)
-    .slice(0, 4);
   const swatches = popularRalCodes
     .map((code) => ralColors.find((color) => color.code === code))
     .filter((color): color is NonNullable<typeof color> => Boolean(color));
@@ -143,7 +140,7 @@ export default async function HomePage() {
             Topdeals van de week
           </h2>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {deals.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

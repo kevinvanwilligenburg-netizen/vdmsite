@@ -3,43 +3,54 @@ import Link from "next/link";
 import { CartBadge } from "@/components/cart/CartBadge";
 import { Icon } from "@/components/icons";
 import { Logo, Tagline } from "@/components/Logo";
-import { getCategories } from "@/lib/tilroy";
+import { MobileNav } from "@/components/MobileNav";
+import { getCategories, getStores } from "@/lib/tilroy";
 
 const USPS = [
   "Vóór 10:00 besteld, vandaag bezorgd",
-  "Verf gemengd in elke RAL-kleur",
-  "Gratis afhalen in 5 winkels",
+  "Verf gemengd in elke kleur",
+  "Gratis bezorgen én gratis afhalen",
 ];
 
 export async function Header() {
-  const categories = await getCategories();
+  const [categories, stores] = await Promise.all([getCategories(), getStores()]);
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
       {/* USP-balk (oranje, zoals op devoordeelmarkt.nl) */}
       <div className="bg-brand-bright text-white">
-        <div className="container-page flex items-center justify-center gap-8 py-1.5 text-xs font-bold sm:justify-between">
+        <div className="container-page flex items-center justify-center gap-8 py-1.5 text-[11px] font-bold sm:justify-between sm:text-xs">
           {USPS.map((usp, index) => (
             <span
               key={usp}
               className={`inline-flex items-center gap-1.5 ${index > 0 ? "hidden sm:inline-flex" : ""}`}
             >
-              <Icon name="check" className="h-3.5 w-3.5" strokeWidth={3} />
+              <Icon name="check" className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />
               {usp}
             </span>
           ))}
-          <Link href="/winkels" className="hidden underline-offset-2 hover:underline md:inline">
-            Winkels
+          <Link href="/klantenservice" className="hidden underline-offset-2 hover:underline md:inline">
+            Klantenservice
           </Link>
         </div>
       </div>
 
       {/* Hoofdbalk */}
       <div className="container-page flex flex-wrap items-center gap-3 py-3 sm:gap-5">
+        <MobileNav
+          categories={categories.map((category) => ({
+            href: `/categorie/${category.slug}`,
+            label: category.name,
+          }))}
+          stores={stores.map((store) => ({
+            href: `/winkels/${store.slug}`,
+            label: store.city,
+          }))}
+        />
         <div className="flex items-center gap-3">
-          <Logo />
+          <Logo className="h-9 w-auto sm:h-11" />
           <Tagline />
         </div>
-        <form action="/zoeken" className="order-last flex w-full flex-1 sm:order-none sm:w-auto">
+        <form action="/zoeken" role="search" className="order-last flex w-full flex-1 sm:order-none sm:w-auto">
           <label htmlFor="site-zoeken" className="sr-only">
             Zoeken in het assortiment
           </label>
@@ -47,6 +58,7 @@ export async function Header() {
             id="site-zoeken"
             type="search"
             name="q"
+            enterKeyHint="search"
             placeholder="Zoeken naar…"
             className="w-full rounded-l-lg border-2 border-r-0 border-ink/10 px-4 py-2 outline-none transition focus:border-brand"
           />
@@ -69,8 +81,8 @@ export async function Header() {
         </div>
       </div>
 
-      {/* Categorienavigatie (zwart, zoals op devoordeelmarkt.nl) */}
-      <nav aria-label="Categorieën" className="bg-ink text-white">
+      {/* Categorienavigatie (zwart, desktop) */}
+      <nav aria-label="Categorieën" className="hidden bg-ink text-white lg:block">
         <div className="container-page flex items-center gap-1 overflow-x-auto whitespace-nowrap py-1 text-sm font-bold">
           {categories.map((category) => (
             <Link

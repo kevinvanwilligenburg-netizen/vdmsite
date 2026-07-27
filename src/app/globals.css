@@ -3,8 +3,29 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     @apply bg-[#F4F6F8] text-ink antialiased;
+  }
+  /* Voorkomt inzoomen op iOS bij het focussen van een invoerveld. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -16,7 +37,7 @@
     @apply rounded-xl bg-white shadow-card ring-1 ring-black/5;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 font-bold transition;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-5 py-3 text-center font-bold transition;
   }
   .btn-primary {
     @apply bg-brand text-white shadow-sm hover:bg-brand-dark;

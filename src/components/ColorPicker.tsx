@@ -1,114 +1,179 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { RAL_GROUPS } from "@/lib/ral";
-import type { RalColor } from "@/lib/types";
+import type { PaintColor } from "@/lib/types";
+
+interface Collection {
+  id: string;
+  name: string;
+  count: number;
+}
 
 function textColorFor(hex: string): string {
   const value = hex.replace("#", "");
   const r = parseInt(value.slice(0, 2), 16);
   const g = parseInt(value.slice(2, 4), 16);
   const b = parseInt(value.slice(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#17233B" : "#FFFFFF";
+  return (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#141414" : "#FFFFFF";
 }
 
+/**
+ * Kleurkiezer met server-side zoeken: de bron telt tienduizenden kleuren, dus
+ * we halen per zoekterm/collectie een beperkte set op via /api/kleuren.
+ * De meegegeven `initialColors` (de RAL-waaier) is meteen zichtbaar.
+ */
 export function ColorPicker({
-  colors,
+  initialColors,
   value,
   onChange,
   compact = false,
 }: {
-  colors: RalColor[];
+  initialColors: PaintColor[];
   value?: string | null;
-  onChange: (color: RalColor) => void;
+  onChange: (color: PaintColor) => void;
   compact?: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const [group, setGroup] = useState<string>("Alle");
+  const [collection, setCollection] = useState("ral");
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [colors, setColors] = useState<PaintColor[]>(initialColors);
+  const [total, setTotal] = useState(initialColors.length);
+  const [loading, setLoading] = useState(false);
+  const requestRef = useRef(0);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase().replace(/^ral\s*/i, "");
-    return colors.filter((color) => {
-      if (group !== "Alle" && color.group !== group) return false;
-      if (!q) return true;
-      return (
-        color.code.includes(q) || color.name.toLowerCase().includes(q)
-      );
-    });
-  }, [colors, query, group]);
+  // Collectielijst één keer ophalen.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/kleuren?meta=1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.collections) setCollections(data.collections);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const selected = value ? colors.find((color) => color.code === value) : undefined;
+  // Kleuren ophalen bij wijziging van zoekterm of collectie (met debounce).
+  useEffect(() => {
+    const isDefault = query.trim() === "" && collection === "ral";
+    if (isDefault) {
+      setColors(initialColors);
+      setTotal(initialColors.length);
+      setLoading(false);
+      return;
+    }
+
+    const id = ++requestRef.current;
+    setLoading(true);
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      params.set("collection", collection);
+      fetch(`/api/kleuren?${params.toString()}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (id !== requestRef.current) return;
+          setColors(data?.colors ?? []);
+          setTotal(data?.total ?? 0);
+        })
+        .catch(() => {
+          if (id === requestRef.current) setColors([]);
+        })
+        .finally(() => {
+          if (id === requestRef.current) setLoading(false);
+        });
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [query, collection, initialColors]);
+
+  const selected = useMemo(
+    () => colors.find((color) => color.key === value),
+    [colors, value],
+  );
 
   return (
-    <div className="space-y-3">
+    <div className="w-full min-w-0 space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <label className="sr-only" htmlFor="ral-zoek">
-          Zoek een RAL-kleur
-        </label>
-        <input
-          id="ral-zoek"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Zoek op RAL-nummer of naam, bv. 9010 of antraciet"
-          className="input sm:max-w-sm"
-        />
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        {["Alle", ...RAL_GROUPS].map((groupName) => (
-          <button
-            key={groupName}
-            type="button"
-            onClick={() => setGroup(groupName)}
-            className={`rounded-full px-3 py-1 text-xs font-bold transition ${
-              group === groupName
-                ? "bg-ink text-white"
-                : "bg-ink/5 text-ink-soft hover:bg-ink/10"
-            }`}
+        <div className="sm:max-w-xs sm:flex-1">
+          <label className="sr-only" htmlFor="kleur-zoek">
+            Zoek een kleur
+          </label>
+          <input
+            id="kleur-zoek"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Zoek op kleurnummer of naam"
+            className="input"
+          />
+        </div>
+        <div className="sm:max-w-xs sm:flex-1">
+          <label className="sr-only" htmlFor="kleur-collectie">
+            Kies een kleurenwaaier
+          </label>
+          <select
+            id="kleur-collectie"
+            value={collection}
+            onChange={(event) => setCollection(event.target.value)}
+            className="input"
           >
-            {groupName}
-          </button>
-        ))}
+            <option value="alle">Alle waaiers</option>
+            {collections.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name} ({entry.count})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div
-        className={`grid gap-1.5 ${
+        className={`grid w-full min-w-0 gap-1.5 ${
           compact
             ? "max-h-56 grid-cols-8 overflow-y-auto pr-1 sm:grid-cols-10"
-            : "grid-cols-6 sm:grid-cols-10 lg:grid-cols-12"
+            : "max-h-[28rem] grid-cols-6 overflow-y-auto pr-1 sm:grid-cols-10 lg:grid-cols-12"
         }`}
         role="listbox"
-        aria-label="RAL-kleuren"
+        aria-label="Kleuren"
+        aria-busy={loading}
       >
-        {filtered.map((color) => {
-          const isSelected = selected?.code === color.code;
+        {colors.map((color) => {
+          const isSelected = value === color.key;
+          const title = [color.code, color.name].filter(Boolean).join(" – ");
           return (
             <button
-              key={color.code}
+              key={color.key}
               type="button"
               role="option"
               aria-selected={isSelected}
-              title={`RAL ${color.code} – ${color.name}`}
+              title={title}
               onClick={() => onChange(color)}
               className={`aspect-square w-full rounded-md ring-1 ring-black/10 transition hover:scale-105 ${
                 isSelected ? "outline outline-[3px] outline-offset-2 outline-brand" : ""
               }`}
               style={{ backgroundColor: color.hex }}
             >
-              <span className="sr-only">
-                RAL {color.code} {color.name}
-              </span>
+              <span className="sr-only">{title}</span>
             </button>
           );
         })}
-        {filtered.length === 0 && (
+        {colors.length === 0 && (
           <p className="col-span-full py-6 text-center text-sm text-ink-soft">
-            Geen kleuren gevonden voor deze zoekopdracht.
+            {loading ? "Kleuren laden…" : "Geen kleuren gevonden voor deze zoekopdracht."}
           </p>
         )}
       </div>
+
+      {total > colors.length && (
+        <p className="text-xs text-ink-soft">
+          {colors.length} van {total.toLocaleString("nl-NL")} kleuren getoond — verfijn
+          je zoekopdracht of kies een waaier.
+        </p>
+      )}
 
       {selected && (
         <div
@@ -116,10 +181,10 @@ export function ColorPicker({
           style={{ backgroundColor: selected.hex, color: textColorFor(selected.hex) }}
         >
           <div>
-            <p className="text-lg font-black">RAL {selected.code}</p>
-            <p className="text-sm font-semibold opacity-90">
-              {selected.name} · {selected.group}
+            <p className="text-lg font-black">
+              {[selected.code, selected.name].filter(Boolean).join(" · ")}
             </p>
+            <p className="text-sm font-semibold opacity-90">{selected.group}</p>
           </div>
         </div>
       )}

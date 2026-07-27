@@ -7,15 +7,14 @@ import { useCart } from "@/components/cart/CartProvider";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Icon } from "@/components/icons";
 import { Price } from "@/components/Price";
-import { findRal } from "@/lib/ral";
-import type { Product, RalColor } from "@/lib/types";
+import type { PaintColor, Product } from "@/lib/types";
 
 export function PurchasePanel({
   product,
   colors,
 }: {
   product: Product;
-  colors: RalColor[];
+  colors: PaintColor[];
 }) {
   const { addItem } = useCart();
 
@@ -24,27 +23,48 @@ export function PurchasePanel({
   const [qty, setQtyState] = useState(1);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [color, setColor] = useState<RalColor | null>(null);
+  const [color, setColor] = useState<PaintColor | null>(null);
   const [pickerOpen, setPickerOpen] = useState(Boolean(product.colorMixable));
 
   // ?kleur= uit de kleurkiezer pas na hydration lezen, zodat de pagina
   // volledig statisch gerenderd kan blijven (belangrijk voor SEO).
+  // Ondersteunt keys ("ral:9010", "hub:…") én kale RAL-codes ("9010").
   useEffect(() => {
     if (!product.colorMixable) return;
     const preselect = new URLSearchParams(window.location.search).get("kleur");
     if (!preselect) return;
-    const ral = findRal(preselect);
-    if (ral) {
-      setColor(ral);
+
+    const local =
+      colors.find((candidate) => candidate.key === preselect) ??
+      colors.find((candidate) => candidate.key === `ral:${preselect}`);
+    if (local) {
+      setColor(local);
       setPickerOpen(false);
+      return;
     }
-  }, [product.colorMixable]);
+
+    // Kleur uit een merkenwaaier: opzoeken bij de server.
+    let active = true;
+    fetch(`/api/kleuren?q=${encodeURIComponent(preselect)}&collection=alle&limit=1`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const found = data?.colors?.[0];
+        if (active && found) {
+          setColor(found);
+          setPickerOpen(false);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [product.colorMixable, colors]);
 
   const activeVariant = variants.find((variant) => variant.id === variantId);
   const unitPrice = activeVariant?.price ?? product.price;
 
   const cartKey = useMemo(
-    () => `${product.id}:${variantId ?? ""}:${color?.code ?? ""}`,
+    () => `${product.id}:${variantId ?? ""}:${color?.key ?? ""}`,
     [product.id, variantId, color],
   );
 
@@ -64,7 +84,13 @@ export function PurchasePanel({
         variantId,
         variantName: activeVariant?.name,
         color: color
-          ? { code: color.code, name: color.name, hex: color.hex }
+          ? {
+              key: color.key,
+              code: color.code,
+              name: color.name,
+              hex: color.hex,
+              collection: color.group,
+            }
           : undefined,
         unitPrice,
         icon: product.art.icon,
@@ -77,7 +103,7 @@ export function PurchasePanel({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <Price price={unitPrice} compareAtPrice={product.compareAtPrice} size="lg" />
 
       {variants.length > 0 && (
@@ -126,15 +152,15 @@ export function PurchasePanel({
                 aria-hidden
               />
               <p className="text-sm font-semibold text-ink">
-                RAL {color.code} · {color.name}
+                {[color.code, color.name].filter(Boolean).join(" · ")}
               </p>
             </div>
           )}
           {pickerOpen && (
             <div className="mt-4">
               <ColorPicker
-                colors={colors}
-                value={color?.code ?? null}
+                initialColors={colors}
+                value={color?.key ?? null}
                 compact
                 onChange={(next) => {
                   setColor(next);
@@ -168,7 +194,12 @@ export function PurchasePanel({
             +
           </button>
         </div>
-        <button type="button" onClick={handleAdd} className="btn btn-primary flex-1 sm:flex-none">
+        <button
+          type="button"
+          id="koop-knop"
+          onClick={handleAdd}
+          className="btn btn-primary flex-1 scroll-mt-32 sm:flex-none"
+        >
           In winkelwagen
         </button>
       </div>

@@ -79,7 +79,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
           items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
-            colorCode: item.color?.code,
+            colorKey: item.color?.key ?? item.color?.code,
             qty: item.qty,
           })),
         }),
@@ -382,7 +382,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                 {item.variantName && ` (${item.variantName})`}
                 {item.color && (
                   <span className="block text-xs text-ink-soft">
-                    Kleur: RAL {item.color.code} {item.color.name}
+                    Kleur: {[item.color.code, item.color.name].filter(Boolean).join(" ")}
                   </span>
                 )}
               </span>

@@ -13,32 +13,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
   const lastModified = new Date();
 
+  const staticPages: { path: string; priority: number; changeFrequency: "daily" | "weekly" | "monthly" | "yearly" }[] = [
+    { path: "/", priority: 1, changeFrequency: "daily" },
+    { path: "/kleurkiezer", priority: 0.9, changeFrequency: "weekly" },
+    { path: "/winkels", priority: 0.8, changeFrequency: "monthly" },
+    { path: "/bezorgen-en-afhalen", priority: 0.7, changeFrequency: "monthly" },
+    { path: "/klantenservice", priority: 0.7, changeFrequency: "monthly" },
+    { path: "/algemene-voorwaarden", priority: 0.3, changeFrequency: "yearly" },
+    { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
+  ];
+
   return [
-    { url: absoluteUrl("/"), lastModified, changeFrequency: "daily", priority: 1 },
-    {
-      url: absoluteUrl("/kleurkiezer"),
+    ...staticPages.map((page) => ({
+      url: absoluteUrl(page.path),
       lastModified,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: absoluteUrl("/winkels"),
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
+      changeFrequency: page.changeFrequency,
+      priority: page.priority,
+    })),
     ...categories.map((category) => ({
       url: absoluteUrl(`/categorie/${category.slug}`),
       lastModified,
       changeFrequency: "weekly" as const,
       priority: 0.9,
     })),
-    ...products.map((product) => ({
-      url: absoluteUrl(`/product/${product.slug}`),
-      lastModified,
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    })),
+    // Sitemaps mogen 50.000 URL's bevatten; we tonen de leverbare artikelen.
+    ...products
+      .filter((product) => product.inStock !== false)
+      .slice(0, 20000)
+      .map((product) => ({
+        url: absoluteUrl(`/product/${product.slug}`),
+        lastModified,
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      })),
     ...stores.map((store) => ({
       url: absoluteUrl(`/winkels/${store.slug}`),
       lastModified,

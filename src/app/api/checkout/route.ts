@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { resolvePaintColor } from "@/lib/colors";
 import { deliveryInfo } from "@/lib/delivery";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
-import { findRal } from "@/lib/ral";
 import { baseUrlFromRequest } from "@/lib/site";
 import { getProductById, getStore } from "@/lib/tilroy";
 import type { CheckoutInput, OrderItem } from "@/lib/types";
@@ -105,13 +105,19 @@ export async function POST(request: Request) {
     }
 
     let color: OrderItem["color"];
-    if (entry.colorCode) {
+    if (entry.colorKey) {
       if (!product.colorMixable) {
         return badRequest(`${product.name} is niet op kleur te mengen.`);
       }
-      const ral = findRal(String(entry.colorCode));
-      if (!ral) return badRequest(`Onbekende RAL-kleur voor ${product.name}.`);
-      color = { code: ral.code, name: ral.name, hex: ral.hex };
+      const paint = await resolvePaintColor(String(entry.colorKey));
+      if (!paint) return badRequest(`Onbekende kleur voor ${product.name}.`);
+      color = {
+        key: paint.key,
+        code: paint.code,
+        name: paint.name,
+        hex: paint.hex,
+        collection: paint.group,
+      };
     } else if (product.colorMixable) {
       return badRequest(`Kies een kleur voor ${product.name}.`);
     }
@@ -121,7 +127,7 @@ export async function POST(request: Request) {
 
     const variantLabel = [
       variant?.name,
-      color ? `RAL ${color.code} ${color.name}` : undefined,
+      color ? [color.code, color.name].filter(Boolean).join(" ") : undefined,
     ]
       .filter(Boolean)
       .join(" · ");

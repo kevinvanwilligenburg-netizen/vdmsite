@@ -8,9 +8,17 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/winkelwagen", "/afrekenen", "/bestelling/", "/betalen/"],
+        disallow: [
+          "/api/",
+          "/winkelwagen",
+          "/afrekenen",
+          "/bestelling/",
+          "/betalen/",
+          "/zoeken",
+        ],
       },
     ],
     sitemap: absoluteUrl("/sitemap.xml"),
+    host: absoluteUrl("/").replace(/\/$/, ""),
   };
 }

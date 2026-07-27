@@ -7,6 +7,11 @@ export const SITE_URL = (
 export const CONTACT_PHONE = "+31 85 273 8338";
 export const CONTACT_EMAIL = "klantenservice@devoordeelmarkt.nl";
 
+/** Basis-URL van het VDM-dashboard (voorraad-hub, kleurenfeed, fulfilment). */
+export const DASHBOARD_API_URL = (
+  process.env.DASHBOARD_API_URL ?? "https://dashboardvdm.vercel.app"
+).replace(/\/$/, "");
+
 export function absoluteUrl(path = "/"): string {
   return new URL(path, SITE_URL).toString();
 }

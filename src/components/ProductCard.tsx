@@ -16,7 +16,12 @@ export function ProductCard({ product }: { product: Product }) {
       className="card group relative flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lift"
     >
       <div className="relative">
-        <ProductArt icon={product.art.icon} hue={product.art.hue} label={product.name} />
+        <ProductArt
+          icon={product.art.icon}
+          hue={product.art.hue}
+          image={product.image}
+          label={product.name}
+        />
         {hasDiscount && (
           <span className="absolute left-3 top-3 rounded-md bg-brand px-2 py-1 text-sm font-black text-white shadow">
             −{discountPct(product.price, product.compareAtPrice!)}%
@@ -28,15 +33,17 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
+      <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
           {product.brand}
         </p>
         <h3 className="line-clamp-2 font-bold leading-snug text-ink group-hover:text-brand">
           {product.name}
         </h3>
-        <p className="line-clamp-2 text-sm text-ink-soft">{product.shortDescription}</p>
-        <div className="mt-auto flex items-end justify-between pt-3">
+        <p className="line-clamp-2 hidden text-sm text-ink-soft sm:block">
+          {product.shortDescription}
+        </p>
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
           <Price
             price={product.price}
             compareAtPrice={product.compareAtPrice}

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Mulish } from "next/font/google";
 import type { ReactNode } from "react";
 
@@ -52,7 +52,20 @@ export const metadata: Metadata = {
       "Mengverf in elke RAL-kleur, gereedschap en alles om te klussen voor de laagste prijs. Online bestellen, gratis afhalen in de winkel.",
     url: SITE_URL,
   },
-  robots: { index: true, follow: true },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+  formatDetection: { telephone: true, address: false, email: false },
+  applicationName: SITE_NAME,
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#F5821F",
 };
 
 const organizationJsonLd = {
@@ -88,9 +101,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <JsonLd data={organizationJsonLd} />
         <JsonLd data={websiteJsonLd} />
+        <a
+          href="#hoofdinhoud"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:font-bold focus:text-white"
+        >
+          Direct naar de inhoud
+        </a>
         <CartProvider>
           <Header />
-          <main className="container-page py-8">{children}</main>
+          <main id="hoofdinhoud" className="container-page py-6 sm:py-8">
+            {children}
+          </main>
           <Footer />
         </CartProvider>
       </body>

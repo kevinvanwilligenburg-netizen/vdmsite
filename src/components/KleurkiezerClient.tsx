@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { ColorPicker } from "@/components/ColorPicker";
-import type { RalColor } from "@/lib/types";
+import type { PaintColor } from "@/lib/types";
 
 interface MixableProduct {
   slug: string;
@@ -16,16 +16,16 @@ export function KleurkiezerClient({
   colors,
   products,
 }: {
-  colors: RalColor[];
+  colors: PaintColor[];
   products: MixableProduct[];
 }) {
-  const [selected, setSelected] = useState<RalColor | null>(null);
+  const [selected, setSelected] = useState<PaintColor | null>(null);
 
   return (
     <div className="space-y-8">
       <ColorPicker
-        colors={colors}
-        value={selected?.code ?? null}
+        initialColors={colors}
+        value={selected?.key ?? null}
         onChange={(color) => setSelected(color)}
       />
 
@@ -33,7 +33,7 @@ export function KleurkiezerClient({
         {selected ? (
           <div className="card p-6">
             <h2 className="text-lg font-black text-ink">
-              Bestel verf in RAL {selected.code} · {selected.name}
+              Bestel verf in {[selected.code, selected.name].filter(Boolean).join(" · ")}
             </h2>
             <p className="mt-1 text-sm text-ink-soft">
               Wij mengen je verf gratis in de winkel en zetten hem klaar bij je
@@ -43,7 +43,7 @@ export function KleurkiezerClient({
               {products.map((product) => (
                 <li key={product.slug}>
                   <Link
-                    href={`/product/${product.slug}?kleur=${selected.code}`}
+                    href={`/product/${product.slug}?kleur=${encodeURIComponent(selected.key)}`}
                     className="card flex items-center justify-between gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-lift"
                   >
                     <span>

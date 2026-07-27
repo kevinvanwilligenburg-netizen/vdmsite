@@ -62,7 +62,7 @@ export function CartPageClient() {
                       style={{ backgroundColor: item.color.hex }}
                       aria-hidden
                     />
-                    RAL {item.color.code} {item.color.name}
+                    {[item.color.code, item.color.name].filter(Boolean).join(" ")}
                   </span>
                 )}
               </p>
