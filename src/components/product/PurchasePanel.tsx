@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { ColorPicker } from "@/components/ColorPicker";
+import { Icon } from "@/components/icons";
 import { Price } from "@/components/Price";
 import { findRal } from "@/lib/ral";
 import type { Product, RalColor } from "@/lib/types";
@@ -105,8 +106,8 @@ export function PurchasePanel({
       {product.colorMixable && (
         <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-black/5">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-bold text-ink">
-              🎨 Jouw kleur{" "}
+            <p className="inline-flex items-center gap-1.5 text-sm font-bold text-ink">
+              <Icon name="palette" className="h-4 w-4 text-brand" /> Jouw kleur{" "}
               <span className="font-normal text-ink-soft">(gratis gemengd in de winkel)</span>
             </p>
             <button
@@ -179,7 +180,7 @@ export function PurchasePanel({
       )}
       {added && (
         <p role="status" className="rounded-lg bg-green-50 px-4 py-3 text-sm font-semibold text-green-800 ring-1 ring-green-200">
-          ✔ Toegevoegd aan je winkelwagen ·{" "}
+          Toegevoegd aan je winkelwagen ·{" "}
           <Link href="/winkelwagen" className="underline">
             Bekijk winkelwagen
           </Link>
@@ -187,9 +188,16 @@ export function PurchasePanel({
       )}
 
       <ul className="space-y-1.5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
-        <li>✔ Gratis afhalen in de winkel van je keuze</li>
-        <li>✔ Vandaag besteld, vaak dezelfde dag klaar</li>
-        <li>✔ Betaal veilig met iDEAL, Bancontact, creditcard of Apple Pay</li>
+        {[
+          "Vóór 10:00 besteld, vandaag bezorgd",
+          "Gratis bezorgen of gratis afhalen in de winkel",
+          "Betaal veilig met iDEAL, Bancontact, creditcard of Apple Pay",
+        ].map((usp) => (
+          <li key={usp} className="flex items-start gap-2">
+            <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+            {usp}
+          </li>
+        ))}
       </ul>
     </div>
   );

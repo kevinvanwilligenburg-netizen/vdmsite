@@ -40,7 +40,7 @@ export function DemoPayButtons({ orderId }: { orderId: string }) {
         disabled={busy !== null}
         className="btn w-full bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
       >
-        {busy === "paid" ? "Verwerken…" : "✔ Betaling geslaagd"}
+        {busy === "paid" ? "Verwerken…" : "Betaling geslaagd"}
       </button>
       <button
         type="button"
@@ -48,7 +48,7 @@ export function DemoPayButtons({ orderId }: { orderId: string }) {
         disabled={busy !== null}
         className="btn w-full border-2 border-ink/15 text-ink hover:border-brand hover:text-brand disabled:opacity-60"
       >
-        {busy === "failed" ? "Verwerken…" : "✕ Betaling mislukt"}
+        {busy === "failed" ? "Verwerken…" : "Betaling mislukt"}
       </button>
       {error && (
         <p role="alert" className="text-sm font-semibold text-brand-dark">

@@ -1,13 +1,14 @@
 import Link from "next/link";
 
 import { CartBadge } from "@/components/cart/CartBadge";
+import { Icon } from "@/components/icons";
 import { Logo, Tagline } from "@/components/Logo";
 import { getCategories } from "@/lib/tilroy";
 
 const USPS = [
-  "✔ Vandaag besteld, vaak vandaag al klaar",
-  "✔ Verf gemengd in elke RAL-kleur",
-  "✔ Gratis afhalen in 5 winkels",
+  "Vóór 10:00 besteld, vandaag bezorgd",
+  "Verf gemengd in elke RAL-kleur",
+  "Gratis afhalen in 5 winkels",
 ];
 
 export async function Header() {
@@ -18,7 +19,11 @@ export async function Header() {
       <div className="bg-brand-bright text-white">
         <div className="container-page flex items-center justify-center gap-8 py-1.5 text-xs font-bold sm:justify-between">
           {USPS.map((usp, index) => (
-            <span key={usp} className={index > 0 ? "hidden sm:inline" : undefined}>
+            <span
+              key={usp}
+              className={`inline-flex items-center gap-1.5 ${index > 0 ? "hidden sm:inline-flex" : ""}`}
+            >
+              <Icon name="check" className="h-3.5 w-3.5" strokeWidth={3} />
               {usp}
             </span>
           ))}
@@ -50,7 +55,7 @@ export async function Header() {
             className="rounded-r-lg bg-brand px-4 font-bold text-white transition hover:bg-brand-dark"
             aria-label="Zoeken"
           >
-            Zoek
+            <Icon name="search" className="h-5 w-5" />
           </button>
         </form>
         <div className="ml-auto flex items-center gap-3">
@@ -58,7 +63,7 @@ export async function Header() {
             href="/winkels"
             className="hidden items-center gap-2 rounded-lg px-3 py-2 font-bold text-ink transition hover:text-brand md:inline-flex"
           >
-            <span aria-hidden>📍</span> Winkels
+            <Icon name="pin" className="h-5 w-5" /> Winkels
           </Link>
           <CartBadge />
         </div>
@@ -78,9 +83,9 @@ export async function Header() {
           ))}
           <Link
             href="/kleurkiezer"
-            className="ml-auto rounded-md bg-brand px-3 py-1.5 text-white transition hover:bg-brand-dark"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-white transition hover:bg-brand-dark"
           >
-            🎨 Kleurkiezer
+            <Icon name="palette" className="h-4 w-4" /> Kleurkiezer
           </Link>
         </div>
       </nav>

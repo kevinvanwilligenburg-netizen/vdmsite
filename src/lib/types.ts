@@ -43,6 +43,8 @@ export interface Store {
   city: string;
   phone: string;
   email?: string;
+  /** Vestigings-id in Tilroy; key in de voorraad-feed van het dashboard. */
+  tilroyShopId?: string;
   openingHours: { day: string; hours: string }[];
 }
 
@@ -116,6 +118,8 @@ export interface OrderCustomer {
   firstName: string;
   lastName: string;
   phone?: string;
+  street?: string;
+  postalCode?: string;
   city?: string;
   country?: string;
 }
@@ -154,13 +158,15 @@ export interface Order {
   refundedAmount?: number;
   molliePaymentId?: string;
   shipment?: { trackTrace?: string };
-  // VDM-extra's voor de afhaalflow:
-  fulfilment: "pickup";
-  store: { id: string; name: string; city: string };
-  pickupCode: string;
+  // VDM-extra's voor bezorgen/afhalen:
+  fulfilment: "pickup" | "delivery";
+  /** Alleen bij afhalen. */
+  store?: { id: string; name: string; city: string };
+  pickupCode?: string;
   readyForPickupAt?: string;
   pickedUpAt?: string;
-  tilroySaleId?: string;
+  /** Alleen bij bezorgen: de belofte op het bestelmoment. */
+  delivery?: { type: "same-day" | "next-day"; expectedDate: string };
 }
 
 export interface CheckoutItemInput {
@@ -171,7 +177,16 @@ export interface CheckoutItemInput {
 }
 
 export interface CheckoutInput {
-  customer: { firstName: string; lastName: string; email: string; phone: string };
-  storeId: string;
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    street?: string;
+    postalCode?: string;
+    city?: string;
+  };
+  fulfilment: "pickup" | "delivery";
+  storeId?: string;
   items: CheckoutItemInput[];
 }

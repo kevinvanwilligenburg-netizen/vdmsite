@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Icon } from "@/components/icons";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
 import { getCategories, getStores } from "@/lib/tilroy";
 
@@ -78,21 +79,19 @@ export async function Footer() {
           </p>
           <ul className="space-y-2 text-sm text-white/80">
             <li>
-              📞{" "}
               <a
                 href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, "")}`}
-                className="transition hover:text-brand-bright"
+                className="inline-flex items-center gap-2 transition hover:text-brand-bright"
               >
-                {CONTACT_PHONE}
+                <Icon name="phone" className="h-4 w-4" /> {CONTACT_PHONE}
               </a>
             </li>
             <li>
-              ✉️{" "}
               <a
                 href={`mailto:${CONTACT_EMAIL}`}
-                className="transition hover:text-brand-bright"
+                className="inline-flex items-center gap-2 transition hover:text-brand-bright"
               >
-                {CONTACT_EMAIL}
+                <Icon name="mail" className="h-4 w-4" /> {CONTACT_EMAIL}
               </a>
             </li>
             <li>

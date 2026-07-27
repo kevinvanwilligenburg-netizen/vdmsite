@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { Icon } from "@/components/icons";
 import { OrderClientActions } from "@/components/order/OrderClientActions";
 import { euros } from "@/lib/format";
 import { getOrderSynced } from "@/lib/orders";
@@ -20,32 +21,61 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
   const paid = isPaidStatus(order.paymentStatus);
   const open = isOpenStatus(order.paymentStatus);
   const failed = isFailedStatus(order.paymentStatus);
+  const isDelivery = order.fulfilment === "delivery";
 
-  const ready = Boolean(order.readyForPickupAt) || order.paymentStatus === "shipped";
-  const pickedUp = Boolean(order.pickedUpAt) || order.paymentStatus === "delivered";
-  const currentStep = pickedUp ? 3 : ready ? 2 : paid ? 1 : 0;
-  const steps = ["Besteld", "Betaald", "Klaar om af te halen", "Afgehaald"];
+  const shipped = order.paymentStatus === "shipped" || Boolean(order.shipment?.trackTrace);
+  const delivered = order.paymentStatus === "delivered";
+  const ready = Boolean(order.readyForPickupAt) || shipped;
+  const pickedUp = Boolean(order.pickedUpAt) || delivered;
+
+  const steps = isDelivery
+    ? ["Besteld", "Betaald", "Onderweg", "Bezorgd"]
+    : ["Besteld", "Betaald", "Klaar om af te halen", "Afgehaald"];
+  const currentStep = isDelivery
+    ? delivered
+      ? 3
+      : shipped
+        ? 2
+        : paid
+          ? 1
+          : 0
+    : pickedUp
+      ? 3
+      : ready
+        ? 2
+        : paid
+          ? 1
+          : 0;
+
+  const expectedDelivery = order.delivery?.expectedDate
+    ? new Intl.DateTimeFormat("nl-NL", { dateStyle: "full" }).format(
+        new Date(order.delivery.expectedDate),
+      )
+    : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="text-center">
         {paid ? (
           <>
-            <p className="text-5xl" aria-hidden>
-              🎉
-            </p>
+            <span className="inline-flex text-green-600" aria-hidden>
+              <Icon name="circle-check" className="h-14 w-14" strokeWidth={1.5} />
+            </span>
             <h1 className="mt-2 text-3xl font-black text-ink">Bedankt voor je bestelling!</h1>
             <p className="mt-2 text-ink-soft">
-              Je betaling is gelukt. We zetten alles voor je klaar en je krijgt
-              bericht op <strong className="text-ink">{order.customer.email}</strong>{" "}
-              zodra je bestelling klaarligt.
+              Je betaling is gelukt.{" "}
+              {isDelivery
+                ? "We pakken je bestelling in en DHL bezorgt hem bij je thuis."
+                : "We zetten alles voor je klaar in de winkel."}{" "}
+              Je krijgt bericht op{" "}
+              <strong className="text-ink">{order.customer.email}</strong>.
             </p>
           </>
         ) : open ? (
           <>
-            <p className="text-5xl" aria-hidden>
-              ⏳
-            </p>
+            <span className="inline-flex text-brand" aria-hidden>
+              <Icon name="clock" className="h-14 w-14" strokeWidth={1.5} />
+            </span>
             <h1 className="mt-2 text-3xl font-black text-ink">We wachten op je betaling…</h1>
             <p className="mt-2 text-ink-soft">
               Heb je net betaald? Deze pagina wordt automatisch bijgewerkt.
@@ -53,9 +83,9 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           </>
         ) : failed ? (
           <>
-            <p className="text-5xl" aria-hidden>
-              😕
-            </p>
+            <span className="inline-flex text-brand-dark" aria-hidden>
+              <Icon name="circle-x" className="h-14 w-14" strokeWidth={1.5} />
+            </span>
             <h1 className="mt-2 text-3xl font-black text-ink">De betaling is niet gelukt</h1>
             <p className="mt-2 text-ink-soft">
               Er is niets afgeschreven. Probeer het gerust nog een keer.
@@ -79,11 +109,15 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
               <li key={label} className="flex flex-1 flex-col items-center gap-1.5">
                 <span
                   aria-hidden
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-black ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-full ${
                     reached ? "bg-brand text-white" : "bg-ink/10 text-ink-soft"
                   }`}
                 >
-                  {reached ? "✓" : index + 1}
+                  {reached ? (
+                    <Icon name="check" className="h-4 w-4" strokeWidth={3} />
+                  ) : (
+                    <span className="text-sm font-black">{index + 1}</span>
+                  )}
                 </span>
                 <span className={reached ? "text-ink" : "text-ink-soft"}>{label}</span>
               </li>
@@ -92,8 +126,8 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
         </ol>
       )}
 
-      {/* Afhaalinfo */}
-      {paid && (
+      {/* Afhaal- of bezorginfo */}
+      {paid && !isDelivery && order.store && (
         <section className="card overflow-hidden">
           <div className="bg-brand p-6 text-center text-white">
             <p className="text-sm font-bold uppercase tracking-wide text-white/80">
@@ -124,6 +158,58 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
         </section>
       )}
 
+      {paid && isDelivery && (
+        <section className="card overflow-hidden">
+          <div className="flex items-center justify-center gap-3 bg-brand p-6 text-white">
+            <Icon name="truck" className="h-8 w-8" aria-hidden />
+            <p className="text-xl font-black">
+              {order.delivery?.type === "same-day"
+                ? "Wordt vandaag bezorgd"
+                : "Wordt morgen bezorgd"}
+            </p>
+          </div>
+          <div className="grid gap-4 p-6 sm:grid-cols-2">
+            <div>
+              <h2 className="font-black text-ink">Bezorgadres</h2>
+              <p className="mt-1 text-ink-soft">
+                {order.customer.street}
+                <br />
+                {order.customer.postalCode} {order.customer.city}
+              </p>
+              {expectedDelivery && (
+                <p className="mt-2 text-sm font-semibold text-ink">
+                  Verwacht: {expectedDelivery}
+                </p>
+              )}
+            </div>
+            <div>
+              <h2 className="font-black text-ink">Track &amp; trace</h2>
+              {order.shipment?.trackTrace ? (
+                /^https?:\/\//.test(order.shipment.trackTrace) ? (
+                  <a
+                    href={order.shipment.trackTrace}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-2 font-bold text-brand hover:underline"
+                  >
+                    <Icon name="truck" className="h-4 w-4" /> Volg je pakket
+                  </a>
+                ) : (
+                  <p className="mt-1 font-mono text-sm font-semibold text-ink">
+                    {order.shipment.trackTrace}
+                  </p>
+                )
+              ) : (
+                <p className="mt-1 text-sm text-ink-soft">
+                  Je ontvangt de track &amp; trace-code per e-mail zodra DHL je
+                  pakket heeft opgehaald.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Besteloverzicht */}
       <section className="card p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -140,13 +226,14 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           {order.items.map((item) => (
             <li key={item.key} className="flex items-center gap-4 py-3">
               <span
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-2xl"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg"
                 style={{
                   background: `linear-gradient(135deg, hsl(${item.hue ?? 25} 85% 94%), hsl(${item.hue ?? 25} 70% 86%))`,
+                  color: `hsl(${item.hue ?? 25} 45% 38%)`,
                 }}
                 aria-hidden
               >
-                {item.icon ?? "🛒"}
+                <Icon name={item.icon ?? "box"} className="h-6 w-6" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-ink">{item.title}</p>
@@ -154,7 +241,7 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
                   {item.quantity} stuks
                   {item.variantLabel && ` · ${item.variantLabel}`}
                   {item.color && (
-                    <span className="ml-1 inline-flex items-center gap-1">
+                    <span className="ml-1.5 inline-flex items-center">
                       <span
                         className="inline-block h-3 w-3 rounded-sm ring-1 ring-black/10"
                         style={{ backgroundColor: item.color.hex }}
@@ -170,8 +257,12 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
         </ul>
         <dl className="mt-2 space-y-1.5 border-t border-ink/10 pt-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ink-soft">Afhalen in de winkel</dt>
-            <dd className="font-bold text-green-700">Gratis</dd>
+            <dt className="text-ink-soft">
+              {isDelivery ? "Bezorging (DHL)" : "Afhalen in de winkel"}
+            </dt>
+            <dd className="font-bold text-green-700">
+              {order.shipping > 0 ? euros(order.shipping) : "Gratis"}
+            </dd>
           </div>
           <div className="flex justify-between text-base">
             <dt className="font-black text-ink">Totaal (incl. btw)</dt>

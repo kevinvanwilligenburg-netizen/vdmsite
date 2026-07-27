@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Icon } from "@/components/icons";
 import type { Category } from "@/lib/types";
 
 export function CategoryCard({ category }: { category: Category }) {
@@ -9,13 +10,14 @@ export function CategoryCard({ category }: { category: Category }) {
       className="card group flex items-center gap-4 p-4 transition hover:-translate-y-0.5 hover:shadow-lift"
     >
       <span
-        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-3xl"
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
         style={{
           background: `linear-gradient(135deg, hsl(${category.hue} 85% 94%), hsl(${category.hue} 70% 86%))`,
+          color: `hsl(${category.hue} 45% 38%)`,
         }}
         aria-hidden
       >
-        {category.icon}
+        <Icon name={category.icon} className="h-7 w-7" />
       </span>
       <span>
         <span className="block font-black text-ink group-hover:text-brand">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { CategoryCard } from "@/components/CategoryCard";
+import { Icon } from "@/components/icons";
 import { ProductCard } from "@/components/ProductCard";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
@@ -10,24 +11,24 @@ export const revalidate = 300;
 
 const HIGHLIGHTS = [
   {
-    icon: "🏷️",
+    icon: "tag",
     title: "Elke dag lage prijzen",
     text: "Topkwaliteit voor bodemprijzen, zonder gedoe met spaaracties.",
   },
   {
-    icon: "🎨",
+    icon: "palette",
     title: "Verf mengen in elke kleur",
     text: "140+ RAL-kleuren, gratis gemengd — klaar terwijl je wacht.",
   },
   {
-    icon: "🏬",
-    title: "Click & Collect",
-    text: "Online besteld, gratis afhalen. Vaak dezelfde dag al klaar.",
+    icon: "truck",
+    title: "Vóór 10:00 besteld, vandaag in huis",
+    text: "Daarna besteld? Dan bezorgen we morgen. Bezorgen is gratis.",
   },
   {
-    icon: "🅿️",
-    title: "Gratis parkeren",
-    text: "Alle winkels hebben gratis parkeren voor de deur.",
+    icon: "store",
+    title: "Click & Collect",
+    text: "Liever afhalen? Gratis in een van onze 5 winkels, vaak dezelfde dag.",
   },
 ];
 
@@ -48,8 +49,8 @@ export default async function HomePage() {
   const heroTitle = banner?.title ?? "De beste verf voor de laagste prijs.";
   const heroSubtitle =
     banner?.subtitle ??
-    "Mengverf in elke RAL-kleur, gereedschap en alles om te klussen. Bestel online, betaal veilig en haal gratis op in de winkel.";
-  const heroBadge = banner?.badge ?? "Vandaag besteld, vaak vandaag al klaar";
+    "Mengverf in elke RAL-kleur, gereedschap en alles om te klussen. Vóór 10:00 besteld = vandaag bezorgd, of haal gratis af in de winkel.";
+  const heroBadge = banner?.badge ?? "Vóór 10:00 besteld, vandaag bezorgd";
   const heroCtaLabel = banner?.ctaLabel ?? "Bekijk de topdeals";
   const heroCtaHref = banner?.ctaHref ?? "#topdeals";
 
@@ -88,7 +89,7 @@ export default async function HomePage() {
                   href="/kleurkiezer"
                   className="btn bg-white text-ink shadow-sm hover:bg-white/90"
                 >
-                  🎨 Kies je RAL-kleur
+                  Kies je RAL-kleur
                 </Link>
               </div>
             </div>
@@ -105,7 +106,7 @@ export default async function HomePage() {
                 </div>
                 <div className="absolute -bottom-4 -left-4 -rotate-3 rounded-xl bg-ink px-5 py-3 shadow-lift">
                   <p className="font-black text-white">
-                    🎨 140+ RAL-kleuren{" "}
+                    140+ RAL-kleuren{" "}
                     <span className="text-brand-bright">gratis gemengd</span>
                   </p>
                 </div>
@@ -115,9 +116,9 @@ export default async function HomePage() {
         </div>
         {/* Zwarte onderbalk, zoals op de actiebanners */}
         <div className="flex items-center justify-center gap-6 bg-ink px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white sm:justify-between sm:px-8">
-          <span>Gratis afhalen</span>
-          <span className="hidden sm:inline">Verf op kleur gemengd</span>
-          <span className="hidden md:inline">Laagsteprijsgarantie op verf</span>
+          <span>Vandaag of morgen bezorgd</span>
+          <span className="hidden sm:inline">Gratis afhalen in de winkel</span>
+          <span className="hidden md:inline">Verf op kleur gemengd</span>
           <span className="text-brand-bright">devoordeelmarkt.nl</span>
         </div>
       </section>
@@ -126,9 +127,9 @@ export default async function HomePage() {
       <section aria-label="Waarom De Voordeelmarkt" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {HIGHLIGHTS.map((highlight) => (
           <div key={highlight.title} className="card p-5">
-            <p className="text-3xl" aria-hidden>
-              {highlight.icon}
-            </p>
+            <span className="inline-flex text-brand" aria-hidden>
+              <Icon name={highlight.icon} className="h-8 w-8" strokeWidth={1.8} />
+            </span>
             <h2 className="mt-2 font-black text-ink">{highlight.title}</h2>
             <p className="mt-1 text-sm text-ink-soft">{highlight.text}</p>
           </div>
@@ -139,7 +140,7 @@ export default async function HomePage() {
       <section id="topdeals" aria-labelledby="topdeals-titel">
         <div className="mb-5 flex items-end justify-between">
           <h2 id="topdeals-titel" className="text-2xl font-black uppercase text-ink sm:text-3xl">
-            🔥 Topdeals van de week
+            Topdeals van de week
           </h2>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -160,7 +161,7 @@ export default async function HomePage() {
           </h2>
           <p className="font-semibold text-white/90">
             Kies online uit 140+ RAL-kleuren. Wij mengen je verf gratis in de
-            winkel — staat klaar als je je bestelling komt afhalen.
+            winkel — vandaag besteld is vaak vandaag al onderweg.
           </p>
           <div className="flex flex-wrap gap-1.5" aria-hidden>
             {swatches.slice(0, 10).map((color) => (
@@ -178,15 +179,15 @@ export default async function HomePage() {
         </div>
         <div className="flex flex-col items-start gap-4 rounded-2xl bg-ink p-8 text-white shadow-card">
           <span className="rounded-full bg-brand px-3 py-1 text-xs font-black uppercase tracking-wide">
-            Click &amp; Collect
+            Bezorgen of afhalen
           </span>
           <h2 className="text-2xl font-black sm:text-3xl">
-            Gratis afhalen in de winkel
+            Vandaag besteld, vandaag in huis
           </h2>
           <p className="font-semibold text-white/80">
-            Bestel online en haal je bestelling gratis op in Nijverdal,
-            Apeldoorn, Deventer, Zutphen of Emmen. Je krijgt een afhaalcode
-            zodra alles klaarstaat — vaak dezelfde dag nog.
+            Bestel vóór 10:00 en we bezorgen je bestelling vandaag nog — daarna
+            morgen. Liever zelf ophalen? Dat kan gratis in Nijverdal,
+            Apeldoorn, Deventer, Zutphen en Emmen.
           </p>
           <Link
             href="/winkels"
@@ -223,9 +224,9 @@ export default async function HomePage() {
             <Link
               key={store.id}
               href={`/winkels/${store.slug}`}
-              className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:text-brand"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:text-brand"
             >
-              📍 {store.city}
+              <Icon name="pin" className="h-4 w-4 text-brand" /> {store.city}
             </Link>
           ))}
         </div>
@@ -244,10 +245,11 @@ export default async function HomePage() {
           producten — allemaal voor bodemprijzen, elke dag opnieuw.
         </p>
         <p className="mt-3 leading-relaxed">
-          Online bestellen is zo gedaan: kies je producten, reken veilig af met
-          iDEAL, Bancontact, creditcard of Apple Pay en haal je bestelling
-          gratis op in de winkel bij jou in de buurt — in Nijverdal, Apeldoorn,
-          Deventer, Zutphen of Emmen. Vandaag besteld is vaak vandaag nog klaar.
+          Online bestellen is zo gedaan: kies je producten en reken veilig af
+          met iDEAL, Bancontact, creditcard of Apple Pay. Bestel je vóór 10:00,
+          dan wordt je bestelling vandaag nog bezorgd; daarna komt hij morgen.
+          Afhalen kan ook — gratis, in Nijverdal, Apeldoorn, Deventer, Zutphen
+          of Emmen.
         </p>
       </section>
     </div>

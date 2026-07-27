@@ -14,12 +14,17 @@ Mulish, "De beste verf voor de laagste prijs").
 - 💳 **Mollie-betalingen** – iDEAL, Bancontact, creditcard en Apple Pay via de
   Mollie hosted checkout. Zonder API-sleutel draait de site in **demomodus**
   met een gesimuleerde betaalpagina, zodat de hele flow lokaal testbaar is.
-- 🏬 **Afhalen in de winkel** – winkelkeuze in de checkout (Nijverdal,
-  Apeldoorn, Deventer, Zutphen, Emmen), afhaalcode na betaling en een
-  bestelstatuspagina die live bijwerkt.
-- 🔗 **Tilroy-koppeling** – producten, winkels en voorraad uit de Tilroy API;
-  betaalde bestellingen worden als afhaalorder naar Tilroy gepusht zodat de
-  winkel ze in de kassa ziet. Zonder sleutel is er een demo-catalogus.
+- 🚚 **DHL-bezorgklok** – vóór 10:00 besteld = vandaag bezorgd, daarna =
+  morgen ([`src/lib/delivery.ts`](src/lib/delivery.ts), puur en testbaar).
+  Labels en track & trace komen centraal uit het dashboard; de site toont
+  `shipment.trackTrace` zodra die in de order staat.
+- 🏬 **Afhalen in de winkel** – of kies Click & Collect: winkelkeuze in de
+  checkout (Nijverdal, Apeldoorn, Deventer, Zutphen, Emmen), afhaalcode na
+  betaling en een bestelstatuspagina die live bijwerkt.
+- 📦 **Gedeelde voorraad** – live voorraad per vestiging via de voorraad-hub
+  van het VDM-dashboard (`/api/voorraad/skus`), die op de échte Tilroy Stock
+  API draait. Beide shops putten zo uit dezelfde voorraad; zolang de hub
+  `configured: false` geeft, geldt de demo-voorraad.
 - 📊 **VDM-dashboard-koppeling** – orders in KV volgens hetzelfde contract als
   de Klus=r-site (dashboard leest ze automatisch mee) en banners/pagina's die
   in het dashboard worden beheerd.
@@ -46,7 +51,7 @@ Kopieer `.env.example` naar `.env.local`:
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Publieke URL (SEO, sitemap, betaal-redirects). |
 | `MOLLIE_API_KEY` | `test_…` of `live_…`. Leeg = demo-betaalpagina. `test_…` markeert orders als `isTest`. |
-| `TILROY_API_KEY` (+ endpoints) | Tilroy-koppeling. Leeg = demo-catalogus. |
+| `DASHBOARD_API_URL` | Basis-URL van het VDM-dashboard (voorraad-hub). Standaard `https://dashboardvdm.vercel.app`. |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash/Vercel KV voor orders + dashboard-content. Leeg = lokale bestandsopslag. |
 
 ## Koppeling met het VDM-dashboard
@@ -84,22 +89,30 @@ info-pagina's; de site blijft gewoon werken.
 ## Bestelflow
 
 1. Klant vult winkelwagen (kleurkeuze wordt per artikel bewaard).
-2. `/afrekenen` → voornaam, achternaam, e-mail, telefoon en afhaalwinkel →
-   `POST /api/checkout`.
+2. `/afrekenen` → keuze **bezorgen** (DHL, adres) of **afhalen** (winkel) +
+   naam/e-mail/telefoon → `POST /api/checkout`.
 3. Server valideert artikelen, **herberekent alle prijzen server-side**, maakt
-   de bestelling aan (`ord_…` + referentie `VDM-123456` + afhaalcode) en start
-   de betaling.
+   de bestelling aan (`ord_…` + referentie `VDM-123456`; bij afhalen een
+   afhaalcode, bij bezorgen de bezorgbelofte) en start de betaling.
 4. Klant betaalt bij Mollie (of op de demo-betaalpagina).
-5. Webhook of lazy sync zet `paymentStatus` op **paid** en pusht de order als
-   afhaalorder naar Tilroy.
-6. `/bestelling/[reference]` toont de afhaalcode, de winkel en de status.
+5. Webhook of lazy sync zet `paymentStatus` op **paid**. De order staat in KV;
+   het dashboard verzorgt centraal de fulfilment (kassa, DHL-label, track &
+   trace via `shipment.trackTrace`).
+6. `/bestelling/[reference]` toont status, afhaalcode óf bezorginfo.
 
-### Tilroy-mapping
+### Bezorgklok
 
-De hele koppeling zit in [`src/lib/tilroy.ts`](src/lib/tilroy.ts): pas
-`mapTilroyProduct`, `mapTilroyShop` en de payload in `pushOrderToTilroy` aan
-op het antwoord van jouw Tilroy-omgeving. Elke functie valt automatisch terug
-op de demodata als de API niet bereikbaar is.
+[`src/lib/delivery.ts`](src/lib/delivery.ts) is puur en deterministisch
+testbaar (geef `now` mee): vóór 10:00 → `same-day`, anders `next-day`.
+Zon-/feestdagregels zijn nog niet gespecificeerd (TODO zodra bekend).
+
+### Voorraad
+
+[`src/lib/tilroy.ts`](src/lib/tilroy.ts) bevraagt de hub van het dashboard:
+`GET {DASHBOARD_API_URL}/api/voorraad/skus?skus=…` → per sku een `shops`-map
+met het aantal per Tilroy-vestigings-id (`tilroyShopId` in
+[`src/lib/stores.ts`](src/lib/stores.ts)). De site roept Tilroy dus nooit
+rechtstreeks aan.
 
 ### Mollie
 
@@ -114,11 +127,11 @@ betaalstatus zelf bij Mollie (lazy sync).
   persistent én zichtbaar in het dashboard.
 - **E-mail** – verstuur bevestiging + "ligt klaar"-bericht (bv. Resend) vanuit
   `applyPaymentResult` in `src/lib/orders.ts`.
-- **Status "klaar om af te halen"** – zet `readyForPickupAt` /
-  `paymentStatus:"delivered"` vanuit Tilroy of het dashboard.
+- **Vervolgstatussen** – het dashboard zet `paymentStatus:"shipped"` +
+  `shipment.trackTrace` (bezorgen) of `readyForPickupAt`/`pickedUpAt`
+  (afhalen) op de order in KV; de site toont ze automatisch.
 - **Winkeldata** – adressen/openingstijden staan in
-  [`src/lib/stores.ts`](src/lib/stores.ts) (overgenomen van devoordeelmarkt.nl)
-  of komen volledig uit de Tilroy shops-API.
+  [`src/lib/stores.ts`](src/lib/stores.ts) (overgenomen van devoordeelmarkt.nl).
 
 ## Scripts
 

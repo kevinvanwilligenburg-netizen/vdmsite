@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
 import { mapsUrl } from "@/lib/stores";
 import { absoluteUrl } from "@/lib/site";
@@ -39,6 +40,7 @@ export default async function StorePage({ params }: Props) {
     name: store.name,
     url: absoluteUrl(`/winkels/${store.slug}`),
     telephone: store.phone,
+    ...(store.email ? { email: store.email } : {}),
     address: {
       "@type": "PostalAddress",
       streetAddress: store.address,
@@ -60,7 +62,7 @@ export default async function StorePage({ params }: Props) {
       <JsonLd data={storeJsonLd} />
 
       <header>
-        <h1 className="text-3xl font-black uppercase italic text-ink sm:text-4xl">
+        <h1 className="text-3xl font-black uppercase text-ink sm:text-4xl">
           {store.name}
         </h1>
       </header>
@@ -73,23 +75,21 @@ export default async function StorePage({ params }: Props) {
             <br />
             {store.postalCode} {store.city}
           </address>
-          <p className="mt-3 text-ink-soft">
-            📞{" "}
+          <p className="mt-3">
             <a
               href={`tel:${store.phone.replace(/[^\d+]/g, "")}`}
-              className="font-semibold text-ink hover:text-brand"
+              className="inline-flex items-center gap-2 font-semibold text-ink hover:text-brand"
             >
-              {store.phone}
+              <Icon name="phone" className="h-4 w-4 text-brand" /> {store.phone}
             </a>
           </p>
           {store.email && (
-            <p className="mt-1 text-ink-soft">
-              ✉️{" "}
+            <p className="mt-1">
               <a
                 href={`mailto:${store.email}`}
-                className="font-semibold text-ink hover:text-brand"
+                className="inline-flex items-center gap-2 font-semibold text-ink hover:text-brand"
               >
-                {store.email}
+                <Icon name="mail" className="h-4 w-4 text-brand" /> {store.email}
               </a>
             </p>
           )}
@@ -100,14 +100,16 @@ export default async function StorePage({ params }: Props) {
               rel="noopener noreferrer"
               className="btn btn-primary"
             >
-              📍 Routebeschrijving
+              <Icon name="pin" className="h-5 w-5" /> Routebeschrijving
             </a>
             <Link href="/" className="btn btn-dark">
               Online bestellen
             </Link>
           </div>
           <div className="mt-6 rounded-xl bg-brand-light p-4 text-sm">
-            <p className="font-bold text-ink">🛍️ Bestelling afhalen?</p>
+            <p className="flex items-center gap-2 font-bold text-ink">
+              <Icon name="cart" className="h-4 w-4 text-brand" /> Bestelling afhalen?
+            </p>
             <p className="mt-1 text-ink-soft">
               Meld je bij de kassa met je afhaalcode. Je bestelling ligt klaar
               zodra je daarover bericht hebt gekregen.

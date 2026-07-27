@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
+import { Icon } from "@/components/icons";
+import { deliveryInfo, deliveryLabel, SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
 import { euro } from "@/lib/format";
 
 interface StoreOption {
@@ -13,15 +15,28 @@ interface StoreOption {
   city: string;
 }
 
+type Fulfilment = "delivery" | "pickup";
+
 export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const { items, subtotal, hydrated } = useCart();
+  const [fulfilment, setFulfilment] = useState<Fulfilment>("delivery");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [street, setStreet] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Bezorgbelofte live bijhouden (elke 30 s herberekenen rond de cutoff).
+  const [promise, setPromise] = useState(() => deliveryInfo());
+  useEffect(() => {
+    const timer = window.setInterval(() => setPromise(deliveryInfo()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   if (!hydrated) {
     return <p className="py-16 text-center text-ink-soft">Bestelgegevens laden…</p>;
@@ -48,8 +63,15 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: { firstName, lastName, email, phone },
-          storeId,
+          fulfilment,
+          customer: {
+            firstName,
+            lastName,
+            email,
+            phone,
+            ...(fulfilment === "delivery" ? { street, postalCode, city } : {}),
+          },
+          ...(fulfilment === "pickup" ? { storeId } : {}),
           items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
@@ -77,7 +99,72 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
     <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_380px]">
       <div className="space-y-8">
         <section className="card p-6">
-          <h2 className="text-lg font-black text-ink">1. Jouw gegevens</h2>
+          <h2 className="text-lg font-black text-ink">1. Bezorgen of afhalen?</h2>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
+                fulfilment === "delivery"
+                  ? "border-brand bg-brand-light"
+                  : "border-ink/10 hover:border-ink/25"
+              }`}
+            >
+              <input
+                type="radio"
+                name="fulfilment"
+                value="delivery"
+                checked={fulfilment === "delivery"}
+                onChange={() => setFulfilment("delivery")}
+                className="mt-1 accent-brand"
+              />
+              <span>
+                <span className="flex items-center gap-2 font-bold text-ink">
+                  <Icon name="truck" className="h-5 w-5 text-brand" /> Bezorgen
+                  <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-black text-green-800">
+                    Gratis
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-sm font-semibold text-green-700">
+                  {deliveryLabel(promise)}
+                </span>
+                <span className="block text-xs text-ink-soft">
+                  {promise.type === "same-day"
+                    ? `Bestel vóór ${SAME_DAY_CUTOFF_HOUR}:00 en DHL bezorgt vandaag nog.`
+                    : "Na 10:00 besteld — DHL bezorgt morgen."}
+                </span>
+              </span>
+            </label>
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
+                fulfilment === "pickup"
+                  ? "border-brand bg-brand-light"
+                  : "border-ink/10 hover:border-ink/25"
+              }`}
+            >
+              <input
+                type="radio"
+                name="fulfilment"
+                value="pickup"
+                checked={fulfilment === "pickup"}
+                onChange={() => setFulfilment("pickup")}
+                className="mt-1 accent-brand"
+              />
+              <span>
+                <span className="flex items-center gap-2 font-bold text-ink">
+                  <Icon name="store" className="h-5 w-5 text-brand" /> Afhalen in de winkel
+                  <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-black text-green-800">
+                    Gratis
+                  </span>
+                </span>
+                <span className="block text-sm text-ink-soft">
+                  Vaak dezelfde dag klaar. Je krijgt een afhaalcode.
+                </span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section className="card p-6">
+          <h2 className="text-lg font-black text-ink">2. Jouw gegevens</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="voornaam" className="mb-1 block text-sm font-bold text-ink">
@@ -140,48 +227,100 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                 placeholder="06 12345678"
               />
             </div>
+            {fulfilment === "delivery" && (
+              <>
+                <div className="sm:col-span-2">
+                  <label htmlFor="straat" className="mb-1 block text-sm font-bold text-ink">
+                    Straat en huisnummer
+                  </label>
+                  <input
+                    id="straat"
+                    required
+                    minLength={3}
+                    autoComplete="street-address"
+                    value={street}
+                    onChange={(event) => setStreet(event.target.value)}
+                    className="input"
+                    placeholder="Voorbeeldstraat 12"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="postcode" className="mb-1 block text-sm font-bold text-ink">
+                    Postcode
+                  </label>
+                  <input
+                    id="postcode"
+                    required
+                    pattern="\d{4}\s?[A-Za-z]{2}"
+                    autoComplete="postal-code"
+                    value={postalCode}
+                    onChange={(event) => setPostalCode(event.target.value)}
+                    className="input"
+                    placeholder="1234 AB"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="plaats" className="mb-1 block text-sm font-bold text-ink">
+                    Plaats
+                  </label>
+                  <input
+                    id="plaats"
+                    required
+                    minLength={2}
+                    autoComplete="address-level2"
+                    value={city}
+                    onChange={(event) => setCity(event.target.value)}
+                    className="input"
+                    placeholder="Plaats"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <p className="mt-3 text-xs text-ink-soft">
-            We gebruiken je gegevens alleen voor deze bestelling, bijvoorbeeld om je
-            te laten weten wanneer alles klaarligt.
+            We gebruiken je gegevens alleen voor deze bestelling.
           </p>
         </section>
 
-        <section className="card p-6">
-          <h2 className="text-lg font-black text-ink">2. Kies je afhaalwinkel</h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            Afhalen is altijd gratis. Vandaag besteld? Dan staat je bestelling er
-            meestal vandaag nog klaar.
-          </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {stores.map((store) => (
-              <label
-                key={store.id}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
-                  storeId === store.id
-                    ? "border-brand bg-brand-light"
-                    : "border-ink/10 hover:border-ink/25"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="store"
-                  value={store.id}
-                  checked={storeId === store.id}
-                  onChange={() => setStoreId(store.id)}
-                  className="mt-1 accent-brand"
-                />
-                <span>
-                  <span className="block font-bold text-ink">{store.city}</span>
-                  <span className="block text-sm text-ink-soft">{store.address}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </section>
+        {fulfilment === "pickup" && (
+          <section className="card p-6">
+            <h2 className="text-lg font-black text-ink">3. Kies je afhaalwinkel</h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              Afhalen is altijd gratis. Vandaag besteld? Dan staat je bestelling
+              er meestal vandaag nog klaar.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {stores.map((store) => (
+                <label
+                  key={store.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
+                    storeId === store.id
+                      ? "border-brand bg-brand-light"
+                      : "border-ink/10 hover:border-ink/25"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="store"
+                    value={store.id}
+                    checked={storeId === store.id}
+                    onChange={() => setStoreId(store.id)}
+                    className="mt-1 accent-brand"
+                  />
+                  <span>
+                    <span className="block font-bold text-ink">{store.city}</span>
+                    <span className="block text-sm text-ink-soft">{store.address}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="card p-6">
-          <h2 className="text-lg font-black text-ink">3. Betalen</h2>
+          <h2 className="text-lg font-black text-ink">
+            {fulfilment === "pickup" ? "4." : "3."} Betalen
+          </h2>
           <p className="mt-1 text-sm text-ink-soft">
             Je rekent veilig af via Mollie en kiest daar je betaalmethode.
           </p>
@@ -220,9 +359,19 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
         </ul>
         <dl className="mt-4 space-y-2 border-t border-ink/10 pt-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ink-soft">Afhalen in de winkel</dt>
+            <dt className="text-ink-soft">
+              {fulfilment === "delivery" ? "Bezorging (DHL)" : "Afhalen in de winkel"}
+            </dt>
             <dd className="font-bold text-green-700">Gratis</dd>
           </div>
+          {fulfilment === "delivery" && (
+            <div className="flex justify-between">
+              <dt className="text-ink-soft">Bezorgd</dt>
+              <dd className="font-semibold text-ink">
+                {promise.type === "same-day" ? "Vandaag" : "Morgen"}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between text-base">
             <dt className="font-black text-ink">Totaal (incl. btw)</dt>
             <dd className="font-black text-brand">{euro(subtotal)}</dd>
@@ -237,7 +386,10 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
           {submitting ? "Bezig met bestellen…" : "Bestellen en betalen →"}
         </button>
         <p className="mt-3 text-center text-xs text-ink-soft">
-          Je betaalt {euro(subtotal)} en haalt je bestelling gratis op.
+          Je betaalt {euro(subtotal)}{" "}
+          {fulfilment === "delivery"
+            ? "en DHL bezorgt gratis."
+            : "en haalt je bestelling gratis op."}
         </p>
       </aside>
     </form>

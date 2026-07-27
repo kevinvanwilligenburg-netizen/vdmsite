@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { useCart } from "@/components/cart/CartProvider";
+import { Icon } from "@/components/icons";
 import { euro } from "@/lib/format";
 
 export function CartPageClient() {
@@ -15,9 +16,9 @@ export function CartPageClient() {
   if (items.length === 0) {
     return (
       <div className="card mx-auto max-w-lg p-10 text-center">
-        <p className="text-5xl" aria-hidden>
-          🛒
-        </p>
+        <span className="inline-flex text-ink/30" aria-hidden>
+          <Icon name="cart" className="h-16 w-16" strokeWidth={1.5} />
+        </span>
         <h2 className="mt-4 text-xl font-black text-ink">Je winkelwagen is leeg</h2>
         <p className="mt-2 text-ink-soft">
           Ontdek onze topdeals en vul je winkelwagen met voordeel.
@@ -35,13 +36,14 @@ export function CartPageClient() {
         {items.map((item) => (
           <li key={item.key} className="card flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap">
             <span
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-3xl"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg"
               style={{
                 background: `linear-gradient(135deg, hsl(${item.hue} 85% 94%), hsl(${item.hue} 70% 86%))`,
+                color: `hsl(${item.hue} 45% 38%)`,
               }}
               aria-hidden
             >
-              {item.icon}
+              <Icon name={item.icon} className="h-8 w-8" />
             </span>
             <div className="min-w-0 flex-1">
               <Link
@@ -92,9 +94,9 @@ export function CartPageClient() {
               type="button"
               aria-label={`${item.name} verwijderen`}
               onClick={() => removeItem(item.key)}
-              className="text-xl text-ink-soft transition hover:text-brand"
+              className="text-ink-soft transition hover:text-brand"
             >
-              ✕
+              <Icon name="x" className="h-5 w-5" />
             </button>
           </li>
         ))}

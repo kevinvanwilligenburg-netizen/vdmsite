@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { deliveryInfo } from "@/lib/delivery";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
-import { createOrder, setMolliePaymentId } from "@/lib/orders";
+import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import { findRal } from "@/lib/ral";
 import { baseUrlFromRequest } from "@/lib/site";
 import { getProductById, getStore } from "@/lib/tilroy";
@@ -14,6 +15,7 @@ function badRequest(message: string) {
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const POSTAL_CODE_PATTERN = /^\d{4}\s?[A-Za-z]{2}$/;
 
 export async function POST(request: Request) {
   let input: CheckoutInput;
@@ -34,8 +36,26 @@ export async function POST(request: Request) {
     return badRequest("Vul een geldig telefoonnummer in.");
   }
 
-  const store = await getStore(String(input.storeId ?? ""));
-  if (!store) return badRequest("Kies een geldige afhaalwinkel.");
+  // Bezorgen of afhalen bepaalt de rest van de validatie.
+  const fulfilment = input.fulfilment === "pickup" ? "pickup" : "delivery";
+
+  let store: Awaited<ReturnType<typeof getStore>> | undefined;
+  let address: { street: string; postalCode: string; city: string } | undefined;
+
+  if (fulfilment === "pickup") {
+    store = await getStore(String(input.storeId ?? ""));
+    if (!store) return badRequest("Kies een geldige afhaalwinkel.");
+  } else {
+    const street = (input.customer?.street ?? "").trim();
+    const postalCode = (input.customer?.postalCode ?? "").trim().toUpperCase();
+    const city = (input.customer?.city ?? "").trim();
+    if (street.length < 3) return badRequest("Vul je straat en huisnummer in.");
+    if (!POSTAL_CODE_PATTERN.test(postalCode)) {
+      return badRequest("Vul een geldige postcode in (bv. 1234 AB).");
+    }
+    if (city.length < 2) return badRequest("Vul je woonplaats in.");
+    address = { street, postalCode, city };
+  }
 
   if (!Array.isArray(input.items) || input.items.length === 0) {
     return badRequest("Je winkelwagen is leeg.");
@@ -104,16 +124,34 @@ export async function POST(request: Request) {
   }
 
   const subtotal = subtotalCents / 100;
-  const order = await createOrder({
-    customer: { firstName, lastName, email, phone, country: "NL" },
+  const orderInput: CreateOrderInput = {
+    customer: {
+      firstName,
+      lastName,
+      email,
+      phone,
+      ...(address ?? {}),
+      country: "NL",
+    },
     items,
     subtotal,
     shipping: 0,
     total: subtotal,
-    store: { id: store.id, name: store.name, city: store.city },
+    fulfilment,
     isTest: mollieTestMode() || undefined,
-  });
+  };
 
+  if (fulfilment === "pickup" && store) {
+    orderInput.store = { id: store.id, name: store.name, city: store.city };
+  } else {
+    const promise = deliveryInfo();
+    orderInput.delivery = {
+      type: promise.type,
+      expectedDate: promise.deliveryDate.toISOString(),
+    };
+  }
+
+  const order = await createOrder(orderInput);
   const baseUrl = baseUrlFromRequest(request);
 
   if (!mollieEnabled()) {

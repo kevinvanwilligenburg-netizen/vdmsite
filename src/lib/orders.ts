@@ -4,13 +4,11 @@ import path from "node:path";
 
 import { isKvEnabled, kvGetJSON, kvSAdd, kvSetJSON } from "@/lib/kv";
 import { getMolliePayment } from "@/lib/mollie";
-import { pushOrderToTilroy } from "@/lib/tilroy";
 import {
   isPaidStatus,
   type Order,
   type OrderCustomer,
   type OrderItem,
-  type OrderPaymentStatus,
 } from "@/lib/types";
 
 /**
@@ -136,7 +134,9 @@ export interface CreateOrderInput {
   subtotal: number; // euro's
   shipping: number; // euro's
   total: number; // euro's
-  store: { id: string; name: string; city: string };
+  fulfilment: "pickup" | "delivery";
+  store?: { id: string; name: string; city: string };
+  delivery?: { type: "same-day" | "next-day"; expectedDate: string };
   isTest?: boolean;
 }
 
@@ -153,9 +153,10 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     total: input.total,
     isTest: input.isTest,
     channel: "web",
-    fulfilment: "pickup",
-    store: input.store,
-    pickupCode: generatePickupCode(),
+    fulfilment: input.fulfilment,
+    ...(input.fulfilment === "pickup"
+      ? { store: input.store, pickupCode: generatePickupCode() }
+      : { delivery: input.delivery }),
   };
   await persist(order);
   return order;
@@ -181,8 +182,9 @@ export async function setMolliePaymentId(
 
 /**
  * Verwerkt de uitkomst van een betaling (webhook, demo-betaling of lazy sync).
- * Idempotent: een al betaalde bestelling wordt nooit teruggezet. Bij een
- * geslaagde betaling wordt de bestelling als afhaalorder naar Tilroy gepusht.
+ * Idempotent: een al betaalde bestelling wordt nooit teruggezet. Betaalde
+ * orders staan in KV; het dashboard pakt ze daar op voor fulfilment
+ * (kassa, DHL-label, track & trace).
  */
 export async function applyPaymentResult(
   order: Order,
@@ -190,27 +192,12 @@ export async function applyPaymentResult(
   info?: { method?: string },
 ): Promise<Order> {
   if (isPaidStatus(order.paymentStatus)) return order;
-
-  if (outcome !== "paid") {
-    return (
-      (await updateOrder(order.id, {
-        paymentStatus: outcome,
-        paymentMethod: info?.method ?? order.paymentMethod,
-      })) ?? order
-    );
-  }
-
-  const paid =
+  return (
     (await updateOrder(order.id, {
-      paymentStatus: "paid",
+      paymentStatus: outcome,
       paymentMethod: info?.method ?? order.paymentMethod,
-    })) ?? order;
-
-  const tilroySaleId = await pushOrderToTilroy(paid);
-  if (tilroySaleId) {
-    return (await updateOrder(paid.id, { tilroySaleId })) ?? paid;
-  }
-  return paid;
+    })) ?? order
+  );
 }
 
 /**

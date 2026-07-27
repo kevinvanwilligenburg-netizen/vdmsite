@@ -12,11 +12,12 @@ const standardHours: Store["openingHours"] = [
 ];
 
 // De vijf vestigingen van De Voordeelmarkt (bron: devoordeelmarkt.nl).
-// Zodra TILROY_API_KEY is ingesteld, worden de winkels uit Tilroy gelezen
-// (zie lib/tilroy.ts); deze lijst is de fallback.
+// tilroyShopId = vestigings-id in Tilroy, tevens de key in de
+// voorraad-feed van het VDM-dashboard (shops: {"7827": 4, ...}).
 export const demoStores: Store[] = [
   {
     id: "nijverdal",
+    tilroyShopId: "7827",
     slug: "nijverdal",
     name: "De Voordeelmarkt Nijverdal",
     address: "Nijverheidsweg 2",
@@ -28,6 +29,7 @@ export const demoStores: Store[] = [
   },
   {
     id: "apeldoorn",
+    tilroyShopId: "8626",
     slug: "apeldoorn",
     name: "De Voordeelmarkt Apeldoorn",
     address: "Auroralaan 39",
@@ -39,6 +41,7 @@ export const demoStores: Store[] = [
   },
   {
     id: "deventer",
+    tilroyShopId: "8628",
     slug: "deventer",
     name: "De Voordeelmarkt Deventer",
     address: "Boxbergerweg 127-A",
@@ -50,6 +53,7 @@ export const demoStores: Store[] = [
   },
   {
     id: "zutphen",
+    tilroyShopId: "8629",
     slug: "zutphen",
     name: "De Voordeelmarkt Zutphen",
     address: "Gerritsenweg 2",
@@ -61,6 +65,7 @@ export const demoStores: Store[] = [
   },
   {
     id: "emmen",
+    tilroyShopId: "8627",
     slug: "emmen",
     name: "De Voordeelmarkt Emmen",
     address: "Nijbracht 35",

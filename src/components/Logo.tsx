@@ -1,23 +1,64 @@
 import Link from "next/link";
 
-/** Logo in de stijl van devoordeelmarkt.nl: zwart blok met oranje MARKT-balk. */
-export function Logo({ size = "md" }: { size?: "md" | "lg" }) {
-  const top = size === "lg" ? "text-sm" : "text-[11px]";
-  const bottom = size === "lg" ? "text-2xl" : "text-lg";
+/**
+ * Logo van De Voordeelmarkt, nagebouwd als inline SVG naar het echte logo:
+ * afgeronde badge met witte rand, zwart bovenvlak "DE VOORDEEL" (DE wit,
+ * VOORDEEL oranje) en oranje ondervlak "MARKT" met licht schuine scheidslijn.
+ */
+export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
   return (
-    <Link href="/" aria-label="De Voordeelmarkt – naar de homepage" className="inline-flex shrink-0">
-      <span className="flex flex-col overflow-hidden rounded-lg shadow-sm ring-1 ring-black/10">
-        <span
-          className={`bg-ink px-2.5 pb-1 pt-1.5 text-center font-black uppercase leading-none tracking-wide text-white ${top}`}
+    <Link
+      href="/"
+      aria-label="De Voordeelmarkt – naar de homepage"
+      className="inline-flex shrink-0"
+    >
+      <svg viewBox="0 0 300 176" className={className} aria-hidden>
+        <defs>
+          <clipPath id="vdm-logo-clip">
+            <rect x="6" y="6" width="288" height="164" rx="18" />
+          </clipPath>
+        </defs>
+        <rect x="6" y="6" width="288" height="164" rx="18" fill="#141414" />
+        <polygon
+          points="6,101 294,89 294,170 6,170"
+          clipPath="url(#vdm-logo-clip)"
+          fill="#F5821F"
+        />
+        <rect
+          x="4"
+          y="4"
+          width="292"
+          height="168"
+          rx="20"
+          fill="none"
+          stroke="#FFFFFF"
+          strokeWidth="7"
+        />
+        <text
+          x="24"
+          y="68"
+          fontFamily="var(--font-mulish), 'Arial Black', Arial, sans-serif"
+          fontWeight="900"
+          fontSize="42"
+          fill="#FFFFFF"
+          textLength="252"
+          lengthAdjust="spacingAndGlyphs"
         >
-          De <span className="text-brand-bright">Voordeel</span>
-        </span>
-        <span
-          className={`bg-brand px-2.5 pb-1.5 pt-1 text-center font-black uppercase leading-none tracking-[0.22em] text-white ${bottom}`}
+          DE <tspan fill="#F5821F">VOORDEEL</tspan>
+        </text>
+        <text
+          x="24"
+          y="154"
+          fontFamily="var(--font-mulish), 'Arial Black', Arial, sans-serif"
+          fontWeight="900"
+          fontSize="60"
+          fill="#FFFFFF"
+          textLength="252"
+          lengthAdjust="spacingAndGlyphs"
         >
-          Markt
-        </span>
-      </span>
+          MARKT
+        </text>
+      </svg>
     </Link>
   );
 }

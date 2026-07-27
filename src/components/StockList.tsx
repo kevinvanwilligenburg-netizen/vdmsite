@@ -1,3 +1,4 @@
+import { Icon } from "@/components/icons";
 import { getStockByStore } from "@/lib/tilroy";
 import type { Product } from "@/lib/types";
 
@@ -7,11 +8,14 @@ export async function StockList({ product }: { product: Product }) {
 
   return (
     <details className="card group p-4">
-      <summary className="flex cursor-pointer list-none items-center justify-between font-bold text-ink">
-        <span>
-          📍 Voorraad in de winkel{" "}
-          <span className="font-semibold text-ink-soft">
-            – op voorraad in {availableCount} van de {stock.length} winkels
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-bold text-ink">
+        <span className="flex items-center gap-2">
+          <Icon name="pin" className="h-5 w-5 shrink-0 text-brand" />
+          <span>
+            Voorraad in de winkel{" "}
+            <span className="font-semibold text-ink-soft">
+              – op voorraad in {availableCount} van de {stock.length} winkels
+            </span>
           </span>
         </span>
         <span className="transition group-open:rotate-180" aria-hidden>
@@ -33,8 +37,8 @@ export async function StockList({ product }: { product: Product }) {
         ))}
       </ul>
       <p className="mt-3 text-xs text-ink-soft">
-        Voorraad wordt vernieuwd via ons kassasysteem. Je betaalt pas bij het
-        plaatsen van je bestelling; de winkel legt je artikelen apart.
+        Voorraad komt live uit ons kassasysteem. Je betaalt bij het plaatsen
+        van je bestelling; de winkel legt je artikelen apart.
       </p>
     </details>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Icon } from "@/components/icons";
 import type { Store } from "@/lib/types";
 
 export function StoreCard({ store }: { store: Store }) {
@@ -12,9 +13,9 @@ export function StoreCard({ store }: { store: Store }) {
       href={`/winkels/${store.slug}`}
       className="card group flex flex-col gap-2 p-5 transition hover:-translate-y-0.5 hover:shadow-lift"
     >
-      <p className="text-2xl" aria-hidden>
-        🏬
-      </p>
+      <span className="text-brand" aria-hidden>
+        <Icon name="store" className="h-8 w-8" />
+      </span>
       <h3 className="text-lg font-black text-ink group-hover:text-brand">{store.city}</h3>
       <p className="text-sm text-ink-soft">
         {store.address}

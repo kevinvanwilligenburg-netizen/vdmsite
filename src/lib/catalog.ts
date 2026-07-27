@@ -1,7 +1,8 @@
 import type { Category, Product } from "@/lib/types";
 
-// Demo-catalogus: wordt gebruikt zolang er geen TILROY_API_KEY is ingesteld
-// of als de Tilroy API niet bereikbaar is (zie lib/tilroy.ts).
+// Demo-catalogus. Voorraad komt live via de voorraad-hub van het
+// VDM-dashboard (zie lib/tilroy.ts); art.icon verwijst naar een SVG-icoon
+// in components/icons.tsx (huisregel: geen emoji als UI-glyphs).
 
 // Categorie-indeling in lijn met devoordeelmarkt.nl (verf voorop).
 export const demoCategories: Category[] = [
@@ -10,7 +11,7 @@ export const demoCategories: Category[] = [
     name: "Verf",
     description:
       "Muurverf, lak, grondverf en beits voor de laagste prijs. Mengverf maken we gratis in de winkel op elke gewenste RAL-kleur.",
-    icon: "🎨",
+    icon: "roller",
     hue: 25,
   },
   {
@@ -18,7 +19,7 @@ export const demoCategories: Category[] = [
     name: "Verfbenodigdheden",
     description:
       "Kwasten, rollers, afplaktape en al het andere schildersgereedschap voor een strak eindresultaat.",
-    icon: "🖌️",
+    icon: "brush",
     hue: 45,
   },
   {
@@ -26,7 +27,7 @@ export const demoCategories: Category[] = [
     name: "Gereedschap",
     description:
       "Elektrisch en handgereedschap voor de laagste prijs. Van accuboormachines tot complete gereedschapskoffers.",
-    icon: "🛠️",
+    icon: "wrench",
     hue: 215,
   },
   {
@@ -34,7 +35,7 @@ export const demoCategories: Category[] = [
     name: "Elektra & Verlichting",
     description:
       "LED-lampen, verlengsnoeren en elektramateriaal. Energiezuinig en voordelig het hele huis verlicht.",
-    icon: "💡",
+    icon: "bulb",
     hue: 265,
   },
   {
@@ -42,7 +43,7 @@ export const demoCategories: Category[] = [
     name: "Tuin & Buiten",
     description:
       "Alles voor tuin, terras en balkon. Tuingereedschap en buitenartikelen voor een voordeelprijs.",
-    icon: "🌿",
+    icon: "leaf",
     hue: 130,
   },
   {
@@ -50,7 +51,7 @@ export const demoCategories: Category[] = [
     name: "Reinigen & Huishouden",
     description:
       "Schoonmaakproducten en handige huishoudartikelen. Elke dag lage prijzen op alles voor in huis.",
-    icon: "🧽",
+    icon: "spray",
     hue: 190,
   },
 ];
@@ -83,7 +84,7 @@ export const demoProducts: Product[] = [
       { label: "Toepassing", value: "Binnen, muur en plafond" },
     ],
     tags: ["muurverf", "wit", "binnen", "latex"],
-    art: { icon: "🪣", hue: 25 },
+    art: { icon: "bucket", hue: 25 },
   },
   {
     id: "vdm-verf-002",
@@ -112,7 +113,7 @@ export const demoProducts: Product[] = [
       { label: "Toepassing", value: "Binnen, muur en plafond" },
     ],
     tags: ["mengverf", "muurverf", "ral", "kleur", "binnen"],
-    art: { icon: "🎨", hue: 205 },
+    art: { icon: "palette", hue: 205 },
   },
   {
     id: "vdm-verf-003",
@@ -140,7 +141,7 @@ export const demoProducts: Product[] = [
       { label: "Toepassing", value: "Binnen en buiten, hout en metaal" },
     ],
     tags: ["mengverf", "lak", "ral", "kleur", "zijdeglans"],
-    art: { icon: "🖌️", hue: 262 },
+    art: { icon: "brush", hue: 262 },
   },
   {
     id: "vdm-verf-004",
@@ -162,7 +163,7 @@ export const demoProducts: Product[] = [
       { label: "Toepassing", value: "Hout, metaal, kunststof" },
     ],
     tags: ["grondverf", "primer"],
-    art: { icon: "🥫", hue: 210 },
+    art: { icon: "can", hue: 210 },
   },
   {
     id: "vdm-tuin-002",
@@ -184,7 +185,7 @@ export const demoProducts: Product[] = [
       { label: "Bescherming", value: "UV- en waterwerend" },
     ],
     tags: ["beits", "tuinhout", "houtbescherming", "buiten"],
-    art: { icon: "🪵", hue: 28 },
+    art: { icon: "can", hue: 28 },
   },
 
   // ── Verfbenodigdheden ─────────────────────────────────────────
@@ -208,7 +209,7 @@ export const demoProducts: Product[] = [
       { label: "Geschikt voor", value: "Alle verfsoorten" },
     ],
     tags: ["kwasten", "schilderen"],
-    art: { icon: "🖌️", hue: 30 },
+    art: { icon: "brush", hue: 30 },
   },
   {
     id: "vdm-verf-006",
@@ -229,7 +230,7 @@ export const demoProducts: Product[] = [
       { label: "Verwijderbaar", value: "Tot 7 dagen residuvrij" },
     ],
     tags: ["afplaktape", "schilderen"],
-    art: { icon: "📏", hue: 48 },
+    art: { icon: "tape", hue: 48 },
   },
 
   // ── Gereedschap ───────────────────────────────────────────────
@@ -255,7 +256,7 @@ export const demoProducts: Product[] = [
       { label: "Inclusief", value: "Koffer + 13-delige bitset" },
     ],
     tags: ["accuboormachine", "boren", "schroeven"],
-    art: { icon: "🔋", hue: 215 },
+    art: { icon: "drill", hue: 215 },
   },
   {
     id: "vdm-ger-002",
@@ -277,7 +278,7 @@ export const demoProducts: Product[] = [
       { label: "Koffer", value: "Slagvast met kliksluiting" },
     ],
     tags: ["gereedschap", "koffer"],
-    art: { icon: "🧰", hue: 18 },
+    art: { icon: "toolbox", hue: 18 },
   },
   {
     id: "vdm-ger-003",
@@ -298,7 +299,7 @@ export const demoProducts: Product[] = [
       { label: "Libellen", value: "3 (0°, 90°, 45°)" },
     ],
     tags: ["waterpas", "meten"],
-    art: { icon: "📐", hue: 100 },
+    art: { icon: "level", hue: 100 },
   },
   {
     id: "vdm-klus-001",
@@ -319,7 +320,7 @@ export const demoProducts: Product[] = [
       { label: "Aandrijving", value: "Pozidriv PZ2" },
     ],
     tags: ["schroeven", "bevestiging"],
-    art: { icon: "🪛", hue: 220 },
+    art: { icon: "screw", hue: 220 },
   },
   {
     id: "vdm-klus-002",
@@ -342,7 +343,7 @@ export const demoProducts: Product[] = [
       { label: "Gewicht", value: "6,8 kg" },
     ],
     tags: ["trap", "ladder", "klussen"],
-    art: { icon: "🪜", hue: 170 },
+    art: { icon: "ladder", hue: 170 },
   },
 
   // ── Elektra & Verlichting ─────────────────────────────────────
@@ -367,7 +368,7 @@ export const demoProducts: Product[] = [
       { label: "Levensduur", value: "15.000 uur" },
     ],
     tags: ["led", "lampen", "verlichting"],
-    art: { icon: "💡", hue: 50 },
+    art: { icon: "bulb", hue: 50 },
   },
   {
     id: "vdm-lamp-002",
@@ -388,7 +389,7 @@ export const demoProducts: Product[] = [
       { label: "Max. vermogen", value: "3680 W" },
     ],
     tags: ["verlengsnoer", "elektra"],
-    art: { icon: "🔌", hue: 0 },
+    art: { icon: "plug", hue: 0 },
   },
 
   // ── Tuin & Buiten ─────────────────────────────────────────────
@@ -412,7 +413,7 @@ export const demoProducts: Product[] = [
       { label: "Inclusief", value: "Spuitpistool + koppelingen" },
     ],
     tags: ["tuinslang", "tuin", "water"],
-    art: { icon: "🚿", hue: 190 },
+    art: { icon: "hose", hue: 190 },
   },
   {
     id: "vdm-tuin-003",
@@ -433,7 +434,7 @@ export const demoProducts: Product[] = [
       { label: "Wasbaar", value: "Ja, 30 °C" },
     ],
     tags: ["handschoenen", "tuin", "klussen"],
-    art: { icon: "🧤", hue: 140 },
+    art: { icon: "hand", hue: 140 },
   },
 
   // ── Reinigen & Huishouden ─────────────────────────────────────
@@ -456,7 +457,7 @@ export const demoProducts: Product[] = [
       { label: "Doeken", value: "4 × microvezel" },
     ],
     tags: ["schoonmaak", "huishouden"],
-    art: { icon: "🧽", hue: 55 },
+    art: { icon: "spray", hue: 55 },
   },
   {
     id: "vdm-huis-002",
@@ -478,7 +479,7 @@ export const demoProducts: Product[] = [
       { label: "Afmetingen", value: "71 × 68 × 130 cm (opgezet)" },
     ],
     tags: ["wasrek", "huishouden"],
-    art: { icon: "🧺", hue: 240 },
+    art: { icon: "hanger", hue: 240 },
   },
 ];
 

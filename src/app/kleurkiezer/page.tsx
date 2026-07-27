@@ -27,8 +27,8 @@ export default async function KleurkiezerPage() {
     <div className="space-y-8">
       <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Kleurkiezer" }]} />
       <header className="max-w-3xl">
-        <h1 className="text-3xl font-black uppercase italic text-ink sm:text-4xl">
-          🎨 Kleurkiezer
+        <h1 className="text-3xl font-black uppercase text-ink sm:text-4xl">
+          Kleurkiezer
         </h1>
         <p className="mt-3 text-ink-soft">
           Kies uit meer dan 140 RAL-kleuren. Wij mengen je verf{" "}

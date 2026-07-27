@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Icon } from "@/components/icons";
 import { Price } from "@/components/Price";
 import { ProductArt } from "@/components/ProductArt";
 import { discountPct } from "@/lib/format";
@@ -22,8 +23,8 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
         )}
         {product.colorMixable && (
-          <span className="absolute right-3 top-3 rounded-md bg-ink px-2 py-1 text-xs font-bold text-white shadow">
-            🎨 Elke RAL-kleur
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md bg-ink px-2 py-1 text-xs font-bold text-white shadow">
+            <Icon name="palette" className="h-3.5 w-3.5" /> Elke RAL-kleur
           </span>
         )}
       </div>

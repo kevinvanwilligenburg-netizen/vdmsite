@@ -1,3 +1,5 @@
+import { Icon } from "@/components/icons";
+
 export function ProductArt({
   icon,
   hue,
@@ -9,7 +11,8 @@ export function ProductArt({
   size?: "sm" | "md" | "lg";
   label?: string;
 }) {
-  const iconSize = size === "lg" ? "text-8xl" : size === "sm" ? "text-3xl" : "text-6xl";
+  const iconSize =
+    size === "lg" ? "h-28 w-28" : size === "sm" ? "h-8 w-8" : "h-16 w-16";
   return (
     <div
       role="img"
@@ -17,11 +20,10 @@ export function ProductArt({
       className="flex aspect-square w-full items-center justify-center"
       style={{
         background: `linear-gradient(135deg, hsl(${hue} 85% 95%), hsl(${hue} 70% 88%))`,
+        color: `hsl(${hue} 45% 38%)`,
       }}
     >
-      <span className={`${iconSize} drop-shadow-sm`} aria-hidden>
-        {icon}
-      </span>
+      <Icon name={icon} className={iconSize} strokeWidth={1.6} />
     </div>
   );
 }
