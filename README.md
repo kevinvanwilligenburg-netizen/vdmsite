@@ -119,6 +119,23 @@ met het aantal per Tilroy-vestigings-id (`tilroyShopId` in
 [`src/lib/stores.ts`](src/lib/stores.ts)). De site roept Tilroy dus nooit
 rechtstreeks aan.
 
+Vestigings-id's: 7827 Nijverdal, 8626 Apeldoorn, 8627 Emmen, 8628 Deventer,
+8629 Zutphen, **8934 webshopmagazijn** (bepaalt of iets bezorgd kan worden)
+en 8602 testvestiging (telt nooit mee).
+
+De hub doet bij een koude cache een volledige crawl (~40 s) en is daarna
+5 minuten snel (~0,1 s). Daarom haalt de productpagina de voorraad **na** de
+eerste render op, via onze eigen proxy `/api/voorraad?skus=…`; de pagina
+wacht er dus nooit op.
+
+### Catalogus-cache
+
+De feed is ~9 MB en past niet in de Next-datacache. De geparste catalogus
+(~4 MB, ~4.900 producten) gaat daarom een uur in Redis onder
+`catalog:products:v1`, zodat een nieuwe serverinstance meteen data heeft in
+plaats van 13–40 s op de feed te wachten. Zonder Redis werkt alles nog, maar
+dan haalt elke koude instance de feed zelf op.
+
 ### Mollie
 
 De betaallaag ([`src/lib/mollie.ts`](src/lib/mollie.ts)) praat rechtstreeks
