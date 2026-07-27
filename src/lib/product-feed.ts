@@ -181,6 +181,21 @@ function toCents(value: string | undefined): number {
 }
 
 /**
+ * Productfoto via de beeldproxy, in de vorm die het ook echt doet.
+ *
+ * Ongeveer één op de acht artikelen kreeg een URL van de vorm
+ * `/s/resizeinbox/580x580/…` mee; die geeft bij de proxy een 403, terwijl
+ * `/v7/…` voor precies dezelfde foto gewoon werkt (gemeten: 4/30 tegenover
+ * 30/30, en alle 20 herschreven mislukkelingen kwamen door). De foto's
+ * bestaan dus wel degelijk — het is puur de URL-vorm. Zolang de feed de
+ * oude vorm levert, rechtzetten we hem hier.
+ */
+function fotoUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return value.replace(/\/s\/resizeinbox\/\d+x\d+\//, "/v7/");
+}
+
+/**
  * Pad van dit artikel op de huidige (Tilroy-)site, bv.
  * "/nl/histor-p-f-zg-leliewit-750ml-1000021". Wordt gebruikt om oude URL's
  * na de overgang naar de nieuwe productpagina te sturen.
@@ -324,7 +339,7 @@ function buildProduct(group: FeedItem[]): Product | null {
     specs: buildSpecs(leader),
     attributes: buildAttributes(leader, group),
     tags: (leader.zoektermen ?? "").split(/\s+/).filter(Boolean).slice(0, 24),
-    image: leader.image_link || undefined,
+    image: fotoUrl(leader.image_link),
     inStock,
     // Elke variant heeft een eigen URL op de huidige site; die moeten
     // straks allemaal naar deze pagina wijzen.
@@ -480,7 +495,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v6";
+const KV_KEY = "catalog:products:v7";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
