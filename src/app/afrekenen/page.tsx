@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { pickupPromise } from "@/lib/pickup";
 import { getStores } from "@/lib/tilroy";
+
+// De afhaalbelofte hangt van het tijdstip af, dus niet cachen.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Afrekenen",
@@ -14,9 +18,12 @@ export default async function CheckoutPage() {
   const stores = await getStores();
   const storeOptions = stores.map((store) => ({
     id: store.id,
+    slug: store.slug,
     name: store.name,
     address: store.address,
     city: store.city,
+    // Afhaalbelofte op basis van de openingstijden van die winkel.
+    pickupLabel: pickupPromise(store).label,
   }));
   return (
     <div className="space-y-8">

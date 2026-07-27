@@ -235,7 +235,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
           <StockList
             skus={skusFor(product)}
-            stores={stores.map((store) => ({ storeId: store.slug, city: store.city }))}
+            stores={stores}
             fallbackInStock={product.inStock !== false}
           />
         </div>

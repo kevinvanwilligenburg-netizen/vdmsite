@@ -6,6 +6,8 @@ import { CartProvider } from "@/components/cart/CartProvider";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
+import { StoreProvider } from "@/components/store/StoreProvider";
+import { getStores } from "@/lib/tilroy";
 import {
   absoluteUrl,
   CONTACT_EMAIL,
@@ -107,7 +109,16 @@ const websiteJsonLd = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const rating = aggregateRatingJsonLd(await getTrustpilotRating());
+  const [rating, stores] = await Promise.all([
+    getTrustpilotRating().then(aggregateRatingJsonLd),
+    getStores(),
+  ]);
+  const storeOptions = stores.map((store) => ({
+    slug: store.slug,
+    city: store.city,
+    address: store.address,
+    name: store.name,
+  }));
 
   return (
     <html lang="nl" className={mulish.variable}>
@@ -120,13 +131,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         >
           Direct naar de inhoud
         </a>
-        <CartProvider>
-          <Header />
-          <main id="hoofdinhoud" className="container-page py-6 sm:py-8">
-            {children}
-          </main>
-          <Footer />
-        </CartProvider>
+        <StoreProvider stores={storeOptions}>
+          <CartProvider>
+            <Header />
+            <main id="hoofdinhoud" className="container-page py-6 sm:py-8">
+              {children}
+            </main>
+            <Footer />
+          </CartProvider>
+        </StoreProvider>
       </body>
     </html>
   );

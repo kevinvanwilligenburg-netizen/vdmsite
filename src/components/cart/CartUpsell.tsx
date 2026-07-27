@@ -74,6 +74,7 @@ export function CartUpsell({ suggestions }: { suggestions: Product[] }) {
                 addItem({
                   key: `${product.id}::`,
                   productId: product.id,
+                  sku: product.sku,
                   slug: product.slug,
                   name: product.name,
                   unitPrice: product.price,

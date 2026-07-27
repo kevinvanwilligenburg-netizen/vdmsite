@@ -4,6 +4,7 @@ import { CartBadge } from "@/components/cart/CartBadge";
 import { Icon } from "@/components/icons";
 import { Logo, Tagline } from "@/components/Logo";
 import { MobileNav } from "@/components/MobileNav";
+import { StorePicker } from "@/components/store/StorePicker";
 import { getCategories, getStores } from "@/lib/tilroy";
 
 const USPS = [
@@ -70,13 +71,8 @@ export async function Header() {
             <Icon name="search" className="h-5 w-5" />
           </button>
         </form>
-        <div className="ml-auto flex items-center gap-3">
-          <Link
-            href="/winkels"
-            className="hidden items-center gap-2 rounded-lg px-3 py-2 font-bold text-ink transition hover:text-brand md:inline-flex"
-          >
-            <Icon name="pin" className="h-5 w-5" /> Winkels
-          </Link>
+        <div className="ml-auto flex items-center gap-1 sm:gap-3">
+          <StorePicker />
           <CartBadge />
         </div>
       </div>

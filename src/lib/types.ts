@@ -101,6 +101,8 @@ export interface CartColor {
 export interface CartItem {
   key: string; // uniek per product+variant+kleur
   productId: string;
+  /** Tilroy-sku van de gekozen variant; nodig voor de voorraadcheck. */
+  sku?: string;
   slug: string;
   name: string;
   variantId?: string;

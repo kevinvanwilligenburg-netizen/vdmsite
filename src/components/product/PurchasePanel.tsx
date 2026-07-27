@@ -88,6 +88,9 @@ export function PurchasePanel({
       {
         key: cartKey,
         productId: product.id,
+        // De sku van de gekozen variant; daarmee checkt de checkout of de
+        // artikelen in de afhaalwinkel liggen.
+        sku: activeVariant?.sku ?? product.sku,
         slug: product.slug,
         name: product.name,
         variantId: activeVariant?.id,

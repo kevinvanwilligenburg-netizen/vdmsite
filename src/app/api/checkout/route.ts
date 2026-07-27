@@ -153,6 +153,43 @@ export async function POST(request: Request) {
     });
   }
 
+  // Afhalen kan alleen als élk artikel in die winkel ligt — anders staat de
+  // klant voor niets aan de balie. Dit hier controleren (niet alleen in de
+  // browser) is wat het echt afdwingt.
+  if (fulfilment === "pickup" && store) {
+    const tekort: { naam: string; elders: string[] }[] = [];
+    for (const item of items) {
+      const stock = await getStockForSkus([item.sku ?? item.productId]);
+      if (!stock.live) break; // voorraad onbekend: niet blokkeren op een gok
+      const hier = stock.stores.find((row) => row.storeId === store.slug);
+      if ((hier?.qty ?? 0) < item.quantity) {
+        tekort.push({
+          naam: item.title,
+          elders: stock.stores
+            .filter((row) => row.qty >= item.quantity && row.storeId !== store.slug)
+            .map((row) => row.city),
+        });
+      }
+    }
+    if (tekort.length > 0) {
+      const eerste = tekort[0];
+      const elders =
+        eerste.elders.length > 0
+          ? ` Wel op voorraad in ${eerste.elders.join(", ")}.`
+          : " Kies bezorgen, dan regelen we het vanuit een andere vestiging.";
+      return NextResponse.json(
+        {
+          error:
+            tekort.length === 1
+              ? `${eerste.naam} ligt niet (voldoende) in ${store.city}.${elders}`
+              : `${tekort.length} artikelen liggen niet in ${store.city}.${elders}`,
+          unavailable: tekort,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const subtotal = subtotalCents / 100;
   const orderInput: CreateOrderInput = {
     customer: {

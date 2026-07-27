@@ -5,21 +5,33 @@ import { useEffect, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { Icon } from "@/components/icons";
+import { useStore } from "@/components/store/StoreProvider";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
 import { euro } from "@/lib/format";
 
 interface StoreOption {
   id: string;
+  slug: string;
   name: string;
   address: string;
   city: string;
+  /** Afhaalbelofte voor deze winkel, server-side berekend op openingstijden. */
+  pickupLabel: string;
+}
+
+interface StoreAvailability {
+  storeId: string;
+  city: string;
+  complete: boolean;
+  missing: string[];
 }
 
 type Fulfilment = "delivery" | "pickup";
 
 export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const { items, subtotal, hydrated } = useCart();
+  const { favourite } = useStore();
   const [fulfilment, setFulfilment] = useState<Fulfilment>("delivery");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -33,6 +45,8 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<StoreAvailability[] | null>(null);
+  const [checkingStock, setCheckingStock] = useState(false);
 
   // De exacte bezorgdag hangt af van de voorraad per artikel; die bepaalt de
   // server bij het plaatsen van de bestelling. Hier tonen we alleen of de
@@ -47,6 +61,40 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
     );
     return () => window.clearInterval(timer);
   }, []);
+
+  // De favoriete winkel van de klant staat voorgeselecteerd.
+  useEffect(() => {
+    if (favourite && stores.some((store) => store.slug === favourite.slug)) {
+      const match = stores.find((store) => store.slug === favourite.slug);
+      if (match) setStoreId(match.id);
+    }
+  }, [favourite, stores]);
+
+  // Welke winkels hebben deze hele bestelling liggen? Alleen relevant bij
+  // afhalen, dus we vragen het pas als de klant daarvoor kiest.
+  useEffect(() => {
+    if (fulfilment !== "pickup" || items.length === 0) return;
+    let active = true;
+    setCheckingStock(true);
+    fetch("/api/voorraad/winkels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: items.map((item) => ({ sku: item.sku ?? item.productId, quantity: item.qty })),
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { live: boolean; stores: StoreAvailability[] } | null) => {
+        if (active && data?.live) setAvailability(data.stores);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setCheckingStock(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [fulfilment, items]);
 
   if (!hydrated) {
     return <p className="py-16 text-center text-ink-soft">Bestelgegevens laden…</p>;
@@ -167,8 +215,11 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                     Gratis
                   </span>
                 </span>
-                <span className="block text-sm text-ink-soft">
-                  Vaak dezelfde dag klaar. Je krijgt een afhaalcode.
+                <span className="mt-0.5 block text-sm font-semibold text-green-700">
+                  Binnen 2 uur klaar
+                </span>
+                <span className="block text-xs text-ink-soft">
+                  Kan alleen in een winkel die alles op voorraad heeft.
                 </span>
               </span>
             </label>
@@ -329,34 +380,71 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
           <section className="card p-6">
             <h2 className="text-lg font-black text-ink">3. Kies je afhaalwinkel</h2>
             <p className="mt-1 text-sm text-ink-soft">
-              Afhalen is altijd gratis. Vandaag besteld? Dan staat je bestelling
-              er meestal vandaag nog klaar.
+              Afhalen is gratis en je bestelling staat binnen 2 uur klaar — mits
+              alles in die winkel op voorraad ligt. Dat controleren we hieronder
+              live voor je.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {stores.map((store) => (
-                <label
-                  key={store.id}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
-                    storeId === store.id
-                      ? "border-brand bg-brand-light"
-                      : "border-ink/10 hover:border-ink/25"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="store"
-                    value={store.id}
-                    checked={storeId === store.id}
-                    onChange={() => setStoreId(store.id)}
-                    className="mt-1 accent-brand"
-                  />
-                  <span>
-                    <span className="block font-bold text-ink">{store.city}</span>
-                    <span className="block text-sm text-ink-soft">{store.address}</span>
-                  </span>
-                </label>
-              ))}
+              {stores.map((store) => {
+                const status = availability?.find((entry) => entry.storeId === store.slug);
+                const compleet = status?.complete;
+                const tekort = status && !status.complete;
+                return (
+                  <label
+                    key={store.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
+                      storeId === store.id
+                        ? "border-brand bg-brand-light"
+                        : tekort
+                          ? "border-ink/10 opacity-60 hover:border-ink/25"
+                          : "border-ink/10 hover:border-ink/25"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="store"
+                      value={store.id}
+                      checked={storeId === store.id}
+                      onChange={() => setStoreId(store.id)}
+                      className="mt-1 accent-brand"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2 font-bold text-ink">
+                        {store.city}
+                        {favourite?.slug === store.slug && (
+                          <span className="rounded bg-brand/10 px-1.5 py-0.5 text-xs font-bold text-brand">
+                            jouw winkel
+                          </span>
+                        )}
+                      </span>
+                      <span className="block text-sm text-ink-soft">{store.address}</span>
+                      {compleet && (
+                        <span className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-green-700">
+                          <Icon name="check" className="h-4 w-4 shrink-0" strokeWidth={3} />
+                          {store.pickupLabel}
+                        </span>
+                      )}
+                      {tekort && (
+                        <span className="mt-1 block text-sm font-semibold text-amber-700">
+                          {status.missing.length === 1
+                            ? "1 artikel ligt hier niet"
+                            : `${status.missing.length} artikelen liggen hier niet`}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
+            {checkingStock && (
+              <p className="mt-3 text-sm text-ink-soft">Voorraad per winkel controleren…</p>
+            )}
+            {availability && !availability.some((entry) => entry.complete) && (
+              <p className="mt-3 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
+                Geen enkele winkel heeft je hele bestelling op voorraad. Kies
+                bezorgen, of haal je bestelling in delen op.
+              </p>
+            )}
           </section>
         )}
 
