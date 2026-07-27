@@ -172,7 +172,13 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
             <div>
               <h2 className="font-black text-ink">Bezorgadres</h2>
               <p className="mt-1 text-ink-soft">
-                {order.customer.street}
+                {[
+                  order.customer.street,
+                  order.customer.houseNumber,
+                  order.customer.houseNumberSuffix,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 <br />
                 {order.customer.postalCode} {order.customer.city}
               </p>

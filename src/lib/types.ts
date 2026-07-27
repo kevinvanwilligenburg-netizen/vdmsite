@@ -13,6 +13,7 @@ export interface Product {
   name: string;
   brand: string;
   sku: string;
+  ean?: string;
   category: string; // categorie-slug
   shortDescription: string;
   description: string;
@@ -118,7 +119,10 @@ export interface OrderCustomer {
   firstName: string;
   lastName: string;
   phone?: string;
+  /** Straatnaam (zonder huisnummer — Tilroy wil die velden apart). */
   street?: string;
+  houseNumber?: string;
+  houseNumberSuffix?: string;
   postalCode?: string;
   city?: string;
   country?: string;
@@ -129,6 +133,10 @@ export interface OrderItem {
   key: string;
   productId: string;
   variantId?: string;
+  /** Tilroy-artikel-id/sourceId van de bestelde variant — nodig om de order
+   *  later in Tilroy te kunnen zetten (voorraad afboeken in de bron). */
+  sku?: string;
+  ean?: string;
   title: string;
   brand?: string;
   image?: string;
@@ -183,6 +191,8 @@ export interface CheckoutInput {
     email: string;
     phone: string;
     street?: string;
+    houseNumber?: string;
+    houseNumberSuffix?: string;
     postalCode?: string;
     city?: string;
   };

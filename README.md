@@ -63,7 +63,7 @@ dashboard (repo `dashboardvdm`) beide shops op één manier uitleest.
 
 | Key | Inhoud |
 | --- | --- |
-| `order:<id>` | Order-JSON (`id`, `reference` "VDM-123456", `createdAt`, `paymentStatus`, `customer` {firstName, lastName, email, …}, `items` [{title, quantity, price, variantLabel}], `subtotal`, `shipping`, `total`, `paymentMethod`, `isTest`, `channel`, + VDM-extra's zoals `store`, `pickupCode`, `fulfilment:"pickup"`) |
+| `order:<id>` | Order-JSON (`id`, `reference` "VDM-123456", `createdAt`, `paymentStatus`, `molliePaymentId`, `customer` {firstName, lastName, email, street, houseNumber, houseNumberSuffix, postalCode, city, country, …}, `items` [{**sku**, ean?, title, quantity, price, variantLabel}], `subtotal`, `shipping`, `total`, `paymentMethod`, `isTest`, `channel`, + VDM-extra's zoals `fulfilment` "pickup"/"delivery", `store`, `pickupCode`, `delivery`) |
 | `order:index` | SET met alle order-ids |
 | `orderref:<REFERENCE>` | order-id (lookup op referentie) |
 | `ordermollie:<paymentId>` | order-id (lookup vanuit de webhook) |
@@ -71,8 +71,13 @@ dashboard (repo `dashboardvdm`) beide shops op één manier uitleest.
 
 Bedragen zijn **euro's** (decimaal, bv. `24.95`) — géén centen. Demo- en
 Mollie-testbetalingen krijgen `isTest: true` en tellen in het dashboard niet
-mee. Activeren: zet de `KV_REST_API_URL`/`KV_REST_API_TOKEN` van dít project
-óók in het dashboard-Vercel-project als `VDMSITE_KV_REST_API_URL` /
+mee. Drie velden zijn er speciaal voor de geplande route *webshop-order →
+Tilroy Order API* (voorraad afboeken in de bron): per regel de **`sku`**
+(Tilroy-artikel-id/sourceId, bij varianten de variant-sku) en `ean` zodra
+bekend, het **gesplitste bezorgadres** (straat, huisnummer en toevoeging
+apart) en **`molliePaymentId`** (gaat mee als `mollieReference`). Activeren:
+zet de `KV_REST_API_URL`/`KV_REST_API_TOKEN` van dít project óók in het
+dashboard-Vercel-project als `VDMSITE_KV_REST_API_URL` /
 `VDMSITE_KV_REST_API_TOKEN`.
 
 **Content (dashboard schrijft, site leest — beheer gebeurt in het dashboard):**

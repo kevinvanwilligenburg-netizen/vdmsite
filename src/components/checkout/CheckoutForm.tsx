@@ -25,6 +25,8 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [street, setStreet] = useState("");
+  const [houseNumber, setHouseNumber] = useState("");
+  const [houseNumberSuffix, setHouseNumberSuffix] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
@@ -69,7 +71,9 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             lastName,
             email,
             phone,
-            ...(fulfilment === "delivery" ? { street, postalCode, city } : {}),
+            ...(fulfilment === "delivery"
+              ? { street, houseNumber, houseNumberSuffix, postalCode, city }
+              : {}),
           },
           ...(fulfilment === "pickup" ? { storeId } : {}),
           items: items.map((item) => ({
@@ -231,18 +235,49 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
               <>
                 <div className="sm:col-span-2">
                   <label htmlFor="straat" className="mb-1 block text-sm font-bold text-ink">
-                    Straat en huisnummer
+                    Straatnaam
                   </label>
                   <input
                     id="straat"
                     required
-                    minLength={3}
-                    autoComplete="street-address"
+                    minLength={2}
+                    autoComplete="address-line1"
                     value={street}
                     onChange={(event) => setStreet(event.target.value)}
                     className="input"
-                    placeholder="Voorbeeldstraat 12"
+                    placeholder="Voorbeeldstraat"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="huisnummer" className="mb-1 block text-sm font-bold text-ink">
+                      Huisnummer
+                    </label>
+                    <input
+                      id="huisnummer"
+                      required
+                      pattern=".*\d.*"
+                      maxLength={8}
+                      value={houseNumber}
+                      onChange={(event) => setHouseNumber(event.target.value)}
+                      className="input"
+                      placeholder="12"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="toevoeging" className="mb-1 block text-sm font-bold text-ink">
+                      Toevoeging{" "}
+                      <span className="font-normal text-ink-soft">(optioneel)</span>
+                    </label>
+                    <input
+                      id="toevoeging"
+                      maxLength={8}
+                      value={houseNumberSuffix}
+                      onChange={(event) => setHouseNumberSuffix(event.target.value)}
+                      className="input"
+                      placeholder="A"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="postcode" className="mb-1 block text-sm font-bold text-ink">

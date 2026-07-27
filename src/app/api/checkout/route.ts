@@ -40,21 +40,41 @@ export async function POST(request: Request) {
   const fulfilment = input.fulfilment === "pickup" ? "pickup" : "delivery";
 
   let store: Awaited<ReturnType<typeof getStore>> | undefined;
-  let address: { street: string; postalCode: string; city: string } | undefined;
+  let address:
+    | {
+        street: string;
+        houseNumber: string;
+        houseNumberSuffix?: string;
+        postalCode: string;
+        city: string;
+      }
+    | undefined;
 
   if (fulfilment === "pickup") {
     store = await getStore(String(input.storeId ?? ""));
     if (!store) return badRequest("Kies een geldige afhaalwinkel.");
   } else {
+    // Tilroy vereist een gesplitst adres: straat en huisnummer (+ toevoeging) apart.
     const street = (input.customer?.street ?? "").trim();
+    const houseNumber = (input.customer?.houseNumber ?? "").trim();
+    const houseNumberSuffix = (input.customer?.houseNumberSuffix ?? "").trim();
     const postalCode = (input.customer?.postalCode ?? "").trim().toUpperCase();
     const city = (input.customer?.city ?? "").trim();
-    if (street.length < 3) return badRequest("Vul je straat en huisnummer in.");
+    if (street.length < 2) return badRequest("Vul je straatnaam in.");
+    if (!/\d/.test(houseNumber) || houseNumber.length > 8) {
+      return badRequest("Vul een geldig huisnummer in.");
+    }
     if (!POSTAL_CODE_PATTERN.test(postalCode)) {
       return badRequest("Vul een geldige postcode in (bv. 1234 AB).");
     }
     if (city.length < 2) return badRequest("Vul je woonplaats in.");
-    address = { street, postalCode, city };
+    address = {
+      street,
+      houseNumber,
+      ...(houseNumberSuffix ? { houseNumberSuffix } : {}),
+      postalCode,
+      city,
+    };
   }
 
   if (!Array.isArray(input.items) || input.items.length === 0) {
@@ -110,6 +130,10 @@ export async function POST(request: Request) {
       key: `${product.id}:${variant?.id ?? ""}:${color?.code ?? ""}`,
       productId: product.id,
       variantId: variant?.id,
+      // sku van de bestelde variant (of het product) — Tilroy identificeert
+      // orderregels uitsluitend hierop; ean gaat mee zodra de bron die levert.
+      sku: variant?.sku ?? product.sku,
+      ean: product.ean,
       title: product.name,
       brand: product.brand,
       image: "",
