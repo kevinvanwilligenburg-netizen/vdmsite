@@ -66,6 +66,11 @@ export async function GET() {
       ? { provider: "mollie", mode: mollieTestMode() ? "test" : "live" }
       : { provider: "demo" },
     stockHub,
+    // De klusadviseur werkt altijd; met een Anthropic-sleutel begrijpt hij
+    // ook vrij geformuleerde vragen in plaats van alleen trefwoorden.
+    klusadviseur: process.env.ANTHROPIC_API_KEY
+      ? { taalbegrip: "ai", model: "claude-opus-5" }
+      : { taalbegrip: "trefwoorden", hint: "zet ANTHROPIC_API_KEY in Vercel voor vrije taal" },
     dashboard: DASHBOARD_API_URL,
   });
 }
