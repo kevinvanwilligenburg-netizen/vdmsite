@@ -50,6 +50,9 @@ export async function GET() {
     metBasiskeuze: products.filter((product) =>
       (product.variants ?? []).some((variant) => variant.base),
     ).length,
+    metKluspasPrijs: products.filter((product) => product.kluspasPrice).length,
+    metGlans: products.filter((product) => product.attributes?.glans).length,
+    metInhoud: products.filter((product) => product.attributes?.inhoud).length,
     oudeUrls: products.reduce((sum, product) => sum + (product.legacyPaths?.length ?? 0), 0),
   };
 
