@@ -32,6 +32,8 @@ export interface Product {
   colorMixable?: boolean; // verf die in de winkel op kleur wordt gemengd
   variants?: ProductVariant[];
   specs?: { label: string; value: string }[];
+  /** Filterbare eigenschappen uit de feed (glans, verfsoort, inhoud, …). */
+  attributes?: Record<string, string>;
   tags?: string[];
   /** Productfoto uit de feed; ontbreekt die, dan tonen we het icoon. */
   image?: string;

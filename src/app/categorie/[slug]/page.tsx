@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
+import { ProductFiltersPanel } from "@/components/plp/ProductFilters";
 import { ProductCard } from "@/components/ProductCard";
+import { activeFilterCount, applyFilters, buildFacets, parseFilters } from "@/lib/facets";
 import { absoluteUrl } from "@/lib/site";
 import { getCategories, getCategory, getProductsByCategory } from "@/lib/tilroy";
 
 export const revalidate = 3600;
 
+const PER_PAGE = 48;
+
 interface Props {
   params: { slug: string };
+  searchParams: Record<string, string | string[] | undefined>;
 }
 
 export async function generateStaticParams() {
@@ -24,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!category) return {};
   return {
     title: `${category.name} kopen voor de laagste prijs`,
-    description: `${category.description} Online bestellen en gratis afhalen in de winkel.`,
+    description: `${category.description} Gratis bezorgd of gratis afhalen in de winkel.`,
     alternates: { canonical: `/categorie/${category.slug}` },
     openGraph: {
       title: `${category.name} | De Voordeelmarkt`,
@@ -33,26 +40,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params, searchParams }: Props) {
   const category = await getCategory(params.slug);
   if (!category) notFound();
-  const products = await getProductsByCategory(category.slug);
+
+  const alle = await getProductsByCategory(category.slug);
+  const filters = parseFilters(searchParams);
+  const gefilterd = applyFilters(alle, filters);
+  const facets = buildFacets(alle, filters);
+  const actief = activeFilterCount(filters);
+
+  const pagina = Math.max(1, Number(searchParams.pagina) || 1);
+  const paginas = Math.max(1, Math.ceil(gefilterd.length / PER_PAGE));
+  const zichtbaar = gefilterd.slice((pagina - 1) * PER_PAGE, pagina * PER_PAGE);
+
+  // Alleen de ongefilterde eerste pagina hoort in de index; gefilterde
+  // varianten zijn handig voor bezoekers maar niet voor zoekmachines.
+  const indexeerbaar = actief === 0 && pagina === 1 && !filters.sort;
 
   const listJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: category.name,
-    numberOfItems: products.length,
-    itemListElement: products.map((product, index) => ({
+    numberOfItems: gefilterd.length,
+    itemListElement: zichtbaar.slice(0, 24).map((product, index) => ({
       "@type": "ListItem",
-      position: index + 1,
+      position: (pagina - 1) * PER_PAGE + index + 1,
       name: product.name,
       url: absoluteUrl(`/product/${product.slug}`),
     })),
   };
 
+  const pageHref = (nummer: number) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (key === "pagina" || value === undefined) continue;
+      params.set(key, Array.isArray(value) ? value.join(",") : value);
+    }
+    if (nummer > 1) params.set("pagina", String(nummer));
+    const query = params.toString();
+    return query ? `/categorie/${category.slug}?${query}` : `/categorie/${category.slug}`;
+  };
+
   return (
     <div className="space-y-6">
+      {!indexeerbaar && <meta name="robots" content="noindex,follow" />}
       <Breadcrumbs
         items={[
           { name: "Home", href: "/" },
@@ -60,6 +92,7 @@ export default async function CategoryPage({ params }: Props) {
         ]}
       />
       <JsonLd data={listJsonLd} />
+
       <header className="flex items-start gap-4">
         <span
           className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-2xl sm:flex"
@@ -78,21 +111,57 @@ export default async function CategoryPage({ params }: Props) {
           <p className="mt-2 max-w-2xl text-ink-soft">{category.description}</p>
         </div>
       </header>
-      {products.length === 0 ? (
+
+      {alle.length === 0 ? (
         <p className="card p-10 text-center text-ink-soft">
-          Er zijn op dit moment geen artikelen in deze categorie. Kom snel terug!
+          Er zijn op dit moment geen artikelen in deze categorie.
         </p>
       ) : (
-        <>
-          <p className="text-sm text-ink-soft">
-            {products.length} {products.length === 1 ? "artikel" : "artikelen"}
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+        <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
+          <Suspense fallback={null}>
+            <ProductFiltersPanel
+              facets={facets}
+              filters={filters}
+              total={gefilterd.length}
+              activeCount={actief}
+            />
+          </Suspense>
+
+          <div className="mt-4 space-y-6 lg:mt-0">
+            {zichtbaar.length === 0 ? (
+              <div className="card p-8 text-center">
+                <p className="font-black text-ink">Geen artikelen met deze filters</p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Probeer een filter weg te halen om meer te zien.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                {zichtbaar.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+
+            {paginas > 1 && (
+              <nav aria-label="Paginering" className="flex flex-wrap items-center justify-center gap-2">
+                {pagina > 1 && (
+                  <Link href={pageHref(pagina - 1)} className="btn btn-dark px-4 py-2 text-sm">
+                    ← Vorige
+                  </Link>
+                )}
+                <span className="px-2 text-sm text-ink-soft">
+                  Pagina {pagina} van {paginas}
+                </span>
+                {pagina < paginas && (
+                  <Link href={pageHref(pagina + 1)} className="btn btn-dark px-4 py-2 text-sm">
+                    Volgende →
+                  </Link>
+                )}
+              </nav>
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -217,6 +217,36 @@ function groupKeyFor(item: FeedItem): string {
   return item.group_id ?? item.id;
 }
 
+/**
+ * Filterbare eigenschappen. Alleen velden waar genoeg artikelen een waarde
+ * voor hebben — een filter met drie opties op vijfduizend producten helpt
+ * niemand.
+ */
+function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  const add = (key: string, value: string | undefined) => {
+    const trimmed = value?.trim();
+    if (trimmed) attributes[key] = trimmed;
+  };
+
+  add("glans", leader.glans);
+  add("verfsoort", leader.verfsoort);
+  add("toepassing", leader.toepassing);
+  add("ondergrond", leader.ondergrond);
+  add("kwaliteit", leader.kwaliteit);
+  add("kleur", leader.kleur);
+
+  // Inhoud: alle maten van de groep, zodat filteren op "2,5 L" ook werkt bij
+  // een product dat meerdere maten heeft.
+  const maten = [...new Set(group.map((item) => item.maat?.trim()).filter(Boolean))];
+  if (maten.length > 0) attributes.inhoud = maten.join("|");
+
+  if (leader.mengverf === "Ja") attributes.mengverf = "Ja";
+  if (leader.aanbieding === "Ja") attributes.aanbieding = "Ja";
+
+  return attributes;
+}
+
 /** Zet de varianten van één groep om in één Product. */
 function buildProduct(group: FeedItem[]): Product | null {
   const leader = group.find((item) => item.group_leader === "true") ?? group[0];
@@ -279,6 +309,7 @@ function buildProduct(group: FeedItem[]): Product | null {
     colorMixable: leader.mengverf === "Ja",
     variants: variants.length > 1 ? variants : undefined,
     specs: buildSpecs(leader),
+    attributes: buildAttributes(leader, group),
     tags: (leader.zoektermen ?? "").split(/\s+/).filter(Boolean).slice(0, 24),
     image: leader.image_link || undefined,
     inStock,

@@ -1,5 +1,6 @@
 import { demoCategories, demoProducts, demoStockFor } from "@/lib/catalog";
 import { feedCategories, loadFeedProducts } from "@/lib/product-feed";
+import { scoreProducts, suggestTerms } from "@/lib/search";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import { demoStores } from "@/lib/stores";
 import type { Category, Product, Store } from "@/lib/types";
@@ -286,51 +287,38 @@ export interface SearchResult {
   products: Product[];
   total: number;
   facets: { slug: string; name: string; count: number }[];
+  /** Alternatieve zoektermen als er niets gevonden is. */
+  suggestions: string[];
+  /** Alle treffers (ongepagineerd), voor filters op de zoekpagina. */
+  all: Product[];
 }
 
-function scoreProduct(product: Product, terms: string[]): number {
-  const name = product.name.toLowerCase();
-  const haystack = [
-    product.name,
-    product.brand,
-    product.sku,
-    product.shortDescription,
-    ...(product.tags ?? []),
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  let score = 0;
-  for (const term of terms) {
-    if (!haystack.includes(term)) return 0;
-    if (name.startsWith(term)) score += 6;
-    else if (name.includes(term)) score += 4;
-    else score += 1;
-  }
-  if (product.image) score += 1;
-  if (product.inStock !== false) score += 1;
-  if (product.compareAtPrice && product.compareAtPrice > product.price) score += 0.5;
-  return score;
-}
-
+/**
+ * Zoeken over de catalogus. De scoring, synoniemen en tikfout-tolerantie
+ * zitten in lib/search.ts; hier komen de resultaten samen met de categorieën
+ * en de suggesties.
+ */
 export async function searchProducts(
   query: string,
   options: { categorySlug?: string; limit?: number } = {},
 ): Promise<SearchResult> {
   const products = await getProducts();
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (terms.length === 0) return { products: [], total: 0, facets: [] };
+  const hits = scoreProducts(products, query);
 
-  const scored = products
-    .map((product) => ({ product, score: scoreProduct(product, terms) }))
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map((entry) => entry.product);
+  if (hits.length === 0) {
+    return {
+      products: [],
+      total: 0,
+      facets: [],
+      suggestions: suggestTerms(products, query),
+      all: [],
+    };
+  }
 
   const categories = await getCategories();
   const counts = new Map<string, number>();
-  for (const product of scored) {
-    counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+  for (const hit of hits) {
+    counts.set(hit.product.category, (counts.get(hit.product.category) ?? 0) + 1);
   }
   const facets = categories
     .filter((category) => counts.has(category.slug))
@@ -341,14 +329,17 @@ export async function searchProducts(
     }))
     .sort((a, b) => b.count - a.count);
 
+  const gevonden = hits.map((hit) => hit.product);
   const filtered = options.categorySlug
-    ? scored.filter((product) => product.category === options.categorySlug)
-    : scored;
+    ? gevonden.filter((product) => product.category === options.categorySlug)
+    : gevonden;
 
   return {
     products: filtered.slice(0, options.limit ?? 48),
     total: filtered.length,
     facets,
+    suggestions: [],
+    all: filtered,
   };
 }
 
