@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { kvPing } from "@/lib/kv";
 import { mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { DASHBOARD_API_URL } from "@/lib/site";
+import { getProducts } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,20 @@ export async function GET() {
     // niet bereikbaar; demo-voorraad blijft actief
   }
 
+  const products = await getProducts();
+  const catalogus = {
+    producten: products.length,
+    metFoto: products.filter((product) => product.image).length,
+    mengverf: products.filter((product) => product.colorMixable).length,
+    metBasiskeuze: products.filter((product) =>
+      (product.variants ?? []).some((variant) => variant.base),
+    ).length,
+    oudeUrls: products.reduce((sum, product) => sum + (product.legacyPaths?.length ?? 0), 0),
+  };
+
   return NextResponse.json({
     ok: true,
+    catalogus,
     orders: kv.enabled
       ? { storage: kv.mode, ping: kv.ok ? "pong" : "geen antwoord" }
       : { storage: "bestand (.data/orders)" },

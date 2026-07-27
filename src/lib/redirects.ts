@@ -72,17 +72,19 @@ export async function resolveLegacyPath(segments: string[]): Promise<string | nu
     return store ? `/winkels/${store.slug}` : "/winkels";
   }
 
-  // Productpagina's: exacte match op de link uit de feed.
+  // Productpagina's: exacte match op een van de URL's uit de feed.
   const products = await getProducts();
-  const exact = products.find((product) => product.legacyPath === path);
+  const exact = products.find((product) => product.legacyPaths?.includes(path));
   if (exact) return `/product/${exact.slug}`;
 
-  // Zelfde artikel, ander taalpad of losse trailing-varianten: match op het
+  // Zelfde artikel via een ander taalpad of met een suffix: match op het
   // artikelnummer achteraan (bv. …-1000021).
-  const idMatch = path.match(/-(\d{4,})$/);
+  const idMatch = path.match(/-(\d{4,})(?:[/?].*)?$/);
   if (idMatch) {
     const suffix = `-${idMatch[1]}`;
-    const byId = products.find((product) => product.legacyPath?.endsWith(suffix));
+    const byId = products.find((product) =>
+      product.legacyPaths?.some((legacy) => legacy.endsWith(suffix)),
+    );
     if (byId) return `/product/${byId.slug}`;
   }
 

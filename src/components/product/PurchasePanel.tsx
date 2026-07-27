@@ -7,6 +7,7 @@ import { useCart } from "@/components/cart/CartProvider";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Icon } from "@/components/icons";
 import { Price } from "@/components/Price";
+import { hasBases, PAINT_BASES, pickVariant, sizesOf } from "@/lib/paint-bases";
 import type { PaintColor, Product } from "@/lib/types";
 
 export function PurchasePanel({
@@ -19,6 +20,9 @@ export function PurchasePanel({
   const { addItem } = useCart();
 
   const variants = product.variants ?? [];
+  const basesInPlay = hasBases(product);
+  const sizes = sizesOf(product);
+  const [size, setSize] = useState<string | undefined>(sizes[0]);
   const [variantId, setVariantId] = useState<string | undefined>(variants[0]?.id);
   const [qty, setQtyState] = useState(1);
   const [added, setAdded] = useState(false);
@@ -60,12 +64,17 @@ export function PurchasePanel({
     };
   }, [product.colorMixable, colors]);
 
-  const activeVariant = variants.find((variant) => variant.id === variantId);
+  // Bij mengverf volgt de basis (en dus het exacte blik) uit de gekozen kleur;
+  // de klant kiest alleen de inhoud. Anders is de variant een gewone keuze.
+  const activeVariant = basesInPlay
+    ? pickVariant(product, size, color)
+    : variants.find((variant) => variant.id === variantId);
   const unitPrice = activeVariant?.price ?? product.price;
+  const activeBase = activeVariant?.base;
 
   const cartKey = useMemo(
-    () => `${product.id}:${variantId ?? ""}:${color?.key ?? ""}`,
-    [product.id, variantId, color],
+    () => `${product.id}:${activeVariant?.id ?? ""}:${color?.key ?? ""}`,
+    [product.id, activeVariant?.id, color],
   );
 
   function handleAdd() {
@@ -81,8 +90,10 @@ export function PurchasePanel({
         productId: product.id,
         slug: product.slug,
         name: product.name,
-        variantId,
-        variantName: activeVariant?.name,
+        variantId: activeVariant?.id,
+        variantName: activeBase
+          ? `${activeVariant?.size ?? activeVariant?.name} · ${PAINT_BASES[activeBase].label}`
+          : activeVariant?.name,
         color: color
           ? {
               key: color.key,
@@ -106,27 +117,52 @@ export function PurchasePanel({
     <div className="min-w-0 space-y-5">
       <Price price={unitPrice} compareAtPrice={product.compareAtPrice} size="lg" />
 
-      {variants.length > 0 && (
-        <fieldset>
-          <legend className="mb-2 text-sm font-bold text-ink">Kies je inhoud</legend>
-          <div className="flex flex-wrap gap-2">
-            {variants.map((variant) => (
-              <button
-                key={variant.id}
-                type="button"
-                onClick={() => setVariantId(variant.id)}
-                aria-pressed={variant.id === variantId}
-                className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
-                  variant.id === variantId
-                    ? "border-brand bg-brand-light text-brand"
-                    : "border-ink/10 text-ink hover:border-ink/30"
-                }`}
-              >
-                {variant.name}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+      {basesInPlay ? (
+        sizes.length > 0 && (
+          <fieldset>
+            <legend className="mb-2 text-sm font-bold text-ink">Kies je inhoud</legend>
+            <div className="flex flex-wrap gap-2">
+              {sizes.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSize(option)}
+                  aria-pressed={option === size}
+                  className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
+                    option === size
+                      ? "border-brand bg-brand-light text-brand"
+                      : "border-ink/10 text-ink hover:border-ink/30"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )
+      ) : (
+        variants.length > 0 && (
+          <fieldset>
+            <legend className="mb-2 text-sm font-bold text-ink">Kies je inhoud</legend>
+            <div className="flex flex-wrap gap-2">
+              {variants.map((variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  onClick={() => setVariantId(variant.id)}
+                  aria-pressed={variant.id === variantId}
+                  className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
+                    variant.id === variantId
+                      ? "border-brand bg-brand-light text-brand"
+                      : "border-ink/10 text-ink hover:border-ink/30"
+                  }`}
+                >
+                  {variant.name}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )
       )}
 
       {product.colorMixable && (
@@ -147,14 +183,30 @@ export function PurchasePanel({
           {color && (
             <div className="mt-3 flex items-center gap-3">
               <span
-                className="h-9 w-9 rounded-md ring-1 ring-black/10"
+                className="h-9 w-9 shrink-0 rounded-md ring-1 ring-black/10"
                 style={{ backgroundColor: color.hex }}
                 aria-hidden
               />
-              <p className="text-sm font-semibold text-ink">
-                {[color.code, color.name].filter(Boolean).join(" · ")}
-              </p>
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  {[color.code, color.name].filter(Boolean).join(" · ")}
+                </p>
+                {activeBase && (
+                  <p className="text-xs text-ink-soft">
+                    Wordt gemengd in de{" "}
+                    <strong className="font-semibold text-ink">
+                      {PAINT_BASES[activeBase].label.toLowerCase()}
+                    </strong>{" "}
+                    — dat kiezen wij voor je.
+                  </p>
+                )}
+              </div>
             </div>
+          )}
+          {!color && basesInPlay && (
+            <p className="mt-3 text-xs text-ink-soft">
+              De juiste mengbasis kiezen wij automatisch bij jouw kleur.
+            </p>
           )}
           {pickerOpen && (
             <div className="mt-4">

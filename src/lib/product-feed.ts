@@ -1,4 +1,5 @@
 import { isKvEnabled, kvGetRaw, kvSetEx } from "@/lib/kv";
+import { parseBase } from "@/lib/paint-bases";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import type { Category, Product, ProductVariant } from "@/lib/types";
 
@@ -197,7 +198,26 @@ function buildSpecs(item: FeedItem): { label: string; value: string }[] {
   return specs;
 }
 
-/** Zet de varianten van één group_id om in één Product. */
+/**
+ * Bepaalt welke feed-items bij één product horen.
+ *
+ * Normaal is dat `group_id` (dezelfde verf in 1 L / 2,5 L / 5 L). Bij mengverf
+ * staan de basissen (licht/midden/donker) in de feed als afzonderlijke
+ * groepen met een eigen prijs. Die voegen we samen op productlijn + glans, want
+ * voor de klant is het één product: hij kiest een kleur en een inhoud, en wij
+ * kiezen de basis (zie lib/paint-bases.ts).
+ */
+function groupKeyFor(item: FeedItem): string {
+  if (item.mengverf === "Ja" && item.productlijn && parseBase(item.mengbasis)) {
+    return `meng:${[item.productlijn, item.glans, item.verfsoort]
+      .filter(Boolean)
+      .join("|")
+      .toLowerCase()}`;
+  }
+  return item.group_id ?? item.id;
+}
+
+/** Zet de varianten van één groep om in één Product. */
 function buildProduct(group: FeedItem[]): Product | null {
   const leader = group.find((item) => item.group_leader === "true") ?? group[0];
   if (!leader?.title) return null;
@@ -208,12 +228,17 @@ function buildProduct(group: FeedItem[]): Product | null {
 
   const variants: ProductVariant[] = sorted
     .filter((item) => item.maat)
-    .map((item) => ({
-      id: item.id,
-      name: item.maat,
-      price: toCents(item.sale_price ?? item.price),
-      sku: item.id,
-    }));
+    .map((item) => {
+      const base = parseBase(item.mengbasis);
+      return {
+        id: item.id,
+        name: item.maat,
+        price: toCents(item.sale_price ?? item.price),
+        sku: item.id,
+        size: item.maat,
+        ...(base ? { base } : {}),
+      };
+    });
 
   const prices = (variants.length > 0 ? variants.map((v) => v.price) : [toCents(leader.sale_price)])
     .filter((price) => price > 0);
@@ -222,8 +247,12 @@ function buildProduct(group: FeedItem[]): Product | null {
   const compareAtPrice = toCents(leader.price);
 
   const groupId = (leader.group_id ?? leader.id).replace(/^g:/, "");
-  const name = leader.title;
   const inStock = group.some((item) => Number(item.voorraad ?? 0) > 0);
+
+  // Mengverf-familie: de basissen zijn samengevoegd, dus de titel van één
+  // basis-artikel ("… Lichte basis") klopt niet meer als productnaam.
+  const isBaseFamily = variants.some((variant) => variant.base);
+  const name = isBaseFamily ? (leader.productlijn || leader.title) : leader.title;
 
   return {
     id: groupId,
@@ -232,8 +261,9 @@ function buildProduct(group: FeedItem[]): Product | null {
     brand: leader.brand || "De Voordeelmarkt",
     sku: leader.id,
     category: categorySlugFor(leader.categories ?? ""),
-    shortDescription:
-      leader.description && leader.description !== name
+    shortDescription: isBaseFamily
+      ? `${name} in elke gewenste kleur — wij mengen gratis in de juiste basis.`
+      : leader.description && leader.description !== name
         ? leader.description
         : `${name} — voordelig online bestellen bij De Voordeelmarkt.`,
     description:
@@ -249,7 +279,15 @@ function buildProduct(group: FeedItem[]): Product | null {
     tags: (leader.zoektermen ?? "").split(/\s+/).filter(Boolean).slice(0, 24),
     image: leader.image_link || undefined,
     inStock,
-    legacyPath: legacyPathFrom(leader.link),
+    // Elke variant heeft een eigen URL op de huidige site; die moeten
+    // straks allemaal naar deze pagina wijzen.
+    legacyPaths: [
+      ...new Set(
+        group
+          .map((item) => legacyPathFrom(item.link))
+          .filter((path): path is string => Boolean(path)),
+      ),
+    ],
     art: { icon: leader.mengverf === "Ja" ? "palette" : "bucket", hue: 25 },
   };
 }
@@ -275,7 +313,7 @@ async function fetchFeed(): Promise<Product[]> {
 
   const groups = new Map<string, FeedItem[]>();
   for (const item of items) {
-    const key = item.group_id ?? item.id;
+    const key = groupKeyFor(item);
     const list = groups.get(key);
     if (list) list.push(item);
     else groups.set(key, [item]);
@@ -292,19 +330,30 @@ async function fetchFeed(): Promise<Product[]> {
   return products;
 }
 
-const KV_KEY = "catalog:products:v1";
-const KV_TTL_SECONDS = 3600;
+const KV_KEY = "catalog:products:v2";
+/**
+ * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
+ * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
+ * rate limit, deploy van het dashboard) in plaats van terug te vallen op de
+ * schrale demo-catalogus.
+ */
+const KV_TTL_SECONDS = 24 * 3600;
+const KV_FRESH_MS = 60 * 60 * 1000;
 
-/** Geparste catalogus uit Redis, zodat een nieuwe serverinstance niet 40 s wacht. */
-async function readFromKv(): Promise<Product[] | null> {
+interface CachedCatalog {
+  at: number;
+  products: Product[];
+}
+
+async function readFromKv(): Promise<CachedCatalog | null> {
   if (!isKvEnabled()) return null;
   try {
     const raw = await kvGetRaw(KV_KEY);
     if (!raw) return null;
-    const products = JSON.parse(raw) as Product[];
-    return Array.isArray(products) && products.length > 0 ? products : null;
+    const parsed = JSON.parse(raw) as CachedCatalog;
+    return Array.isArray(parsed?.products) && parsed.products.length > 0 ? parsed : null;
   } catch (error) {
-    console.error("[catalogus] catalogus uit KV lezen mislukt:", error);
+    console.error("[catalogus] uit KV lezen mislukt:", error);
     return null;
   }
 }
@@ -312,26 +361,32 @@ async function readFromKv(): Promise<Product[] | null> {
 async function writeToKv(products: Product[]): Promise<void> {
   if (!isKvEnabled() || products.length === 0) return;
   try {
-    await kvSetEx(KV_KEY, JSON.stringify(products), KV_TTL_SECONDS);
+    const payload: CachedCatalog = { at: Date.now(), products };
+    await kvSetEx(KV_KEY, JSON.stringify(payload), KV_TTL_SECONDS);
   } catch (error) {
-    console.error("[catalogus] catalogus naar KV schrijven mislukt:", error);
+    console.error("[catalogus] naar KV schrijven mislukt:", error);
   }
 }
 
 /**
- * Alle producten. Volgorde: geheugen → Redis → feed ophalen (en wegschrijven).
- * Leeg bij storing; de aanroeper valt dan terug op de demo-catalogus.
+ * Alle producten. Volgorde: geheugen → Redis → feed.
+ *
+ * Is de opgeslagen catalogus ouder dan een uur, dan halen we de feed opnieuw
+ * op; mislukt dat, dan blijven we die oudere versie gebruiken. Alleen als er
+ * helemaal niets is, krijgt de aanroeper een lege lijst (en valt die terug op
+ * de demo-catalogus).
  */
 export async function loadFeedProducts(): Promise<Product[]> {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.products;
   if (inflight) return inflight;
 
   inflight = (async () => {
-    const fromKv = await readFromKv();
-    if (fromKv) {
-      cache = { at: Date.now(), products: fromKv };
-      return fromKv;
+    const stored = await readFromKv();
+    if (stored && Date.now() - stored.at < KV_FRESH_MS) {
+      cache = { at: Date.now(), products: stored.products };
+      return stored.products;
     }
+
     try {
       const products = await fetchFeed();
       cache = { at: Date.now(), products };
@@ -339,6 +394,12 @@ export async function loadFeedProducts(): Promise<Product[]> {
       return products;
     } catch (error) {
       console.error("[catalogus] productfeed niet beschikbaar:", error);
+      if (stored) {
+        const uren = Math.round((Date.now() - stored.at) / 3_600_000);
+        console.warn(`[catalogus] terugval op opgeslagen catalogus (${uren} uur oud).`);
+        cache = { at: Date.now() - CACHE_MS / 2, products: stored.products };
+        return stored.products;
+      }
       return cache?.products ?? [];
     }
   })().finally(() => {

@@ -1,10 +1,17 @@
 /* ── Catalogus (prijzen in centen, alleen site-intern) ─────────── */
 
+/** Mengbasis waarin een kleur wordt aangemaakt. */
+export type PaintBaseId = "licht" | "midden" | "donker";
+
 export interface ProductVariant {
   id: string;
   name: string;
   price: number; // in centen, incl. btw
   sku: string;
+  /** Inhoud (bv. "2,5 L"); bij mengverf los van de basis. */
+  size?: string;
+  /** Basis waarin deze variant wordt gemengd; alleen bij mengverf. */
+  base?: PaintBaseId;
 }
 
 export interface Product {
@@ -27,8 +34,11 @@ export interface Product {
   /** Productfoto uit de feed; ontbreekt die, dan tonen we het icoon. */
   image?: string;
   inStock?: boolean;
-  /** Pad van dit product op de huidige site, voor 301-redirects bij de overgang. */
-  legacyPath?: string;
+  /**
+   * Alle paden waarop dit artikel op de huidige site staat (één per variant),
+   * zodat elke bestaande URL na de overgang blijft werken.
+   */
+  legacyPaths?: string[];
   art: { icon: string; hue: number };
 }
 
