@@ -15,21 +15,31 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const kv = await kvPing();
 
-  let stockHub: { reachable: boolean; configured: boolean } = {
-    reachable: false,
+  // De hub doet bij een koude cache een volledige crawl (~40 s). Een timeout
+  // betekent dus "traag", niet "kapot" — dat onderscheid hoort hier te staan.
+  let stockHub: { status: string; configured: boolean; ms?: number } = {
+    status: "onbekend",
     configured: false,
   };
+  const startedAt = Date.now();
   try {
     const res = await fetch(`${DASHBOARD_API_URL}/api/voorraad/skus?skus=ping`, {
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(12000),
       cache: "no-store",
     });
+    const ms = Date.now() - startedAt;
     if (res.ok) {
       const data = (await res.json()) as { configured?: boolean };
-      stockHub = { reachable: true, configured: data.configured === true };
+      stockHub = { status: "bereikbaar", configured: data.configured === true, ms };
+    } else {
+      stockHub = { status: `status ${res.status}`, configured: false, ms };
     }
   } catch {
-    // niet bereikbaar; demo-voorraad blijft actief
+    stockHub = {
+      status: "traag of onbereikbaar (koude cache duurt tot ~40 s)",
+      configured: false,
+      ms: Date.now() - startedAt,
+    };
   }
 
   const products = await getProducts();
