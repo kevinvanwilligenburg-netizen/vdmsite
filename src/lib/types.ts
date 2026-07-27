@@ -27,6 +27,8 @@ export interface Product {
   /** Productfoto uit de feed; ontbreekt die, dan tonen we het icoon. */
   image?: string;
   inStock?: boolean;
+  /** Pad van dit product op de huidige site, voor 301-redirects bij de overgang. */
+  legacyPath?: string;
   art: { icon: string; hue: number };
 }
 

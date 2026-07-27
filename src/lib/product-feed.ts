@@ -166,6 +166,21 @@ function toCents(value: string | undefined): number {
   return Number.isFinite(number) ? Math.round(number * 100) : 0;
 }
 
+/**
+ * Pad van dit artikel op de huidige (Tilroy-)site, bv.
+ * "/nl/histor-p-f-zg-leliewit-750ml-1000021". Wordt gebruikt om oude URL's
+ * na de overgang naar de nieuwe productpagina te sturen.
+ */
+function legacyPathFrom(link: string | undefined): string | undefined {
+  if (!link) return undefined;
+  try {
+    const path = new URL(link).pathname.toLowerCase().replace(/\/+$/, "");
+    return path && path !== "/" ? path : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function buildSpecs(item: FeedItem): { label: string; value: string }[] {
   const specs: { label: string; value: string }[] = [];
   const add = (label: string, key: string) => {
@@ -234,6 +249,7 @@ function buildProduct(group: FeedItem[]): Product | null {
     tags: (leader.zoektermen ?? "").split(/\s+/).filter(Boolean).slice(0, 24),
     image: leader.image_link || undefined,
     inStock,
+    legacyPath: legacyPathFrom(leader.link),
     art: { icon: leader.mengverf === "Ja" ? "palette" : "bucket", hue: 25 },
   };
 }
@@ -244,10 +260,14 @@ let cache: { at: number; products: Product[] } | null = null;
 let inflight: Promise<Product[]> | null = null;
 
 async function fetchFeed(): Promise<Product[]> {
-  // De feed is ~9 MB en past niet in de Next-datacache; niet proberen.
+  // LET OP: geen `cache: "no-store"` hier. Dat maakt elke pagina die de
+  // catalogus gebruikt dynamisch, terwijl die statisch (ISR) is gedeclareerd —
+  // Next gooit dan "Page changed from static to dynamic at runtime" en de
+  // pagina geeft een 500. De feed is ~9 MB en past niet in de Next-datacache
+  // (die logt daarover, verder onschuldig); het echte cachen doet Redis.
   const res = await fetch(FEED_URL, {
     signal: AbortSignal.timeout(45000),
-    cache: "no-store",
+    next: { revalidate: 3600 },
   });
   if (!res.ok) throw new Error(`Productfeed gaf status ${res.status}`);
   const xml = await res.text();
