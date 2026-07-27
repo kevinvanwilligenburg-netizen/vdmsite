@@ -14,17 +14,27 @@ Mulish, "De beste verf voor de laagste prijs").
 - 💳 **Mollie-betalingen** – iDEAL, Bancontact, creditcard en Apple Pay via de
   Mollie hosted checkout. Zonder API-sleutel draait de site in **demomodus**
   met een gesimuleerde betaalpagina, zodat de hele flow lokaal testbaar is.
-- 🚚 **DHL-bezorgklok** – vóór 10:00 besteld = vandaag bezorgd, daarna =
-  morgen ([`src/lib/delivery.ts`](src/lib/delivery.ts), puur en testbaar).
-  Labels en track & trace komen centraal uit het dashboard; de site toont
-  `shipment.trackTrace` zodra die in de order staat.
-- 🏬 **Afhalen in de winkel** – of kies Click & Collect: winkelkeuze in de
-  checkout (Nijverdal, Apeldoorn, Deventer, Zutphen, Emmen), afhaalcode na
-  betaling en een bestelstatuspagina die live bijwerkt.
+- 🚚 **Bezorgen op basis van voorraad** – ligt het artikel in Nijverdal (de
+  webshopvoorraad), dan gaat het met DHL: vóór 10:00 besteld is vandaag
+  bezorgd, daarna morgen. Ligt het alleen in een andere winkel, dan verstuurt
+  die winkel het met PostNL binnen één werkdag. Zie
+  [`src/lib/delivery.ts`](src/lib/delivery.ts) (puur en testbaar). Labels en
+  track & trace komen centraal uit het dashboard.
+- 🏬 **Afhalen binnen 2 uur, gratis** – kan alleen in een winkel die álle
+  artikelen op voorraad heeft; de checkout toont dat per winkel en de server
+  weigert een afhaalorder die niet klopt. De belofte houdt rekening met
+  openingstijden ([`src/lib/pickup.ts`](src/lib/pickup.ts)): buiten
+  openingstijd schuift hij naar het eerstvolgende moment dat de winkel open is.
+- 📍 **Favoriete winkel** – klanten kiezen hun vaste winkel in de header. Die
+  keuze stuurt de voorraadweergave, de afhaalbelofte en de voorselectie bij het
+  afrekenen, en wordt lokaal onthouden.
 - 📦 **Gedeelde voorraad** – live voorraad per vestiging via de voorraad-hub
   van het VDM-dashboard (`/api/voorraad/skus`), die op de échte Tilroy Stock
-  API draait. Beide shops putten zo uit dezelfde voorraad; zolang de hub
-  `configured: false` geeft, geldt de demo-voorraad.
+  API draait. Beide shops putten zo uit dezelfde voorraad.
+- ⭐ **Trustpilot** – TrustBox-widgets op homepage, footer en checkout. Met een
+  API-sleutel komt het échte gemiddelde als `aggregateRating` in de structured
+  data; zonder sleutel bewust geen rating (verzonnen sterren zijn in strijd met
+  de richtlijnen van Google).
 - 📊 **VDM-dashboard-koppeling** – orders in KV volgens hetzelfde contract als
   de Klus=r-site (dashboard leest ze automatisch mee) en banners/pagina's die
   in het dashboard worden beheerd.
@@ -51,8 +61,11 @@ Kopieer `.env.example` naar `.env.local`:
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Publieke URL (SEO, sitemap, betaal-redirects). |
 | `MOLLIE_API_KEY` | `test_…` of `live_…`. Leeg = demo-betaalpagina. `test_…` markeert orders als `isTest`. |
-| `DASHBOARD_API_URL` | Basis-URL van het VDM-dashboard (voorraad-hub). Standaard `https://dashboardvdm.vercel.app`. |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash/Vercel KV voor orders + dashboard-content. Leeg = lokale bestandsopslag. |
+| `DASHBOARD_API_URL` | Basis-URL van het VDM-dashboard (catalogus, kleuren, voorraad). Standaard `https://dashboardvdm.vercel.app`. |
+| `REDIS_URL` | Redis via TCP (Vercel Marketplace → Redis). Voor orders, content en de catalogus-cache. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Alternatief: Upstash/Vercel KV via REST. Leeg = lokale bestandsopslag. |
+| `NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID` | Zet de reviewwidgets aan. Leeg = geen widgets. |
+| `TRUSTPILOT_API_KEY` | Optioneel: haalt het echte gemiddelde op voor de structured data. |
 
 ## Koppeling met het VDM-dashboard
 
@@ -105,11 +118,26 @@ info-pagina's; de site blijft gewoon werken.
    trace via `shipment.trackTrace`).
 6. `/bestelling/[reference]` toont status, afhaalcode óf bezorginfo.
 
-### Bezorgklok
+### Bezorgen en afhalen
 
-[`src/lib/delivery.ts`](src/lib/delivery.ts) is puur en deterministisch
-testbaar (geef `now` mee): vóór 10:00 → `same-day`, anders `next-day`.
-Zon-/feestdagregels zijn nog niet gespecificeerd (TODO zodra bekend).
+Beide modules zijn puur en deterministisch testbaar (geef `now` mee):
+
+- [`src/lib/delivery.ts`](src/lib/delivery.ts) — `deliveryPromise({webshopQty,
+  otherStoresQty})` geeft `same-day` / `next-day` (DHL, uit Nijverdal),
+  `next-workday` (PostNL, uit een andere winkel) of `unavailable`. Bij een
+  bestelling telt de traagste regel.
+- [`src/lib/pickup.ts`](src/lib/pickup.ts) — `pickupPromise(store)` rekent met
+  de openingstijden: open én nog ≥2 uur tot sluitingstijd betekent vandaag
+  klaar met een concreet tijdstip, anders het eerstvolgende openingsmoment.
+
+Afhaalorders worden server-side gevalideerd in
+[`/api/checkout`](src/app/api/checkout/route.ts): ligt niet alles in de
+gekozen winkel, dan volgt een 409 met de winkels waar het wél ligt. Valt de
+voorraad-API uit, dan blokkeren we bewust níét — anders houdt één storing alle
+afhaalbestellingen tegen.
+
+Zon- en feestdagen: PostNL-leveringen slaan de zondag over; verdere
+feestdagregels zijn nog niet gespecificeerd (TODO zodra bekend).
 
 ### Voorraad
 
