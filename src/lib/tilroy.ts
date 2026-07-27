@@ -197,6 +197,14 @@ export async function getStore(idOrSlug: string): Promise<Store | undefined> {
 
 /* ── Voorraad via de dashboard-hub ─────────────────────────────── */
 
+/**
+ * Vestigings-id's in Tilroy zoals de hub ze aanlevert. Naast de vijf winkels
+ * bestaan er twee bijzondere "shops": het webshopmagazijn (waar bezorgingen
+ * uit gaan) en een testvestiging die we altijd negeren.
+ */
+const WEBSHOP_SHOP_ID = "8934";
+const TEST_SHOP_ID = "8602";
+
 interface HubStockItem {
   sku: string;
   description?: string;
@@ -240,26 +248,49 @@ export interface StoreStock {
   qty: number;
 }
 
-export async function getStockByStore(product: Product): Promise<StoreStock[]> {
+export interface ProductStock {
+  /** Voorraad per winkel (voor afhalen). */
+  stores: StoreStock[];
+  /** Voorraad in het webshopmagazijn (voor bezorgen); null als onbekend. */
+  webshopQty: number | null;
+  /** Komen deze cijfers live uit de voorraad-hub, of is het een indicatie? */
+  live: boolean;
+}
+
+export async function getStockByStore(product: Product): Promise<ProductStock> {
   const stores = await getStores();
   const skus = [product.sku, ...(product.variants ?? []).map((variant) => variant.sku)];
   const hub = await fetchHubStock([...new Set(skus)]);
 
   if (hub) {
-    return stores.map((store) => {
-      let qty = 0;
-      for (const item of hub.items) {
-        const shopQty = store.tilroyShopId ? item.shops?.[store.tilroyShopId] : undefined;
-        if (Number.isFinite(shopQty)) qty += shopQty as number;
-      }
-      return { store, qty };
-    });
+    const sumForShop = (shopId: string) =>
+      hub.items.reduce((total, item) => {
+        const qty = item.shops?.[shopId];
+        return Number.isFinite(qty) ? total + (qty as number) : total;
+      }, 0);
+
+    return {
+      stores: stores.map((store) => ({
+        store,
+        // De testvestiging telt nooit mee.
+        qty:
+          store.tilroyShopId && store.tilroyShopId !== TEST_SHOP_ID
+            ? sumForShop(store.tilroyShopId)
+            : 0,
+      })),
+      webshopQty: sumForShop(WEBSHOP_SHOP_ID),
+      live: true,
+    };
   }
 
-  // Zonder hub: demo-indicatie, maar respecteer of het artikel überhaupt
-  // op voorraad is volgens de feed.
-  return stores.map((store) => ({
-    store,
-    qty: product.inStock === false ? 0 : demoStockFor(product.id, store.id),
-  }));
+  // Zonder hub: indicatie, maar respecteer of het artikel überhaupt
+  // leverbaar is volgens de productfeed.
+  return {
+    stores: stores.map((store) => ({
+      store,
+      qty: product.inStock === false ? 0 : demoStockFor(product.id, store.id),
+    })),
+    webshopQty: null,
+    live: false,
+  };
 }
