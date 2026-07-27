@@ -101,6 +101,14 @@ export function MobileNav({
                     <Icon name="palette" className="h-5 w-5" /> Kleurkiezer
                   </Link>
                 </li>
+                <li>
+                  <Link
+                    href="/klusadvies"
+                    className="mt-1 flex items-center gap-2 rounded-lg border-2 border-brand px-3 py-2.5 font-bold text-brand"
+                  >
+                    <Icon name="bulb" className="h-5 w-5" /> Klusadvies
+                  </Link>
+                </li>
               </ul>
             </div>
 

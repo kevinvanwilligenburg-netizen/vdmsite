@@ -198,6 +198,35 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Klusadvies: de vraag die klanten aan de balie stellen, nu ook online */}
+      <section
+        aria-labelledby="klusadvies-titel"
+        className="flex flex-col items-start gap-4 rounded-2xl border-2 border-brand/20 bg-brand-light p-8 lg:flex-row lg:items-center lg:gap-8"
+      >
+        <div className="flex-1">
+          <span className="rounded-full bg-brand px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
+            Nieuw
+          </span>
+          <h2
+            id="klusadvies-titel"
+            className="mt-3 text-2xl font-black uppercase text-ink sm:text-3xl"
+          >
+            Hoeveel verf heb ik nodig?
+          </h2>
+          <p className="mt-2 max-w-2xl font-semibold text-ink-soft">
+            Beschrijf je klus in gewone taal — &ldquo;slaapkamer van 4 bij 3 meter, van
+            donkerblauw naar wit&rdquo; — en wij rekenen uit hoeveel liter je nodig hebt, of er
+            grondverf bij moet en welke kwast of roller erbij hoort. In één klik in je mandje.
+          </p>
+        </div>
+        <Link
+          href="/klusadvies"
+          className="btn shrink-0 bg-brand text-white shadow-sm hover:bg-brand-dark"
+        >
+          Bereken mijn klus →
+        </Link>
+      </section>
+
       {/* Categorieën */}
       <section aria-labelledby="categorieen-titel">
         <h2 id="categorieen-titel" className="mb-5 text-2xl font-black uppercase text-ink sm:text-3xl">

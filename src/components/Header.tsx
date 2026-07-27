@@ -79,22 +79,38 @@ export async function Header() {
 
       {/* Categorienavigatie (zwart, desktop) */}
       <nav aria-label="Categorieën" className="hidden bg-ink text-white lg:block">
-        <div className="container-page flex items-center gap-1 overflow-x-auto whitespace-nowrap py-1 text-sm font-bold">
-          {categories.map((category) => (
+        {/*
+          Alleen de categorieën scrollen. Kleurkiezer en Klusadvies staan
+          daarbuiten en blijven zo altijd in beeld: samen met de categorieën
+          in één scrollende rij liepen ze op een gewoon laptopscherm voorbij
+          de rechterrand en waren ze onvindbaar.
+        */}
+        <div className="container-page flex items-center gap-3 py-1 text-sm font-bold">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap">
+            {categories.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/categorie/${category.slug}`}
+                className="rounded-md px-3 py-1.5 transition hover:text-brand-bright"
+              >
+                {category.name}
+              </Link>
+            ))}
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             <Link
-              key={category.slug}
-              href={`/categorie/${category.slug}`}
-              className="rounded-md px-3 py-1.5 transition hover:text-brand-bright"
+              href="/klusadvies"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition hover:text-brand-bright"
             >
-              {category.name}
+              <Icon name="bulb" className="h-4 w-4" /> Klusadvies
             </Link>
-          ))}
-          <Link
-            href="/kleurkiezer"
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-white transition hover:bg-brand-dark"
-          >
-            <Icon name="palette" className="h-4 w-4" /> Kleurkiezer
-          </Link>
+            <Link
+              href="/kleurkiezer"
+              className="inline-flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-white transition hover:bg-brand-dark"
+            >
+              <Icon name="palette" className="h-4 w-4" /> Kleurkiezer
+            </Link>
+          </div>
         </div>
       </nav>
     </header>

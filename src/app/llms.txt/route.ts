@@ -38,6 +38,13 @@ export async function GET() {
 - De juiste mengbasis (licht, midden of donker) wordt automatisch bij de gekozen kleur bepaald.
 - Kleurkiezer: ${absoluteUrl("/kleurkiezer")}
 
+## Klusadvies
+
+- De klusadviseur rekent uit hoeveel verf een klus kost: oppervlak, aantal lagen, liters, of er grondverf nodig is en welk gereedschap erbij hoort.
+- Vuistregels die wij hanteren: ongeveer 8 m² per liter per laag bij muurverf, twee lagen als norm, drie lagen bij overschilderen van donker naar licht zonder grondlaag.
+- Grondverf is nodig op kaal hout, vers stucwerk en metaal, en bij een grote kleursprong.
+- Klusadvies: ${absoluteUrl("/klusadvies")}
+
 ## Assortiment
 
 ${categories.map((category) => `- ${category.name}: ${category.description} → ${absoluteUrl(`/categorie/${category.slug}`)}`).join("\n")}

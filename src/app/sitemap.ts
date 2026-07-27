@@ -17,6 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: { path: string; priority: number; changeFrequency: "daily" | "weekly" | "monthly" | "yearly" }[] = [
     { path: "/", priority: 1, changeFrequency: "daily" },
     { path: "/kleurkiezer", priority: 0.9, changeFrequency: "weekly" },
+    { path: "/klusadvies", priority: 0.9, changeFrequency: "monthly" },
     { path: "/winkels", priority: 0.8, changeFrequency: "monthly" },
     { path: "/bezorgen-en-afhalen", priority: 0.7, changeFrequency: "monthly" },
     { path: "/zakelijk", priority: 0.8, changeFrequency: "monthly" },

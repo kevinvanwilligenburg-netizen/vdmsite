@@ -68,6 +68,14 @@ export async function Footer() {
                 Kleurkiezer
               </Link>
             </li>
+            <li>
+              <Link
+                href="/klusadvies"
+                className="text-white/80 transition hover:text-brand-bright"
+              >
+                Klusadvies
+              </Link>
+            </li>
           </ul>
         </nav>
 
