@@ -26,6 +26,8 @@ export interface Product {
   description: string;
   price: number; // in centen; bij varianten de "vanaf"-prijs
   compareAtPrice?: number; // adviesprijs in centen, voor voordeel-badge
+  /** Prijs met Kluspas (in centen); komt uit de feed. */
+  kluspasPrice?: number;
   unit?: string;
   colorMixable?: boolean; // verf die in de winkel op kleur wordt gemengd
   variants?: ProductVariant[];
@@ -109,6 +111,8 @@ export interface CartItem {
   variantName?: string;
   color?: CartColor;
   unitPrice: number; // centen
+  /** Prijs per stuk met Kluspas (centen), als die er is. */
+  kluspasUnitPrice?: number;
   qty: number;
   icon: string;
   hue: number;
@@ -198,6 +202,10 @@ export interface Order {
   subtotal: number; // euro's
   shipping: number; // euro's (afhalen = 0)
   total: number; // euro's
+  /** Kluspas-nummer van de klant; de korting zit al in de bedragen. */
+  kluspasNumber?: string;
+  /** Wat de Kluspas op deze bestelling scheelde (euro's). */
+  kluspasSavings?: number;
   isTest?: boolean;
   channel?: "web" | "pos";
   refundedAmount?: number;
@@ -248,5 +256,7 @@ export interface CheckoutInput {
   };
   fulfilment: "pickup" | "delivery";
   storeId?: string;
+  /** Optioneel Kluspas-nummer; levert 5% korting op het hele mandje. */
+  kluspasNumber?: string;
   items: CheckoutItemInput[];
 }

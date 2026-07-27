@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { Icon } from "@/components/icons";
 import { useStore } from "@/components/store/StoreProvider";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
+import { KLUSPAS_DISCOUNT_LABEL } from "@/lib/kluspas";
 import { euro } from "@/lib/format";
 
 interface StoreOption {
@@ -47,6 +48,8 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const [error, setError] = useState<string | null>(null);
   const [availability, setAvailability] = useState<StoreAvailability[] | null>(null);
   const [checkingStock, setCheckingStock] = useState(false);
+  const [kluspasNumber, setKluspasNumber] = useState("");
+  const [kluspasOpen, setKluspasOpen] = useState(false);
 
   // De exacte bezorgdag hangt af van de voorraad per artikel; die bepaalt de
   // server bij het plaatsen van de bestelling. Hier tonen we alleen of de
@@ -61,6 +64,33 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
     );
     return () => window.clearInterval(timer);
   }, []);
+
+  // Zodra het e-mailadres compleet is, geven we het mandje door aan het
+  // dashboard. Haakt de klant daarna af, dan kan die er een herinnering over
+  // sturen. Eén keer per adres, en pas als de klant even stil is.
+  const gemeldRef = useRef<string>("");
+  useEffect(() => {
+    const adres = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adres) || adres === gemeldRef.current) return;
+    if (items.length === 0) return;
+    const timer = window.setTimeout(() => {
+      gemeldRef.current = adres;
+      fetch("/api/winkelwagen/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: adres,
+          items: items.map((item) => ({
+            title: item.name,
+            quantity: item.qty,
+            price: item.unitPrice / 100,
+          })),
+          total: subtotal / 100,
+        }),
+      }).catch(() => undefined);
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [email, items, subtotal]);
 
   // De favoriete winkel van de klant staat voorgeselecteerd.
   useEffect(() => {
@@ -132,6 +162,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
               : {}),
           },
           ...(fulfilment === "pickup" ? { storeId } : {}),
+          ...(kluspasNumber.trim() ? { kluspasNumber: kluspasNumber.trim() } : {}),
           items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
@@ -488,6 +519,38 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             </li>
           ))}
         </ul>
+        {/* Kluspas: 5% korting op het hele mandje */}
+        <div className="mt-4 rounded-lg bg-brand-light p-3">
+          {kluspasOpen || kluspasNumber ? (
+            <>
+              <label htmlFor="kluspas" className="block text-sm font-bold text-ink">
+                Kluspas-nummer
+              </label>
+              <input
+                id="kluspas"
+                inputMode="numeric"
+                value={kluspasNumber}
+                onChange={(event) => setKluspasNumber(event.target.value)}
+                className="input mt-1 bg-white"
+                placeholder="Nummer op je pas"
+              />
+              <p className="mt-1.5 text-xs text-ink-soft">
+                Je krijgt {KLUSPAS_DISCOUNT_LABEL.toLowerCase()} op je hele
+                bestelling. De winkel controleert je pas bij het verwerken.
+              </p>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setKluspasOpen(true)}
+              className="flex w-full items-center gap-2 text-left text-sm font-bold text-ink"
+            >
+              <Icon name="tag" className="h-4 w-4 shrink-0 text-brand" />
+              Heb je een Kluspas? Bespaar {KLUSPAS_DISCOUNT_LABEL.toLowerCase()}
+            </button>
+          )}
+        </div>
+
         <dl className="mt-4 space-y-2 border-t border-ink/10 pt-4 text-sm">
           <div className="flex justify-between">
             <dt className="text-ink-soft">

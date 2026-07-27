@@ -7,7 +7,15 @@ import { useCart } from "@/components/cart/CartProvider";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Icon } from "@/components/icons";
 import { Price } from "@/components/Price";
-import { hasBases, PAINT_BASES, pickVariant, sizesOf } from "@/lib/paint-bases";
+import { PaintCalculator } from "@/components/product/PaintCalculator";
+import {
+  coveragePerLiter,
+  hasBases,
+  PAINT_BASES,
+  pickVariant,
+  sizesInLiters,
+  sizesOf,
+} from "@/lib/paint-bases";
 import type { PaintColor, Product } from "@/lib/types";
 
 export function PurchasePanel({
@@ -71,6 +79,7 @@ export function PurchasePanel({
     : variants.find((variant) => variant.id === variantId);
   const unitPrice = activeVariant?.price ?? product.price;
   const activeBase = activeVariant?.base;
+  const coverage = coveragePerLiter(product);
 
   const cartKey = useMemo(
     () => `${product.id}:${activeVariant?.id ?? ""}:${color?.key ?? ""}`,
@@ -118,7 +127,12 @@ export function PurchasePanel({
 
   return (
     <div className="min-w-0 space-y-5">
-      <Price price={unitPrice} compareAtPrice={product.compareAtPrice} size="lg" />
+      <Price
+        price={unitPrice}
+        compareAtPrice={product.compareAtPrice}
+        kluspasPrice={product.kluspasPrice}
+        size="lg"
+      />
 
       {basesInPlay ? (
         sizes.length > 0 && (
@@ -225,6 +239,13 @@ export function PurchasePanel({
             </div>
           )}
         </div>
+      )}
+
+      {coverage && (
+        <PaintCalculator
+          coveragePerLiter={coverage}
+          sizesInLiters={sizesInLiters(product).length > 0 ? sizesInLiters(product) : [1]}
+        />
       )}
 
       <div className="flex flex-wrap items-center gap-3">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { KleurkiezerClient } from "@/components/KleurkiezerClient";
+import { MyColors } from "@/components/MyColors";
 import { getColorCollections, getInitialColors } from "@/lib/colors";
 import { euro } from "@/lib/format";
 import { getProducts } from "@/lib/tilroy";
@@ -48,6 +49,7 @@ export default async function KleurkiezerPage() {
           de winkel leggen we de officiële waaier ernaast.
         </p>
       </header>
+      <MyColors />
       <KleurkiezerClient colors={colors} products={mixable} />
     </div>
   );

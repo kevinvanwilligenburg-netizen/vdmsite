@@ -103,3 +103,38 @@ export function sizesOf(product: Product): string[] {
 export function hasBases(product: Product): boolean {
   return (product.variants ?? []).some((variant) => Boolean(variant.base));
 }
+
+/**
+ * Rendement in m² per liter, uit de specificaties ("Ca. 8 m² per liter").
+ * `null` als het er niet staat — dan tonen we de rekenhulp niet.
+ */
+export function coveragePerLiter(product: Product): number | null {
+  for (const spec of product.specs ?? []) {
+    const match = spec.value.match(/([\d,.]+)\s*m²?\s*(?:per|\/)\s*(?:liter|l\b)/i);
+    if (match) {
+      const value = Number(match[1].replace(",", "."));
+      if (Number.isFinite(value) && value > 0) return value;
+    }
+  }
+  return null;
+}
+
+/** Inhoudsmaten in liters, afgeleid uit de variantnamen ("2,5 L", "750 ml"). */
+export function sizesInLiters(product: Product): number[] {
+  const liters = new Set<number>();
+  for (const variant of product.variants ?? []) {
+    const label = variant.size ?? variant.name;
+    const ml = label.match(/([\d,.]+)\s*ml\b/i);
+    if (ml) {
+      const value = Number(ml[1].replace(",", ".")) / 1000;
+      if (Number.isFinite(value) && value > 0) liters.add(value);
+      continue;
+    }
+    const l = label.match(/([\d,.]+)\s*l\b/i);
+    if (l) {
+      const value = Number(l[1].replace(",", "."));
+      if (Number.isFinite(value) && value > 0) liters.add(value);
+    }
+  }
+  return [...liters].sort((a, b) => a - b);
+}

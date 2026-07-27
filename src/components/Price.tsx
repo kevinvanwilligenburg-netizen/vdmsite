@@ -3,11 +3,13 @@ import { euro } from "@/lib/format";
 export function Price({
   price,
   compareAtPrice,
+  kluspasPrice,
   from = false,
   size = "md",
 }: {
   price: number;
   compareAtPrice?: number;
+  kluspasPrice?: number;
   from?: boolean;
   size?: "sm" | "md" | "lg";
 }) {
@@ -25,6 +27,14 @@ export function Price({
       </span>
       {compareAtPrice && compareAtPrice > price && (
         <s className="text-sm font-medium text-ink-soft/70">{euro(compareAtPrice)}</s>
+      )}
+      {kluspasPrice && kluspasPrice < price && (
+        <span
+          className={`w-full font-semibold text-ink-soft ${size === "lg" ? "text-sm" : "text-xs"}`}
+        >
+          Met Kluspas{" "}
+          <strong className="font-black text-ink">{euro(kluspasPrice)}</strong>
+        </span>
       )}
       {size === "lg" && <span className="w-full text-xs text-ink-soft">incl. btw</span>}
     </div>

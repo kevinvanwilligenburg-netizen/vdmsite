@@ -151,6 +151,8 @@ export interface CreateOrderInput {
   fulfilment: "pickup" | "delivery";
   store?: { id: string; name: string; city: string };
   delivery?: Order["delivery"];
+  kluspasNumber?: string;
+  kluspasSavings?: number;
   isTest?: boolean;
 }
 
@@ -166,6 +168,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     shipping: input.shipping,
     total: input.total,
     isTest: input.isTest,
+    ...(input.kluspasNumber ? { kluspasNumber: input.kluspasNumber } : {}),
+    ...(input.kluspasSavings ? { kluspasSavings: input.kluspasSavings } : {}),
     channel: "web",
     fulfilment: input.fulfilment,
     ...(input.fulfilment === "pickup"

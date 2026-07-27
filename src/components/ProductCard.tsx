@@ -47,6 +47,7 @@ export function ProductCard({ product }: { product: Product }) {
           <Price
             price={product.price}
             compareAtPrice={product.compareAtPrice}
+            kluspasPrice={product.kluspasPrice}
             from={Boolean(product.variants && product.variants.length > 1)}
             size="sm"
           />

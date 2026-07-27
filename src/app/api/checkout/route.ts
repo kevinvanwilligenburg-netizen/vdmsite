@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
+import {
+  isPlausibleKluspasNumber,
+  kluspasUnitPrice,
+  normalizeKluspasNumber,
+} from "@/lib/kluspas";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import { baseUrlFromRequest } from "@/lib/site";
@@ -84,10 +89,20 @@ export async function POST(request: Request) {
     return badRequest("Een bestelling kan maximaal 50 verschillende artikelen bevatten.");
   }
 
+  // Kluspas: een plausibel nummer levert de kortingsprijs uit de feed op. De
+  // echte controle op het ledenbestand doet de kassa; wij zetten het nummer in
+  // de order zodat de winkel het kan koppelen.
+  const kluspasInput = normalizeKluspasNumber(String(input.kluspasNumber ?? ""));
+  if (kluspasInput && !isPlausibleKluspasNumber(kluspasInput)) {
+    return badRequest("Dat Kluspas-nummer herkennen we niet. Laat het veld leeg of controleer het nummer.");
+  }
+  const kluspas = kluspasInput.length > 0;
+
   // Prijzen en productgegevens altijd server-side bepalen; de client levert
   // alleen id's en aantallen aan. Bedragen in de order zijn EURO'S (contract).
   const items: OrderItem[] = [];
   let subtotalCents = 0;
+  let kluspasSavingCents = 0;
   for (const entry of input.items) {
     const product = await getProductById(String(entry.productId ?? ""));
     if (!product) return badRequest("Een van de artikelen bestaat niet (meer).");
@@ -122,8 +137,12 @@ export async function POST(request: Request) {
       return badRequest(`Kies een kleur voor ${product.name}.`);
     }
 
-    const unitCents = variant?.price ?? product.price;
+    // Met een Kluspas geldt de kortingsprijs uit de feed; die rekenen we niet
+    // zelf uit, zodat site en kassa altijd hetzelfde bedrag hanteren.
+    const listCents = variant?.price ?? product.price;
+    const unitCents = kluspas ? kluspasUnitPrice(listCents, product.kluspasPrice) : listCents;
     subtotalCents += unitCents * qty;
+    kluspasSavingCents += (listCents - unitCents) * qty;
 
     const variantLabel = [
       variant?.name,
@@ -205,6 +224,12 @@ export async function POST(request: Request) {
     shipping: 0,
     total: subtotal,
     fulfilment,
+    ...(kluspas
+      ? {
+          kluspasNumber: kluspasInput,
+          kluspasSavings: kluspasSavingCents / 100,
+        }
+      : {}),
     isTest: mollieTestMode() || undefined,
   };
 

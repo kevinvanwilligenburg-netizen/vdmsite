@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Icon } from "@/components/icons";
 import { OrderClientActions } from "@/components/order/OrderClientActions";
+import { ReorderColor, type SavedColor } from "@/components/order/ReorderColor";
 import { euros } from "@/lib/format";
 import { getOrderSynced } from "@/lib/orders";
 import { isFailedStatus, isOpenStatus, isPaidStatus } from "@/lib/types";
@@ -223,6 +224,25 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
             </div>
           </div>
         </section>
+      )}
+
+      {/* Gemengde kleuren bewaren voor bijbestellen */}
+      {paid && (
+        <ReorderColor
+          colors={order.items
+            .filter((item) => item.color)
+            .map<SavedColor>((item) => ({
+              key: item.color?.key,
+              code: item.color?.code ?? "",
+              name: item.color?.name ?? "",
+              hex: item.color?.hex ?? "#CCCCCC",
+              productSlug: item.slug ?? "",
+              productName: item.title,
+              orderedAt: order.createdAt,
+              reference: order.reference,
+            }))
+            .filter((color) => color.productSlug)}
+        />
       )}
 
       {/* Besteloverzicht */}

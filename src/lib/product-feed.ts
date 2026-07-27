@@ -245,6 +245,8 @@ function buildProduct(group: FeedItem[]): Product | null {
   if (prices.length === 0) return null;
   const price = Math.min(...prices);
   const compareAtPrice = toCents(leader.price);
+  // Kluspas-prijs uit de feed (komma-notatie, bv. "4,13").
+  const kluspasPrice = toCents(leader.kluspas_prijs);
 
   const groupId = (leader.group_id ?? leader.id).replace(/^g:/, "");
   const inStock = group.some((item) => Number(item.voorraad ?? 0) > 0);
@@ -272,6 +274,7 @@ function buildProduct(group: FeedItem[]): Product | null {
         .join(" ") || name,
     price,
     compareAtPrice: compareAtPrice > price ? compareAtPrice : undefined,
+    kluspasPrice: kluspasPrice > 0 && kluspasPrice < price ? kluspasPrice : undefined,
     unit: leader.maat_range || leader.maat || undefined,
     colorMixable: leader.mengverf === "Ja",
     variants: variants.length > 1 ? variants : undefined,

@@ -8,6 +8,7 @@ import { getCategories, getStores } from "@/lib/tilroy";
 const PAYMENT_METHODS = ["iDEAL", "Bancontact", "Creditcard", "Apple Pay"];
 
 const SERVICE_LINKS = [
+  { href: "/zakelijk", label: "Zakelijk inkopen" },
   { href: "/klantenservice", label: "Klantenservice & FAQ" },
   { href: "/bezorgen-en-afhalen", label: "Bezorgen & afhalen" },
   { href: "/winkels", label: "Openingstijden & adressen" },
