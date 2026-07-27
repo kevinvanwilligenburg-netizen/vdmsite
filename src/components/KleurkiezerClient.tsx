@@ -63,7 +63,7 @@ export function KleurkiezerClient({
             </ul>
           </div>
         ) : (
-          <p className="rounded-xl bg-accent-light px-5 py-4 font-semibold text-ink">
+          <p className="rounded-xl bg-brand-light px-5 py-4 font-semibold text-ink">
             👆 Kies hierboven een kleur om direct mengverf in die kleur te bestellen.
           </p>
         )}

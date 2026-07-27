@@ -4,9 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
-import type { OrderStatus } from "@/lib/types";
-
-const PAID_STATUSES: OrderStatus[] = ["paid", "ready_for_pickup", "completed"];
+import { isFailedStatus, isOpenStatus, isPaidStatus, type OrderPaymentStatus } from "@/lib/types";
 
 /**
  * Client-hulpjes op de bestelpagina:
@@ -15,11 +13,11 @@ const PAID_STATUSES: OrderStatus[] = ["paid", "ready_for_pickup", "completed"];
  * - toont een "opnieuw betalen"-knop bij een mislukte betaling.
  */
 export function OrderClientActions({
-  orderId,
+  reference,
   status,
 }: {
-  orderId: string;
-  status: OrderStatus;
+  reference: string;
+  status: OrderPaymentStatus;
 }) {
   const router = useRouter();
   const { clear } = useCart();
@@ -28,34 +26,34 @@ export function OrderClientActions({
   const [retryError, setRetryError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (PAID_STATUSES.includes(status) && !clearedRef.current) {
+    if (isPaidStatus(status) && !clearedRef.current) {
       clearedRef.current = true;
       clear();
     }
   }, [status, clear]);
 
   useEffect(() => {
-    if (status !== "pending_payment") return;
+    if (!isOpenStatus(status)) return;
     const timer = window.setInterval(async () => {
       try {
-        const response = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        const response = await fetch(`/api/orders/${reference}`, { cache: "no-store" });
         if (!response.ok) return;
-        const order = (await response.json()) as { status: OrderStatus };
-        if (order.status !== status) router.refresh();
+        const order = (await response.json()) as { paymentStatus: OrderPaymentStatus };
+        if (order.paymentStatus !== status) router.refresh();
       } catch {
         // netwerkfout: volgende poging afwachten
       }
     }, 3500);
     return () => window.clearInterval(timer);
-  }, [status, orderId, router]);
+  }, [status, reference, router]);
 
-  if (status !== "payment_failed") return null;
+  if (!isFailedStatus(status)) return null;
 
   async function retryPayment() {
     setRetrying(true);
     setRetryError(null);
     try {
-      const response = await fetch(`/api/orders/${orderId}/pay`, { method: "POST" });
+      const response = await fetch(`/api/orders/${reference}/pay`, { method: "POST" });
       const data = (await response.json()) as { checkoutUrl?: string; error?: string };
       if (!response.ok || !data.checkoutUrl) {
         throw new Error(data.error ?? "Opnieuw betalen is nu niet mogelijk.");
@@ -70,7 +68,7 @@ export function OrderClientActions({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 text-center">
       <button
         type="button"
         onClick={retryPayment}

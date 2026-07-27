@@ -3,14 +3,23 @@ import type { Category, Product } from "@/lib/types";
 // Demo-catalogus: wordt gebruikt zolang er geen TILROY_API_KEY is ingesteld
 // of als de Tilroy API niet bereikbaar is (zie lib/tilroy.ts).
 
+// Categorie-indeling in lijn met devoordeelmarkt.nl (verf voorop).
 export const demoCategories: Category[] = [
   {
-    slug: "verf-en-lak",
-    name: "Verf & Lak",
+    slug: "verf",
+    name: "Verf",
     description:
-      "Muurverf, lak en grondverf voor elke klus. Mengverf maken we in de winkel op elke gewenste RAL-kleur.",
+      "Muurverf, lak, grondverf en beits voor de laagste prijs. Mengverf maken we gratis in de winkel op elke gewenste RAL-kleur.",
     icon: "🎨",
-    hue: 348,
+    hue: 25,
+  },
+  {
+    slug: "verfbenodigdheden",
+    name: "Verfbenodigdheden",
+    description:
+      "Kwasten, rollers, afplaktape en al het andere schildersgereedschap voor een strak eindresultaat.",
+    icon: "🖌️",
+    hue: 45,
   },
   {
     slug: "gereedschap",
@@ -21,48 +30,40 @@ export const demoCategories: Category[] = [
     hue: 215,
   },
   {
-    slug: "tuin-en-buiten",
-    name: "Tuin & Buiten",
-    description:
-      "Alles voor tuin, terras en balkon. Tuingereedschap, beits en buitenartikelen voor een voordeelprijs.",
-    icon: "🌿",
-    hue: 130,
-  },
-  {
-    slug: "huishouden",
-    name: "Huishouden",
-    description:
-      "Handige huishoudartikelen en schoonmaakproducten. Elke dag lage prijzen op alles voor in huis.",
-    icon: "🧺",
-    hue: 42,
-  },
-  {
-    slug: "verlichting-en-elektra",
-    name: "Verlichting & Elektra",
+    slug: "elektra",
+    name: "Elektra & Verlichting",
     description:
       "LED-lampen, verlengsnoeren en elektramateriaal. Energiezuinig en voordelig het hele huis verlicht.",
     icon: "💡",
     hue: 265,
   },
   {
-    slug: "klus-en-bevestiging",
-    name: "Klus & Bevestiging",
+    slug: "tuin-en-buiten",
+    name: "Tuin & Buiten",
     description:
-      "Schroeven, pluggen, trappen en al het bevestigingsmateriaal dat je nodig hebt om elke klus af te maken.",
-    icon: "🔩",
-    hue: 200,
+      "Alles voor tuin, terras en balkon. Tuingereedschap en buitenartikelen voor een voordeelprijs.",
+    icon: "🌿",
+    hue: 130,
+  },
+  {
+    slug: "reinigen-en-huishouden",
+    name: "Reinigen & Huishouden",
+    description:
+      "Schoonmaakproducten en handige huishoudartikelen. Elke dag lage prijzen op alles voor in huis.",
+    icon: "🧽",
+    hue: 190,
   },
 ];
 
 export const demoProducts: Product[] = [
-  // ── Verf & Lak ────────────────────────────────────────────────
+  // ── Verf ──────────────────────────────────────────────────────
   {
     id: "vdm-verf-001",
     slug: "muurverf-mat-wit",
     name: "Muurverf Mat Wit",
     brand: "VDM Basics",
     sku: "VDM-VERF-001",
-    category: "verf-en-lak",
+    category: "verf",
     shortDescription:
       "Dekkende matte muurverf voor binnen in helder wit (RAL 9010). Reukarm en makkelijk aan te brengen.",
     description:
@@ -82,7 +83,7 @@ export const demoProducts: Product[] = [
       { label: "Toepassing", value: "Binnen, muur en plafond" },
     ],
     tags: ["muurverf", "wit", "binnen", "latex"],
-    art: { icon: "🪣", hue: 348 },
+    art: { icon: "🪣", hue: 25 },
   },
   {
     id: "vdm-verf-002",
@@ -90,7 +91,7 @@ export const demoProducts: Product[] = [
     name: "Mengverf Muurverf Mat – elke RAL-kleur",
     brand: "VDM Kleurmix",
     sku: "VDM-VERF-002",
-    category: "verf-en-lak",
+    category: "verf",
     shortDescription:
       "Matte muurverf, in de winkel gratis gemengd op elke gewenste RAL-kleur. Kies je kleur met de kleurkiezer.",
     description:
@@ -119,7 +120,7 @@ export const demoProducts: Product[] = [
     name: "Mengverf Lak Zijdeglans – elke RAL-kleur",
     brand: "VDM Kleurmix",
     sku: "VDM-VERF-003",
-    category: "verf-en-lak",
+    category: "verf",
     shortDescription:
       "Slijtvaste zijdeglanslak op waterbasis, gemengd op elke RAL-kleur. Voor deuren, kozijnen en meubels.",
     description:
@@ -147,7 +148,7 @@ export const demoProducts: Product[] = [
     name: "Grondverf Universeel 750 ml",
     brand: "VDM Basics",
     sku: "VDM-VERF-004",
-    category: "verf-en-lak",
+    category: "verf",
     shortDescription:
       "Universele grondverf op waterbasis voor hout, metaal en kunststof. Sneldrogend en goed schuurbaar.",
     description:
@@ -164,12 +165,36 @@ export const demoProducts: Product[] = [
     art: { icon: "🥫", hue: 210 },
   },
   {
+    id: "vdm-tuin-002",
+    slug: "tuinbeits-douglas-2-5l",
+    name: "Tuinbeits Douglas 2,5 L",
+    brand: "GreenGarden",
+    sku: "VDM-TUIN-002",
+    category: "verf",
+    shortDescription:
+      "Beschermende tuinbeits op waterbasis in warme douglas-tint. Voor schutting, schuur en tuinhout.",
+    description:
+      "Deze tuinbeits beschermt schuttingen, schuren en ander tuinhout tegen weer en wind, en geeft het hout een warme douglas-uitstraling. Op waterbasis, dus reukarm en snel droog. Eén laag gaat tot drie jaar mee.",
+    price: 2295,
+    unit: "2,5 liter",
+    specs: [
+      { label: "Kleur", value: "Douglas (transparant)" },
+      { label: "Basis", value: "Waterbasis" },
+      { label: "Rendement", value: "Ca. 10 m² per liter" },
+      { label: "Bescherming", value: "UV- en waterwerend" },
+    ],
+    tags: ["beits", "tuinhout", "houtbescherming", "buiten"],
+    art: { icon: "🪵", hue: 28 },
+  },
+
+  // ── Verfbenodigdheden ─────────────────────────────────────────
+  {
     id: "vdm-verf-005",
     slug: "kwastenset-5-delig",
     name: "Kwastenset 5-delig",
     brand: "VDM Pro",
     sku: "VDM-VERF-005",
-    category: "verf-en-lak",
+    category: "verfbenodigdheden",
     shortDescription:
       "Complete kwastenset met vijf maten voor lak- en muurverfklussen. Verliest geen haren.",
     description:
@@ -191,7 +216,7 @@ export const demoProducts: Product[] = [
     name: "Afplaktape 2 rollen à 50 m",
     brand: "VDM Pro",
     sku: "VDM-VERF-006",
-    category: "verf-en-lak",
+    category: "verfbenodigdheden",
     shortDescription:
       "Scherpe verflijnen zonder doorbloeden. Twee rollen professionele afplaktape van elk 50 meter.",
     description:
@@ -275,6 +300,96 @@ export const demoProducts: Product[] = [
     tags: ["waterpas", "meten"],
     art: { icon: "📐", hue: 100 },
   },
+  {
+    id: "vdm-klus-001",
+    slug: "schroevenassortiment-1000-delig",
+    name: "Schroevenassortiment 1000-delig",
+    brand: "VDM Pro",
+    sku: "VDM-KLUS-001",
+    category: "gereedschap",
+    shortDescription:
+      "Duizend spaanplaatschroeven in de acht meest gebruikte maten, overzichtelijk in een assortimentsdoos.",
+    description:
+      "Nooit meer zonder de juiste schroef. Deze assortimentsdoos bevat duizend verzinkte spaanplaatschroeven (PZ2) in acht gangbare maten, van 3×16 tot 5×70 mm. De doos heeft uitneembare vakken en een klikdeksel.",
+    price: 1295,
+    unit: "1000 stuks",
+    specs: [
+      { label: "Aantal", value: "1000 schroeven, 8 maten" },
+      { label: "Type", value: "Spaanplaatschroef, verzinkt" },
+      { label: "Aandrijving", value: "Pozidriv PZ2" },
+    ],
+    tags: ["schroeven", "bevestiging"],
+    art: { icon: "🪛", hue: 220 },
+  },
+  {
+    id: "vdm-klus-002",
+    slug: "huishoudtrap-aluminium-8-treden",
+    name: "Huishoudtrap aluminium 8 treden",
+    brand: "VDM Pro",
+    sku: "VDM-KLUS-002",
+    category: "gereedschap",
+    shortDescription:
+      "Lichtgewicht aluminium trap met acht brede treden, veiligheidsbeugel en anti-slip voeten.",
+    description:
+      "Stabiele huishoudtrap van licht aluminium met acht extra brede treden met anti-slip profiel. De veiligheidsbeugel geeft extra houvast en het gereedschapsplateau houdt je spullen binnen handbereik. Gecertificeerd tot 150 kg.",
+    price: 8995,
+    compareAtPrice: 13900,
+    unit: "per stuk",
+    specs: [
+      { label: "Treden", value: "8, extra breed" },
+      { label: "Sta-hoogte", value: "1,70 m" },
+      { label: "Max. belasting", value: "150 kg (EN 131)" },
+      { label: "Gewicht", value: "6,8 kg" },
+    ],
+    tags: ["trap", "ladder", "klussen"],
+    art: { icon: "🪜", hue: 170 },
+  },
+
+  // ── Elektra & Verlichting ─────────────────────────────────────
+  {
+    id: "vdm-lamp-001",
+    slug: "led-lampen-e27-6-pack",
+    name: "LED-lampen E27 6-pack",
+    brand: "BrightHome",
+    sku: "VDM-LAMP-001",
+    category: "elektra",
+    shortDescription:
+      "Zes energiezuinige LED-lampen met grote fitting (E27), warm wit licht en 15.000 branduren.",
+    description:
+      "Vervang al je oude gloeilampen in één keer met dit voordelige 6-pack. De lampen geven direct warm wit licht (2700K), verbruiken slechts 4,9 watt en gaan tot 15.000 branduren mee. Vergelijkbaar met een 40W gloeilamp.",
+    price: 995,
+    compareAtPrice: 1995,
+    unit: "6 stuks",
+    specs: [
+      { label: "Fitting", value: "E27 (grote fitting)" },
+      { label: "Lichtkleur", value: "2700K warm wit" },
+      { label: "Vermogen", value: "4,9 W (≈ 40 W gloeilamp)" },
+      { label: "Levensduur", value: "15.000 uur" },
+    ],
+    tags: ["led", "lampen", "verlichting"],
+    art: { icon: "💡", hue: 50 },
+  },
+  {
+    id: "vdm-lamp-002",
+    slug: "verlengsnoer-3-voudig-5m",
+    name: "Verlengsnoer 3-voudig 5 m",
+    brand: "VDM Basics",
+    sku: "VDM-LAMP-002",
+    category: "elektra",
+    shortDescription:
+      "Verlengsnoer met drie geaarde stopcontacten en vijf meter kabel. Met kinderbeveiliging.",
+    description:
+      "Handig verlengsnoer met drie geaarde contacten en vijf meter snoer. Voorzien van kinderbeveiliging en een ophangoog. Geschikt voor binnen, tot 3680 watt.",
+    price: 795,
+    unit: "per stuk",
+    specs: [
+      { label: "Contacten", value: "3 × geaard" },
+      { label: "Kabellengte", value: "5 meter" },
+      { label: "Max. vermogen", value: "3680 W" },
+    ],
+    tags: ["verlengsnoer", "elektra"],
+    art: { icon: "🔌", hue: 0 },
+  },
 
   // ── Tuin & Buiten ─────────────────────────────────────────────
   {
@@ -300,28 +415,6 @@ export const demoProducts: Product[] = [
     art: { icon: "🚿", hue: 190 },
   },
   {
-    id: "vdm-tuin-002",
-    slug: "tuinbeits-douglas-2-5l",
-    name: "Tuinbeits Douglas 2,5 L",
-    brand: "GreenGarden",
-    sku: "VDM-TUIN-002",
-    category: "tuin-en-buiten",
-    shortDescription:
-      "Beschermende tuinbeits op waterbasis in warme douglas-tint. Voor schutting, schuur en tuinhout.",
-    description:
-      "Deze tuinbeits beschermt schuttingen, schuren en ander tuinhout tegen weer en wind, en geeft het hout een warme douglas-uitstraling. Op waterbasis, dus reukarm en snel droog. Eén laag gaat tot drie jaar mee.",
-    price: 2295,
-    unit: "2,5 liter",
-    specs: [
-      { label: "Kleur", value: "Douglas (transparant)" },
-      { label: "Basis", value: "Waterbasis" },
-      { label: "Rendement", value: "Ca. 10 m² per liter" },
-      { label: "Bescherming", value: "UV- en waterwerend" },
-    ],
-    tags: ["beits", "tuinhout", "buiten"],
-    art: { icon: "🪵", hue: 28 },
-  },
-  {
     id: "vdm-tuin-003",
     slug: "werkhandschoenen-3-paar",
     name: "Werkhandschoenen 3 paar",
@@ -343,14 +436,14 @@ export const demoProducts: Product[] = [
     art: { icon: "🧤", hue: 140 },
   },
 
-  // ── Huishouden ────────────────────────────────────────────────
+  // ── Reinigen & Huishouden ─────────────────────────────────────
   {
     id: "vdm-huis-001",
     slug: "schoonmaakset-8-delig",
     name: "Schoonmaakset 8-delig",
     brand: "BrightHome",
     sku: "VDM-HUIS-001",
-    category: "huishouden",
+    category: "reinigen-en-huishouden",
     shortDescription:
       "Complete schoonmaakset met emmer, mop, trekker en doeken. Alles om je huis te laten blinken.",
     description:
@@ -371,7 +464,7 @@ export const demoProducts: Product[] = [
     name: "Wasrek RVS Tower",
     brand: "BrightHome",
     sku: "VDM-HUIS-002",
-    category: "huishouden",
+    category: "reinigen-en-huishouden",
     shortDescription:
       "Ruim inklapbaar droogrek van roestvrij staal met 20 meter drooglengte en wieltjes.",
     description:
@@ -386,98 +479,6 @@ export const demoProducts: Product[] = [
     ],
     tags: ["wasrek", "huishouden"],
     art: { icon: "🧺", hue: 240 },
-  },
-
-  // ── Verlichting & Elektra ─────────────────────────────────────
-  {
-    id: "vdm-lamp-001",
-    slug: "led-lampen-e27-6-pack",
-    name: "LED-lampen E27 6-pack",
-    brand: "BrightHome",
-    sku: "VDM-LAMP-001",
-    category: "verlichting-en-elektra",
-    shortDescription:
-      "Zes energiezuinige LED-lampen met grote fitting (E27), warm wit licht en 15.000 branduren.",
-    description:
-      "Vervang al je oude gloeilampen in één keer met dit voordelige 6-pack. De lampen geven direct warm wit licht (2700K), verbruiken slechts 4,9 watt en gaan tot 15.000 branduren mee. Vergelijkbaar met een 40W gloeilamp.",
-    price: 995,
-    compareAtPrice: 1995,
-    unit: "6 stuks",
-    specs: [
-      { label: "Fitting", value: "E27 (grote fitting)" },
-      { label: "Lichtkleur", value: "2700K warm wit" },
-      { label: "Vermogen", value: "4,9 W (≈ 40 W gloeilamp)" },
-      { label: "Levensduur", value: "15.000 uur" },
-    ],
-    tags: ["led", "lampen", "verlichting"],
-    art: { icon: "💡", hue: 50 },
-  },
-  {
-    id: "vdm-lamp-002",
-    slug: "verlengsnoer-3-voudig-5m",
-    name: "Verlengsnoer 3-voudig 5 m",
-    brand: "VDM Basics",
-    sku: "VDM-LAMP-002",
-    category: "verlichting-en-elektra",
-    shortDescription:
-      "Verlengsnoer met drie geaarde stopcontacten en vijf meter kabel. Met kinderbeveiliging.",
-    description:
-      "Handig verlengsnoer met drie geaarde contacten en vijf meter snoer. Voorzien van kinderbeveiliging en een ophangoog. Geschikt voor binnen, tot 3680 watt.",
-    price: 795,
-    unit: "per stuk",
-    specs: [
-      { label: "Contacten", value: "3 × geaard" },
-      { label: "Kabellengte", value: "5 meter" },
-      { label: "Max. vermogen", value: "3680 W" },
-    ],
-    tags: ["verlengsnoer", "elektra"],
-    art: { icon: "🔌", hue: 0 },
-  },
-
-  // ── Klus & Bevestiging ────────────────────────────────────────
-  {
-    id: "vdm-klus-001",
-    slug: "schroevenassortiment-1000-delig",
-    name: "Schroevenassortiment 1000-delig",
-    brand: "VDM Pro",
-    sku: "VDM-KLUS-001",
-    category: "klus-en-bevestiging",
-    shortDescription:
-      "Duizend spaanplaatschroeven in de acht meest gebruikte maten, overzichtelijk in een assortimentsdoos.",
-    description:
-      "Nooit meer zonder de juiste schroef. Deze assortimentsdoos bevat duizend verzinkte spaanplaatschroeven (PZ2) in acht gangbare maten, van 3×16 tot 5×70 mm. De doos heeft uitneembare vakken en een klikdeksel.",
-    price: 1295,
-    unit: "1000 stuks",
-    specs: [
-      { label: "Aantal", value: "1000 schroeven, 8 maten" },
-      { label: "Type", value: "Spaanplaatschroef, verzinkt" },
-      { label: "Aandrijving", value: "Pozidriv PZ2" },
-    ],
-    tags: ["schroeven", "bevestiging"],
-    art: { icon: "🪛", hue: 220 },
-  },
-  {
-    id: "vdm-klus-002",
-    slug: "huishoudtrap-aluminium-8-treden",
-    name: "Huishoudtrap aluminium 8 treden",
-    brand: "VDM Pro",
-    sku: "VDM-KLUS-002",
-    category: "klus-en-bevestiging",
-    shortDescription:
-      "Lichtgewicht aluminium trap met acht brede treden, veiligheidsbeugel en anti-slip voeten.",
-    description:
-      "Stabiele huishoudtrap van licht aluminium met acht extra brede treden met anti-slip profiel. De veiligheidsbeugel geeft extra houvast en het gereedschapsplateau houdt je spullen binnen handbereik. Gecertificeerd tot 150 kg.",
-    price: 8995,
-    compareAtPrice: 13900,
-    unit: "per stuk",
-    specs: [
-      { label: "Treden", value: "8, extra breed" },
-      { label: "Sta-hoogte", value: "1,70 m" },
-      { label: "Max. belasting", value: "150 kg (EN 131)" },
-      { label: "Gewicht", value: "6,8 kg" },
-    ],
-    tags: ["trap", "ladder", "klussen"],
-    art: { icon: "🪜", hue: 170 },
   },
 ];
 

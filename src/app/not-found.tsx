@@ -13,7 +13,7 @@ export default function NotFound() {
         <Link href="/" className="btn btn-primary">
           Naar de homepage
         </Link>
-        <Link href="/zoeken" className="btn btn-accent">
+        <Link href="/zoeken" className="btn btn-dark">
           Zoeken
         </Link>
       </div>

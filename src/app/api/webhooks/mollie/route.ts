@@ -24,14 +24,13 @@ export async function POST(request: Request) {
     if (!order) return new Response("ok");
 
     if (payment.status === "paid") {
-      await applyPaymentResult(order, "paid", {
-        provider: "mollie",
-        id: payment.id,
-        method: payment.method ?? undefined,
-        paidAt: payment.paidAt ?? undefined,
-      });
-    } else if (["failed", "canceled", "expired"].includes(payment.status)) {
-      await applyPaymentResult(order, "failed", { provider: "mollie", id: payment.id });
+      await applyPaymentResult(order, "paid", { method: payment.method ?? undefined });
+    } else if (
+      payment.status === "failed" ||
+      payment.status === "canceled" ||
+      payment.status === "expired"
+    ) {
+      await applyPaymentResult(order, payment.status);
     }
   } catch (error) {
     console.error("[mollie] webhook verwerken mislukt:", error);

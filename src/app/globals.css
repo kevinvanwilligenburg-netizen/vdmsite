@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-ink antialiased;
+    @apply bg-[#F4F6F8] text-ink antialiased;
   }
 }
 
@@ -21,8 +21,8 @@
   .btn-primary {
     @apply bg-brand text-white shadow-sm hover:bg-brand-dark;
   }
-  .btn-accent {
-    @apply bg-accent text-ink shadow-sm hover:bg-accent-dark;
+  .btn-dark {
+    @apply bg-ink text-white shadow-sm hover:bg-black;
   }
   .input {
     @apply w-full rounded-lg border-2 border-ink/10 px-4 py-2.5 outline-none transition focus:border-brand;

@@ -82,6 +82,17 @@ export default async function StorePage({ params }: Props) {
               {store.phone}
             </a>
           </p>
+          {store.email && (
+            <p className="mt-1 text-ink-soft">
+              ✉️{" "}
+              <a
+                href={`mailto:${store.email}`}
+                className="font-semibold text-ink hover:text-brand"
+              >
+                {store.email}
+              </a>
+            </p>
+          )}
           <div className="mt-5 flex flex-wrap gap-3">
             <a
               href={mapsUrl(store)}
@@ -91,11 +102,11 @@ export default async function StorePage({ params }: Props) {
             >
               📍 Routebeschrijving
             </a>
-            <Link href="/" className="btn btn-accent">
+            <Link href="/" className="btn btn-dark">
               Online bestellen
             </Link>
           </div>
-          <div className="mt-6 rounded-xl bg-accent-light p-4 text-sm">
+          <div className="mt-6 rounded-xl bg-brand-light p-4 text-sm">
             <p className="font-bold text-ink">🛍️ Bestelling afhalen?</p>
             <p className="mt-1 text-ink-soft">
               Meld je bij de kassa met je afhaalcode. Je bestelling ligt klaar

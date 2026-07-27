@@ -1,3 +1,5 @@
+/* ── Catalogus (prijzen in centen, alleen site-intern) ─────────── */
+
 export interface ProductVariant {
   id: string;
   name: string;
@@ -16,7 +18,7 @@ export interface Product {
   description: string;
   price: number; // in centen; bij varianten de "vanaf"-prijs
   compareAtPrice?: number; // adviesprijs in centen, voor voordeel-badge
-  unit?: string; // bv. "per set" of "2,5 liter"
+  unit?: string;
   colorMixable?: boolean; // verf die in de winkel op RAL-kleur wordt gemengd
   variants?: ProductVariant[];
   specs?: { label: string; value: string }[];
@@ -40,14 +42,15 @@ export interface Store {
   postalCode: string;
   city: string;
   phone: string;
+  email?: string;
   openingHours: { day: string; hours: string }[];
 }
 
 export interface RalColor {
-  code: string; // bv. "9010"
-  name: string; // bv. "Zuiver wit"
-  hex: string; // indicatieve weergave
-  group: string; // bv. "Wit & zwart"
+  code: string;
+  name: string;
+  hex: string;
+  group: string;
 }
 
 export interface CartColor {
@@ -56,6 +59,7 @@ export interface CartColor {
   hex: string;
 }
 
+/** Winkelwagenregel (client-side, prijzen in centen). */
 export interface CartItem {
   key: string; // uniek per product+variant+kleur
   productId: string;
@@ -70,37 +74,92 @@ export interface CartItem {
   hue: number;
 }
 
-export type OrderStatus =
-  | "pending_payment"
-  | "payment_failed"
-  | "paid"
-  | "ready_for_pickup"
-  | "completed"
-  | "cancelled";
+/* ── Bestellingen ──────────────────────────────────────────────────
+ *
+ * ⚠️ EXTERN CONTRACT — zelfde conventie als de Klus=r-site. Het VDM-dashboard
+ * (repo dashboardvdm) leest de KV READ-ONLY mee op de keys `order:<id>`
+ * (Order-JSON) en `order:index` (SET met alle order-ids) en op deze
+ * veldnamen: reference / createdAt / paymentStatus / customer / items
+ * (title, quantity, price, variantLabel) / subtotal / shipping / total /
+ * paymentMethod / isTest / channel / refundedAmount / shipment.
+ * Bedragen zijn EURO'S (decimaal, bv. 24.95) — géén centen. Extra velden
+ * zijn prima (het dashboard leest defensief), maar wijzig deze namen niet
+ * zonder dashboardvdm mee te nemen.
+ * ────────────────────────────────────────────────────────────────── */
 
-export interface OrderCustomer {
-  name: string;
-  email: string;
-  phone: string;
+export type OrderPaymentStatus =
+  | "open"
+  | "pending"
+  | "paid"
+  | "authorized"
+  | "shipped"
+  | "delivered"
+  | "canceled"
+  | "failed"
+  | "expired"
+  | "refunded";
+
+export function isPaidStatus(status: OrderPaymentStatus): boolean {
+  return ["paid", "authorized", "shipped", "delivered"].includes(status);
 }
 
-export interface OrderPayment {
-  provider: "mollie" | "demo";
-  id?: string;
-  method?: string;
-  paidAt?: string;
+export function isOpenStatus(status: OrderPaymentStatus): boolean {
+  return ["open", "pending"].includes(status);
+}
+
+export function isFailedStatus(status: OrderPaymentStatus): boolean {
+  return ["canceled", "failed", "expired"].includes(status);
+}
+
+export interface OrderCustomer {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+}
+
+/** Orderregel volgens het gedeelde contract (prijs in euro's per stuk). */
+export interface OrderItem {
+  key: string;
+  productId: string;
+  variantId?: string;
+  title: string;
+  brand?: string;
+  image?: string;
+  variantLabel?: string;
+  slug?: string;
+  quantity: number;
+  price: number; // euro's per stuk, incl. btw
+  // VDM-extra's (dashboard negeert onbekende velden):
+  color?: CartColor;
+  icon?: string;
+  hue?: number;
 }
 
 export interface Order {
-  id: string;
-  createdAt: string;
-  status: OrderStatus;
-  items: CartItem[];
-  totals: { subtotal: number; total: number };
+  id: string; // ord_xxxxxxxx
+  reference: string; // VDM-123456
+  createdAt: string; // ISO
+  paymentStatus: OrderPaymentStatus;
+  paymentMethod?: string;
   customer: OrderCustomer;
+  items: OrderItem[];
+  subtotal: number; // euro's
+  shipping: number; // euro's (afhalen = 0)
+  total: number; // euro's
+  isTest?: boolean;
+  channel?: "web" | "pos";
+  refundedAmount?: number;
+  molliePaymentId?: string;
+  shipment?: { trackTrace?: string };
+  // VDM-extra's voor de afhaalflow:
+  fulfilment: "pickup";
   store: { id: string; name: string; city: string };
   pickupCode: string;
-  payment: OrderPayment;
+  readyForPickupAt?: string;
+  pickedUpAt?: string;
   tilroySaleId?: string;
 }
 
@@ -112,7 +171,7 @@ export interface CheckoutItemInput {
 }
 
 export interface CheckoutInput {
-  customer: OrderCustomer;
+  customer: { firstName: string; lastName: string; email: string; phone: string };
   storeId: string;
   items: CheckoutItemInput[];
 }

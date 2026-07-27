@@ -1,13 +1,27 @@
 import type { Metadata } from "next";
+import { Mulish } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { CartProvider } from "@/components/cart/CartProvider";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
-import { absoluteUrl, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
+import {
+  absoluteUrl,
+  CONTACT_EMAIL,
+  CONTACT_PHONE,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+} from "@/lib/site";
 
 import "./globals.css";
+
+const mulish = Mulish({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mulish",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -16,15 +30,17 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Bij De Voordeelmarkt klus je voor weinig: verf op elke RAL-kleur gemengd, gereedschap en alles voor huis & tuin. Online bestellen en gratis afhalen in de winkel.",
+    "De beste verf voor de laagste prijs. Mengverf in elke RAL-kleur, gereedschap en alles om te klussen. Online bestellen en gratis afhalen in Nijverdal, Apeldoorn, Deventer, Zutphen of Emmen.",
   keywords: [
     "voordeelmarkt",
-    "klussen",
     "verf",
     "mengverf",
     "RAL kleuren",
+    "muurverf",
+    "lak",
+    "verfdiscounter",
     "gereedschap",
-    "bouwmarkt",
+    "klussen",
     "afhalen in de winkel",
   ],
   openGraph: {
@@ -33,7 +49,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${SITE_NAME} – ${SITE_TAGLINE}`,
     description:
-      "Verf op kleur, gereedschap en alles voor huis & tuin voor de laagste prijs. Online bestellen, gratis afhalen in de winkel.",
+      "Mengverf in elke RAL-kleur, gereedschap en alles om te klussen voor de laagste prijs. Online bestellen, gratis afhalen in de winkel.",
     url: SITE_URL,
   },
   robots: { index: true, follow: true },
@@ -45,6 +61,13 @@ const organizationJsonLd = {
   name: SITE_NAME,
   url: SITE_URL,
   logo: absoluteUrl("/icon.svg"),
+  contactPoint: {
+    "@type": "ContactPoint",
+    telephone: CONTACT_PHONE.replace(/\s/g, ""),
+    email: CONTACT_EMAIL,
+    contactType: "customer service",
+    availableLanguage: "Dutch",
+  },
 };
 
 const websiteJsonLd = {
@@ -61,7 +84,7 @@ const websiteJsonLd = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="nl">
+    <html lang="nl" className={mulish.variable}>
       <body>
         <JsonLd data={organizationJsonLd} />
         <JsonLd data={websiteJsonLd} />

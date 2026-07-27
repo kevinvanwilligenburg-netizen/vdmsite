@@ -3,8 +3,14 @@ const euroFormatter = new Intl.NumberFormat("nl-NL", {
   currency: "EUR",
 });
 
+/** Formatteer een bedrag in CENTEN (catalogus/winkelwagen). */
 export function euro(cents: number): string {
   return euroFormatter.format(cents / 100);
+}
+
+/** Formatteer een bedrag in EURO'S (bestellingen volgens het ordercontract). */
+export function euros(amount: number): string {
+  return euroFormatter.format(amount);
 }
 
 export function discountPct(price: number, compareAtPrice: number): number {

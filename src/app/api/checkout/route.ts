@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { createMolliePayment, mollieEnabled } from "@/lib/mollie";
-import { createOrder, updateOrder } from "@/lib/orders";
+import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
+import { createOrder, setMolliePaymentId } from "@/lib/orders";
 import { findRal } from "@/lib/ral";
 import { baseUrlFromRequest } from "@/lib/site";
 import { getProductById, getStore } from "@/lib/tilroy";
-import type { CartItem, CheckoutInput } from "@/lib/types";
+import type { CheckoutInput, OrderItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +23,12 @@ export async function POST(request: Request) {
     return badRequest("Ongeldige aanvraag.");
   }
 
-  const name = (input.customer?.name ?? "").trim();
+  const firstName = (input.customer?.firstName ?? "").trim();
+  const lastName = (input.customer?.lastName ?? "").trim();
   const email = (input.customer?.email ?? "").trim();
   const phone = (input.customer?.phone ?? "").trim();
-  if (name.length < 2) return badRequest("Vul je naam in.");
+  if (firstName.length < 2) return badRequest("Vul je voornaam in.");
+  if (lastName.length < 2) return badRequest("Vul je achternaam in.");
   if (!EMAIL_PATTERN.test(email)) return badRequest("Vul een geldig e-mailadres in.");
   if (phone.replace(/[^\d]/g, "").length < 8) {
     return badRequest("Vul een geldig telefoonnummer in.");
@@ -43,8 +45,9 @@ export async function POST(request: Request) {
   }
 
   // Prijzen en productgegevens altijd server-side bepalen; de client levert
-  // alleen id's en aantallen aan.
-  const items: CartItem[] = [];
+  // alleen id's en aantallen aan. Bedragen in de order zijn EURO'S (contract).
+  const items: OrderItem[] = [];
+  let subtotalCents = 0;
   for (const entry of input.items) {
     const product = await getProductById(String(entry.productId ?? ""));
     if (!product) return badRequest("Een van de artikelen bestaat niet (meer).");
@@ -61,7 +64,7 @@ export async function POST(request: Request) {
       return badRequest(`Ongeldige variant voor ${product.name}.`);
     }
 
-    let color: CartItem["color"];
+    let color: OrderItem["color"];
     if (entry.colorCode) {
       if (!product.colorMixable) {
         return badRequest(`${product.name} is niet op kleur te mengen.`);
@@ -73,43 +76,60 @@ export async function POST(request: Request) {
       return badRequest(`Kies een kleur voor ${product.name}.`);
     }
 
+    const unitCents = variant?.price ?? product.price;
+    subtotalCents += unitCents * qty;
+
+    const variantLabel = [
+      variant?.name,
+      color ? `RAL ${color.code} ${color.name}` : undefined,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
     items.push({
       key: `${product.id}:${variant?.id ?? ""}:${color?.code ?? ""}`,
       productId: product.id,
-      slug: product.slug,
-      name: product.name,
       variantId: variant?.id,
-      variantName: variant?.name,
+      title: product.name,
+      brand: product.brand,
+      image: "",
+      variantLabel: variantLabel || undefined,
+      slug: product.slug,
+      quantity: qty,
+      price: unitCents / 100,
       color,
-      unitPrice: variant?.price ?? product.price,
-      qty,
       icon: product.art.icon,
       hue: product.art.hue,
     });
   }
 
+  const subtotal = subtotalCents / 100;
   const order = await createOrder({
+    customer: { firstName, lastName, email, phone, country: "NL" },
     items,
-    customer: { name, email, phone },
+    subtotal,
+    shipping: 0,
+    total: subtotal,
     store: { id: store.id, name: store.name, city: store.city },
+    isTest: mollieTestMode() || undefined,
   });
 
   const baseUrl = baseUrlFromRequest(request);
 
   if (!mollieEnabled()) {
-    await updateOrder(order.id, { payment: { provider: "demo" } });
     return NextResponse.json({
       orderId: order.id,
-      checkoutUrl: `/betalen/demo/${order.id}`,
+      reference: order.reference,
+      checkoutUrl: `/betalen/demo/${order.reference}`,
     });
   }
 
   try {
     const { paymentId, checkoutUrl } = await createMolliePayment(order, baseUrl);
-    await updateOrder(order.id, { payment: { provider: "mollie", id: paymentId } });
-    return NextResponse.json({ orderId: order.id, checkoutUrl });
+    await setMolliePaymentId(order.id, paymentId);
+    return NextResponse.json({ orderId: order.id, reference: order.reference, checkoutUrl });
   } catch (error) {
-    console.error(`[mollie] betaling aanmaken voor ${order.id} mislukt:`, error);
+    console.error(`[mollie] betaling aanmaken voor ${order.reference} mislukt:`, error);
     return NextResponse.json(
       { error: "De betaling kon niet worden gestart. Probeer het opnieuw." },
       { status: 502 },

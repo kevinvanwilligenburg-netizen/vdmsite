@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { mollieEnabled } from "@/lib/mollie";
 import { applyPaymentResult, getOrder } from "@/lib/orders";
+import { isOpenStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -25,20 +26,17 @@ export async function POST(request: Request) {
   if (!order) {
     return NextResponse.json({ error: "Bestelling niet gevonden." }, { status: 404 });
   }
-  if (order.status !== "pending_payment") {
+  if (!isOpenStatus(order.paymentStatus)) {
     return NextResponse.json({ error: "Deze bestelling staat niet meer open." }, { status: 409 });
   }
 
   if (body.outcome === "paid") {
-    const updated = await applyPaymentResult(order, "paid", {
-      provider: "demo",
-      method: "demo-ideal",
-    });
-    return NextResponse.json({ status: updated.status });
+    const updated = await applyPaymentResult(order, "paid", { method: "demo-ideal" });
+    return NextResponse.json({ paymentStatus: updated.paymentStatus });
   }
   if (body.outcome === "failed") {
-    const updated = await applyPaymentResult(order, "failed", { provider: "demo" });
-    return NextResponse.json({ status: updated.status });
+    const updated = await applyPaymentResult(order, "failed");
+    return NextResponse.json({ paymentStatus: updated.paymentStatus });
   }
   return NextResponse.json({ error: "Ongeldige uitkomst." }, { status: 400 });
 }

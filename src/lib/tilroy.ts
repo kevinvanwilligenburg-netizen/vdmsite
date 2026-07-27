@@ -93,6 +93,7 @@ function mapTilroyShop(record: TilroyRecord): Store | null {
     postalCode: str(record.postalCode ?? record.zip),
     city: str(record.city),
     phone: str(record.phone),
+    email: str(record.email) || undefined,
     openingHours: [],
   };
 }
@@ -189,16 +190,16 @@ export async function getStockByStore(product: Product): Promise<StoreStock[]> {
  */
 export async function pushOrderToTilroy(order: Order): Promise<string | null> {
   if (!tilroyEnabled()) {
-    console.info(`[tilroy] demomodus: bestelling ${order.id} niet doorgezet naar Tilroy.`);
+    console.info(`[tilroy] demomodus: bestelling ${order.reference} niet doorgezet naar Tilroy.`);
     return null;
   }
   try {
     const payload = {
-      reference: order.id,
+      reference: order.reference,
       shopId: order.store.id,
       type: "pickup",
       customer: {
-        name: order.customer.name,
+        name: `${order.customer.firstName} ${order.customer.lastName}`.trim(),
         email: order.customer.email,
         phone: order.customer.phone,
       },
@@ -206,14 +207,11 @@ export async function pushOrderToTilroy(order: Order): Promise<string | null> {
       lines: order.items.map((item) => ({
         sku: item.productId,
         variantId: item.variantId ?? null,
-        description:
-          item.name +
-          (item.variantName ? ` – ${item.variantName}` : "") +
-          (item.color ? ` – RAL ${item.color.code} ${item.color.name}` : ""),
-        quantity: item.qty,
-        unitPrice: item.unitPrice / 100,
+        description: item.title + (item.variantLabel ? ` – ${item.variantLabel}` : ""),
+        quantity: item.quantity,
+        unitPrice: item.price,
       })),
-      totalAmount: order.totals.total / 100,
+      totalAmount: order.total,
       paymentStatus: "paid",
     };
     const data = await tilroyFetch<TilroyRecord>(SALES_ENDPOINT, {
@@ -222,7 +220,7 @@ export async function pushOrderToTilroy(order: Order): Promise<string | null> {
     });
     return str(data.id ?? data.saleId) || null;
   } catch (error) {
-    console.error(`[tilroy] bestelling ${order.id} doorzetten mislukt:`, error);
+    console.error(`[tilroy] bestelling ${order.reference} doorzetten mislukt:`, error);
     return null;
   }
 }

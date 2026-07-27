@@ -1,8 +1,11 @@
 export const SITE_NAME = "De Voordeelmarkt";
-export const SITE_TAGLINE = "Dé discounter voor klussen, huis & tuin";
+export const SITE_TAGLINE = "De beste verf voor de laagste prijs";
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.devoordeelmarkt.nl"
 ).replace(/\/$/, "");
+
+export const CONTACT_PHONE = "+31 85 273 8338";
+export const CONTACT_EMAIL = "klantenservice@devoordeelmarkt.nl";
 
 export function absoluteUrl(path = "/"): string {
   return new URL(path, SITE_URL).toString();

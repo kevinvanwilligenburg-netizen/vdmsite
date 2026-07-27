@@ -22,7 +22,7 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
         )}
         {product.colorMixable && (
-          <span className="absolute right-3 top-3 rounded-md bg-accent px-2 py-1 text-xs font-bold text-ink shadow">
+          <span className="absolute right-3 top-3 rounded-md bg-ink px-2 py-1 text-xs font-bold text-white shadow">
             🎨 Elke RAL-kleur
           </span>
         )}
@@ -42,7 +42,7 @@ export function ProductCard({ product }: { product: Product }) {
             from={Boolean(product.variants && product.variants.length > 1)}
             size="sm"
           />
-          <span className="rounded-lg bg-accent px-3 py-1.5 text-sm font-bold text-ink transition group-hover:bg-accent-dark">
+          <span className="rounded-lg bg-ink px-3 py-1.5 text-sm font-bold text-white transition group-hover:bg-brand">
             Bekijk →
           </span>
         </div>

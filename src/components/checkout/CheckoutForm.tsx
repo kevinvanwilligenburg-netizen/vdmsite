@@ -15,7 +15,8 @@ interface StoreOption {
 
 export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const { items, subtotal, hydrated } = useCart();
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
@@ -47,7 +48,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: { name, email, phone },
+          customer: { firstName, lastName, email, phone },
           storeId,
           items: items.map((item) => ({
             productId: item.productId,
@@ -78,19 +79,34 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
         <section className="card p-6">
           <h2 className="text-lg font-black text-ink">1. Jouw gegevens</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label htmlFor="naam" className="mb-1 block text-sm font-bold text-ink">
-                Naam
+            <div>
+              <label htmlFor="voornaam" className="mb-1 block text-sm font-bold text-ink">
+                Voornaam
               </label>
               <input
-                id="naam"
+                id="voornaam"
                 required
                 minLength={2}
-                autoComplete="name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
+                autoComplete="given-name"
+                value={firstName}
+                onChange={(event) => setFirstName(event.target.value)}
                 className="input"
-                placeholder="Voor- en achternaam"
+                placeholder="Voornaam"
+              />
+            </div>
+            <div>
+              <label htmlFor="achternaam" className="mb-1 block text-sm font-bold text-ink">
+                Achternaam
+              </label>
+              <input
+                id="achternaam"
+                required
+                minLength={2}
+                autoComplete="family-name"
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
+                className="input"
+                placeholder="Achternaam"
               />
             </div>
             <div>

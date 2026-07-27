@@ -1,13 +1,15 @@
 import type { MetadataRoute } from "next";
 
+import { listPublishedPages } from "@/lib/content";
 import { absoluteUrl } from "@/lib/site";
 import { getCategories, getProducts, getStores } from "@/lib/tilroy";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, categories, stores] = await Promise.all([
+  const [products, categories, stores, pages] = await Promise.all([
     getProducts(),
     getCategories(),
     getStores(),
+    listPublishedPages(),
   ]);
   const lastModified = new Date();
 
@@ -42,6 +44,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.6,
+    })),
+    ...pages.map((page) => ({
+      url: absoluteUrl(`/info/${page.slug}`),
+      lastModified: page.updatedAt ? new Date(page.updatedAt) : lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
     })),
   ];
 }

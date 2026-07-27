@@ -2,8 +2,11 @@ import Link from "next/link";
 
 import { CategoryCard } from "@/components/CategoryCard";
 import { ProductCard } from "@/components/ProductCard";
+import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
 import { getCategories, getProducts, getStores } from "@/lib/tilroy";
+
+export const revalidate = 300;
 
 const HIGHLIGHTS = [
   {
@@ -12,27 +15,28 @@ const HIGHLIGHTS = [
     text: "Topkwaliteit voor bodemprijzen, zonder gedoe met spaaracties.",
   },
   {
-    icon: "🏬",
-    title: "Gratis afhalen",
-    text: "Bestel online en haal gratis op in een van onze 6 winkels.",
-  },
-  {
     icon: "🎨",
-    title: "Verf op kleur",
-    text: "Meer dan 140 RAL-kleuren, gratis gemengd terwijl je wacht.",
+    title: "Verf mengen in elke kleur",
+    text: "140+ RAL-kleuren, gratis gemengd — klaar terwijl je wacht.",
   },
   {
-    icon: "🔒",
-    title: "Veilig betalen",
-    text: "iDEAL, Bancontact, creditcard of Apple Pay via Mollie.",
+    icon: "🏬",
+    title: "Click & Collect",
+    text: "Online besteld, gratis afhalen. Vaak dezelfde dag al klaar.",
+  },
+  {
+    icon: "🅿️",
+    title: "Gratis parkeren",
+    text: "Alle winkels hebben gratis parkeren voor de deur.",
   },
 ];
 
 export default async function HomePage() {
-  const [products, categories, stores] = await Promise.all([
+  const [products, categories, stores, banner] = await Promise.all([
     getProducts(),
     getCategories(),
     getStores(),
+    getBanner("home-hero"),
   ]);
   const deals = products
     .filter((product) => product.compareAtPrice && product.compareAtPrice > product.price)
@@ -41,46 +45,80 @@ export default async function HomePage() {
     .map((code) => ralColors.find((color) => color.code === code))
     .filter((color): color is NonNullable<typeof color> => Boolean(color));
 
+  const heroTitle = banner?.title ?? "De beste verf voor de laagste prijs.";
+  const heroSubtitle =
+    banner?.subtitle ??
+    "Mengverf in elke RAL-kleur, gereedschap en alles om te klussen. Bestel online, betaal veilig en haal gratis op in de winkel.";
+  const heroBadge = banner?.badge ?? "Vandaag besteld, vaak vandaag al klaar";
+  const heroCtaLabel = banner?.ctaLabel ?? "Bekijk de topdeals";
+  const heroCtaHref = banner?.ctaHref ?? "#topdeals";
+
   return (
     <div className="space-y-14">
-      {/* Hero */}
-      <section className="overflow-hidden rounded-2xl bg-ink text-white">
-        <div className="grid items-center gap-8 p-8 sm:p-12 lg:grid-cols-2">
-          <div>
-            <p className="inline-block -skew-x-6 rounded-md bg-brand px-3 py-1 text-sm font-black uppercase text-white">
-              Vandaag besteld, vaak vandaag al klaar
-            </p>
-            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl">
-              Klussen voor <span className="text-accent">weinig.</span>
-            </h1>
-            <p className="mt-4 max-w-md text-lg text-white/80">
-              Verf gemengd op elke RAL-kleur, gereedschap en alles voor huis &amp;
-              tuin. Bestel online, betaal veilig en haal gratis op in de winkel.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="#topdeals" className="btn btn-accent">
-                Bekijk de topdeals
-              </Link>
-              <Link
-                href="/kleurkiezer"
-                className="btn border-2 border-white/25 text-white hover:border-accent hover:text-accent"
-              >
-                🎨 Kies je kleur
-              </Link>
-            </div>
-          </div>
-          <div className="relative hidden justify-center lg:flex" aria-hidden>
-            <div className="rotate-6 rounded-2xl bg-accent p-8 text-center shadow-lift">
-              <p className="text-6xl font-black italic text-brand">−50%</p>
-              <p className="mt-1 text-lg font-black uppercase text-ink">Tot wel 50% voordeel</p>
-              <p className="text-sm font-semibold text-ink/70">op honderden artikelen</p>
-            </div>
-            <div className="absolute -bottom-4 -left-2 -rotate-3 rounded-xl bg-white px-5 py-3 shadow-lift">
-              <p className="font-black text-ink">
-                🎨 140+ RAL-kleuren <span className="text-brand">gratis gemengd</span>
+      {/* Hero (oranje, in de stijl van de actiebanners van devoordeelmarkt.nl) */}
+      <section className="overflow-hidden rounded-2xl shadow-card">
+        <div
+          className="relative bg-gradient-to-br from-brand-bright to-brand"
+          style={
+            banner?.imageUrl
+              ? {
+                  backgroundImage: `linear-gradient(100deg, rgba(20,20,20,0.82) 0%, rgba(20,20,20,0.45) 55%, rgba(20,20,20,0.15) 100%), url(${banner.imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
+        >
+          <div className="grid items-center gap-8 p-8 sm:p-12 lg:grid-cols-[1.2fr_1fr]">
+            <div>
+              <p className="inline-block rounded-md bg-ink px-3 py-1.5 text-sm font-black uppercase text-white">
+                {heroBadge}
               </p>
+              <h1 className="mt-4 text-4xl font-black leading-tight text-white sm:text-5xl">
+                {heroTitle}
+              </h1>
+              <p className="mt-4 max-w-xl text-lg font-semibold text-white/90">
+                {heroSubtitle}
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href={heroCtaHref} className="btn btn-dark">
+                  {heroCtaLabel} →
+                </Link>
+                <Link
+                  href="/kleurkiezer"
+                  className="btn bg-white text-ink shadow-sm hover:bg-white/90"
+                >
+                  🎨 Kies je RAL-kleur
+                </Link>
+              </div>
             </div>
+            {!banner?.imageUrl && (
+              <div className="relative hidden justify-center lg:flex" aria-hidden>
+                <div className="rotate-3 rounded-2xl bg-white p-8 text-center shadow-lift">
+                  <p className="text-6xl font-black text-brand">−50%</p>
+                  <p className="mt-1 text-lg font-black uppercase text-ink">
+                    Tot wel 50% voordeel
+                  </p>
+                  <p className="text-sm font-semibold text-ink-soft">
+                    op honderden artikelen
+                  </p>
+                </div>
+                <div className="absolute -bottom-4 -left-4 -rotate-3 rounded-xl bg-ink px-5 py-3 shadow-lift">
+                  <p className="font-black text-white">
+                    🎨 140+ RAL-kleuren{" "}
+                    <span className="text-brand-bright">gratis gemengd</span>
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+        {/* Zwarte onderbalk, zoals op de actiebanners */}
+        <div className="flex items-center justify-center gap-6 bg-ink px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white sm:justify-between sm:px-8">
+          <span>Gratis afhalen</span>
+          <span className="hidden sm:inline">Verf op kleur gemengd</span>
+          <span className="hidden md:inline">Laagsteprijsgarantie op verf</span>
+          <span className="text-brand-bright">devoordeelmarkt.nl</span>
         </div>
       </section>
 
@@ -100,7 +138,7 @@ export default async function HomePage() {
       {/* Topdeals */}
       <section id="topdeals" aria-labelledby="topdeals-titel">
         <div className="mb-5 flex items-end justify-between">
-          <h2 id="topdeals-titel" className="text-2xl font-black uppercase italic text-ink sm:text-3xl">
+          <h2 id="topdeals-titel" className="text-2xl font-black uppercase text-ink sm:text-3xl">
             🔥 Topdeals van de week
           </h2>
         </div>
@@ -111,38 +149,57 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Kleurkiezer-banner */}
-      <section className="overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-black/5">
-        <div className="grid items-center gap-6 p-8 lg:grid-cols-[1fr_auto]">
-          <div>
-            <h2 className="text-2xl font-black uppercase italic text-ink sm:text-3xl">
-              Verf in <span className="text-brand">elke kleur</span> die je wilt
-            </h2>
-            <p className="mt-2 max-w-2xl text-ink-soft">
-              Kies uit meer dan 140 RAL-kleuren met onze online kleurkiezer. Wij
-              mengen je muurverf of lak gratis in de winkel — staat klaar als jij
-              je bestelling komt afhalen.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-1.5" aria-hidden>
-              {swatches.map((color) => (
-                <span
-                  key={color.code}
-                  title={`RAL ${color.code} ${color.name}`}
-                  className="h-8 w-8 rounded-md ring-1 ring-black/10"
-                  style={{ backgroundColor: color.hex }}
-                />
-              ))}
-            </div>
+      {/* Duo-banners (oranje + zwart, zoals Kluspas/Profpas op de huidige site) */}
+      <section className="grid gap-5 lg:grid-cols-2" aria-label="Uitgelicht">
+        <div className="flex flex-col items-start gap-4 rounded-2xl bg-gradient-to-br from-brand-bright to-brand p-8 text-white shadow-card">
+          <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-black uppercase tracking-wide">
+            Kleurkiezer
+          </span>
+          <h2 className="text-2xl font-black sm:text-3xl">
+            Verf in élke kleur die je wilt
+          </h2>
+          <p className="font-semibold text-white/90">
+            Kies online uit 140+ RAL-kleuren. Wij mengen je verf gratis in de
+            winkel — staat klaar als je je bestelling komt afhalen.
+          </p>
+          <div className="flex flex-wrap gap-1.5" aria-hidden>
+            {swatches.slice(0, 10).map((color) => (
+              <span
+                key={color.code}
+                title={`RAL ${color.code} ${color.name}`}
+                className="h-7 w-7 rounded-md ring-2 ring-white/40"
+                style={{ backgroundColor: color.hex }}
+              />
+            ))}
           </div>
-          <Link href="/kleurkiezer" className="btn btn-primary whitespace-nowrap">
+          <Link href="/kleurkiezer" className="btn btn-dark mt-auto">
             Open de kleurkiezer →
+          </Link>
+        </div>
+        <div className="flex flex-col items-start gap-4 rounded-2xl bg-ink p-8 text-white shadow-card">
+          <span className="rounded-full bg-brand px-3 py-1 text-xs font-black uppercase tracking-wide">
+            Click &amp; Collect
+          </span>
+          <h2 className="text-2xl font-black sm:text-3xl">
+            Gratis afhalen in de winkel
+          </h2>
+          <p className="font-semibold text-white/80">
+            Bestel online en haal je bestelling gratis op in Nijverdal,
+            Apeldoorn, Deventer, Zutphen of Emmen. Je krijgt een afhaalcode
+            zodra alles klaarstaat — vaak dezelfde dag nog.
+          </p>
+          <Link
+            href="/winkels"
+            className="btn mt-auto bg-brand text-white shadow-sm hover:bg-brand-dark"
+          >
+            Bekijk onze winkels →
           </Link>
         </div>
       </section>
 
       {/* Categorieën */}
       <section aria-labelledby="categorieen-titel">
-        <h2 id="categorieen-titel" className="mb-5 text-2xl font-black uppercase italic text-ink sm:text-3xl">
+        <h2 id="categorieen-titel" className="mb-5 text-2xl font-black uppercase text-ink sm:text-3xl">
           Shop per categorie
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -153,13 +210,13 @@ export default async function HomePage() {
       </section>
 
       {/* Winkels */}
-      <section aria-labelledby="winkels-titel" className="rounded-2xl bg-accent-light p-8">
-        <h2 id="winkels-titel" className="text-2xl font-black uppercase italic text-ink">
+      <section aria-labelledby="winkels-titel" className="rounded-2xl bg-brand-light p-8">
+        <h2 id="winkels-titel" className="text-2xl font-black uppercase text-ink">
           Gratis afhalen in {stores.length} winkels
         </h2>
         <p className="mt-2 max-w-2xl text-ink-soft">
-          Bestel vóór 16:00 en je bestelling staat meestal dezelfde dag nog voor
-          je klaar. Je ontvangt een afhaalcode zodra alles klaarstaat.
+          Vandaag besteld? Dan staat je bestelling er meestal dezelfde dag nog
+          klaar. Je ontvangt een afhaalcode zodra alles klaarstaat.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {stores.map((store) => (
@@ -175,23 +232,22 @@ export default async function HomePage() {
       </section>
 
       {/* SEO-tekst */}
-      <section className="prose-sm max-w-3xl text-ink-soft">
+      <section className="max-w-3xl text-ink-soft">
         <h2 className="text-xl font-black text-ink">
-          De Voordeelmarkt: dé bouwmarkt-discounter van Zeeland
+          De Voordeelmarkt: de verfdiscounter van Oost-Nederland
         </h2>
         <p className="mt-3 leading-relaxed">
-          Bij De Voordeelmarkt vind je alles voor het klussen in en om het huis
-          voor de laagste prijs: muurverf en lak (gemengd op elke gewenste
-          RAL-kleur), elektrisch gereedschap, tuinartikelen, verlichting en
-          bevestigingsmateriaal. Door slim in te kopen en zonder poespas te
-          verkopen, betaal jij elke dag bodemprijzen.
+          Bij De Voordeelmarkt draait alles om de beste verf voor de laagste
+          prijs. Muurverf, lak, grondverf en beits mengen we gratis op elke
+          gewenste RAL-kleur, terwijl je wacht. Daarnaast vind je in onze
+          winkels gereedschap, elektra, tuinartikelen en huishoudelijke
+          producten — allemaal voor bodemprijzen, elke dag opnieuw.
         </p>
         <p className="mt-3 leading-relaxed">
           Online bestellen is zo gedaan: kies je producten, reken veilig af met
           iDEAL, Bancontact, creditcard of Apple Pay en haal je bestelling
-          gratis op in de winkel bij jou in de buurt — in Goes, Middelburg,
-          Vlissingen, Terneuzen, Zierikzee of Hulst. Vandaag besteld is vaak
-          vandaag nog klaar.
+          gratis op in de winkel bij jou in de buurt — in Nijverdal, Apeldoorn,
+          Deventer, Zutphen of Emmen. Vandaag besteld is vaak vandaag nog klaar.
         </p>
       </section>
     </div>

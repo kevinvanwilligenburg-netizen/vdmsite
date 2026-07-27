@@ -2,119 +2,208 @@ import { randomInt } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { isKvEnabled, kvGetJSON, kvSAdd, kvSetJSON } from "@/lib/kv";
 import { getMolliePayment } from "@/lib/mollie";
 import { pushOrderToTilroy } from "@/lib/tilroy";
-import type { CartItem, Order, OrderCustomer, OrderPayment } from "@/lib/types";
+import {
+  isPaidStatus,
+  type Order,
+  type OrderCustomer,
+  type OrderItem,
+  type OrderPaymentStatus,
+} from "@/lib/types";
 
 /**
- * Eenvoudige bestandsopslag voor bestellingen (JSON per order in .data/).
- * Prima voor lokaal draaien en demo's; vervang dit in productie door een
- * database (zie README → "Naar productie").
+ * Orderstore volgens dezelfde conventie als de Klus=r-site, zodat het
+ * VDM-dashboard (repo dashboardvdm) de orders automatisch READ-ONLY kan
+ * meelezen zodra de KV-credentials daar als VDMSITE_KV_REST_API_URL/TOKEN
+ * bekend zijn.
+ *
+ * ⚠️ EXTERN CONTRACT — KV-keys (niet wijzigen zonder dashboardvdm mee te nemen):
+ *   `order:<id>`              → Order-JSON
+ *   `order:index`             → SET met alle order-ids
+ *   `orderref:<REFERENCE>`    → order-id (lookup op VDM-123456)
+ *   `ordermollie:<paymentId>` → order-id (lookup vanuit de Mollie-webhook)
+ *   `orders:email:<email>`    → SET met order-ids van die klant
+ *
+ * Opslag: in-memory cache + KV zodra die is geconfigureerd. Zonder KV worden
+ * orders lokaal als JSON bewaard in .data/orders/ (genegeerd door git), zodat
+ * de hele flow ook in demomodus blijft werken.
  */
+
+const memory = new Map<string, Order>();
+
+const KEY = {
+  order: (id: string) => `order:${id}`,
+  ref: (reference: string) => `orderref:${reference.toUpperCase()}`,
+  mollie: (paymentId: string) => `ordermollie:${paymentId}`,
+  email: (email: string) => `orders:email:${email.trim().toLowerCase()}`,
+  index: "order:index",
+};
 
 const DATA_DIR = path.join(process.cwd(), ".data", "orders");
 
-function isValidOrderId(id: string): boolean {
-  return /^[A-Z0-9-]{6,40}$/i.test(id);
-}
+const ID_PATTERN = /^ord_[a-z0-9]{6,16}$/;
+const REF_PATTERN = /^VDM-\d{6}$/i;
 
-function orderPath(id: string): string {
-  return path.join(DATA_DIR, `${id.toUpperCase()}.json`);
-}
-
-function generateOrderId(): string {
-  // Geen verwarrende tekens (0/O, 1/I) in het leesbare deel.
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function generateId(): string {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
   let suffix = "";
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     suffix += alphabet[randomInt(alphabet.length)];
   }
-  return `VDM-${suffix}`;
+  return `ord_${suffix}`;
+}
+
+function generateReference(): string {
+  return `VDM-${randomInt(100000, 1000000)}`;
 }
 
 function generatePickupCode(): string {
   return String(randomInt(100000, 1000000));
 }
 
-export async function createOrder(input: {
-  items: CartItem[];
-  customer: OrderCustomer;
-  store: { id: string; name: string; city: string };
-}): Promise<Order> {
-  const subtotal = input.items.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
-  const order: Order = {
-    id: generateOrderId(),
-    createdAt: new Date().toISOString(),
-    status: "pending_payment",
-    items: input.items,
-    totals: { subtotal, total: subtotal },
-    customer: input.customer,
-    store: input.store,
-    pickupCode: generatePickupCode(),
-    payment: { provider: "demo" },
-  };
-  await saveOrder(order);
-  return order;
-}
+/* ── Bestandsopslag (fallback zonder KV) ───────────────────────── */
 
-export async function saveOrder(order: Order): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(orderPath(order.id), JSON.stringify(order, null, 2), "utf8");
-}
-
-export async function getOrder(id: string): Promise<Order | null> {
-  if (!isValidOrderId(id)) return null;
+async function fileWrite(name: string, value: unknown): Promise<void> {
   try {
-    const raw = await fs.readFile(orderPath(id), "utf8");
-    return JSON.parse(raw) as Order;
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(path.join(DATA_DIR, name), JSON.stringify(value, null, 2), "utf8");
+  } catch (error) {
+    console.error("[orders] bestand schrijven mislukt:", error);
+  }
+}
+
+async function fileRead<T>(name: string): Promise<T | null> {
+  try {
+    const raw = await fs.readFile(path.join(DATA_DIR, name), "utf8");
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
 }
 
-export async function updateOrder(id: string, patch: Partial<Order>): Promise<Order | null> {
-  const order = await getOrder(id);
+/* ── Opslaan & laden ───────────────────────────────────────────── */
+
+async function persist(order: Order): Promise<void> {
+  memory.set(order.id, order);
+  if (isKvEnabled()) {
+    await kvSetJSON(KEY.order(order.id), order);
+    await kvSetJSON(KEY.ref(order.reference), order.id);
+    await kvSAdd(KEY.index, order.id);
+    if (order.customer.email) await kvSAdd(KEY.email(order.customer.email), order.id);
+    if (order.molliePaymentId) {
+      await kvSetJSON(KEY.mollie(order.molliePaymentId), order.id);
+    }
+    return;
+  }
+  await fileWrite(`${order.id}.json`, order);
+  await fileWrite(`ref-${order.reference.toUpperCase()}.json`, { id: order.id });
+}
+
+async function loadById(id: string): Promise<Order | null> {
+  if (!ID_PATTERN.test(id)) return null;
+  const cached = memory.get(id);
+  if (cached) return cached;
+  const fromKv = isKvEnabled() ? await kvGetJSON<Order>(KEY.order(id)) : null;
+  const order = fromKv ?? (await fileRead<Order>(`${id}.json`));
+  if (order) memory.set(order.id, order);
+  return order;
+}
+
+/** Zoek een bestelling op order-id (`ord_…`) óf op referentie (`VDM-123456`). */
+export async function getOrder(idOrReference: string): Promise<Order | null> {
+  const value = (idOrReference ?? "").trim();
+  if (ID_PATTERN.test(value)) return loadById(value);
+  if (!REF_PATTERN.test(value)) return null;
+  const reference = value.toUpperCase();
+  for (const order of memory.values()) {
+    if (order.reference.toUpperCase() === reference) return order;
+  }
+  if (isKvEnabled()) {
+    const id = await kvGetJSON<string>(KEY.ref(reference));
+    return id ? loadById(id) : null;
+  }
+  const pointer = await fileRead<{ id: string }>(`ref-${reference}.json`);
+  return pointer?.id ? loadById(pointer.id) : null;
+}
+
+/* ── Aanmaken & bijwerken ──────────────────────────────────────── */
+
+export interface CreateOrderInput {
+  customer: OrderCustomer;
+  items: OrderItem[];
+  subtotal: number; // euro's
+  shipping: number; // euro's
+  total: number; // euro's
+  store: { id: string; name: string; city: string };
+  isTest?: boolean;
+}
+
+export async function createOrder(input: CreateOrderInput): Promise<Order> {
+  const order: Order = {
+    id: generateId(),
+    reference: generateReference(),
+    createdAt: new Date().toISOString(),
+    paymentStatus: "open",
+    customer: input.customer,
+    items: input.items,
+    subtotal: input.subtotal,
+    shipping: input.shipping,
+    total: input.total,
+    isTest: input.isTest,
+    channel: "web",
+    fulfilment: "pickup",
+    store: input.store,
+    pickupCode: generatePickupCode(),
+  };
+  await persist(order);
+  return order;
+}
+
+export async function updateOrder(
+  idOrReference: string,
+  patch: Partial<Order>,
+): Promise<Order | null> {
+  const order = await getOrder(idOrReference);
   if (!order) return null;
   const updated: Order = { ...order, ...patch };
-  await saveOrder(updated);
+  await persist(updated);
   return updated;
 }
 
-const PAID_STATUSES: Order["status"][] = ["paid", "ready_for_pickup", "completed"];
-
-export function isPaidStatus(status: Order["status"]): boolean {
-  return PAID_STATUSES.includes(status);
+export async function setMolliePaymentId(
+  idOrReference: string,
+  molliePaymentId: string,
+): Promise<Order | null> {
+  return updateOrder(idOrReference, { molliePaymentId });
 }
 
 /**
  * Verwerkt de uitkomst van een betaling (webhook, demo-betaling of lazy sync).
  * Idempotent: een al betaalde bestelling wordt nooit teruggezet. Bij een
- * geslaagde betaling wordt de bestelling doorgezet naar Tilroy.
+ * geslaagde betaling wordt de bestelling als afhaalorder naar Tilroy gepusht.
  */
 export async function applyPaymentResult(
   order: Order,
-  result: "paid" | "failed",
-  paymentInfo?: Partial<OrderPayment>,
+  outcome: "paid" | "failed" | "canceled" | "expired",
+  info?: { method?: string },
 ): Promise<Order> {
-  if (isPaidStatus(order.status)) return order;
+  if (isPaidStatus(order.paymentStatus)) return order;
 
-  if (result === "failed") {
+  if (outcome !== "paid") {
     return (
       (await updateOrder(order.id, {
-        status: "payment_failed",
-        payment: { ...order.payment, ...paymentInfo },
+        paymentStatus: outcome,
+        paymentMethod: info?.method ?? order.paymentMethod,
       })) ?? order
     );
   }
 
-  const paid: Order =
+  const paid =
     (await updateOrder(order.id, {
-      status: "paid",
-      payment: {
-        ...order.payment,
-        ...paymentInfo,
-        paidAt: paymentInfo?.paidAt ?? new Date().toISOString(),
-      },
+      paymentStatus: "paid",
+      paymentMethod: info?.method ?? order.paymentMethod,
     })) ?? order;
 
   const tilroySaleId = await pushOrderToTilroy(paid);
@@ -126,32 +215,23 @@ export async function applyPaymentResult(
 
 /**
  * Haalt een bestelling op en synchroniseert onderweg de Mollie-status als de
- * betaling nog openstaat. Zo werkt de flow ook zonder bereikbare webhook
+ * betaling nog openstaat. Zo klopt de status ook zonder bereikbare webhook
  * (bijvoorbeeld op localhost).
  */
-export async function getOrderSynced(id: string): Promise<Order | null> {
-  const order = await getOrder(id);
+export async function getOrderSynced(idOrReference: string): Promise<Order | null> {
+  const order = await getOrder(idOrReference);
   if (!order) return null;
-  if (
-    order.status !== "pending_payment" ||
-    order.payment.provider !== "mollie" ||
-    !order.payment.id
-  ) {
-    return order;
-  }
+  if (order.paymentStatus !== "open" || !order.molliePaymentId) return order;
   try {
-    const payment = await getMolliePayment(order.payment.id);
+    const payment = await getMolliePayment(order.molliePaymentId);
     if (payment.status === "paid") {
-      return applyPaymentResult(order, "paid", {
-        method: payment.method ?? undefined,
-        paidAt: payment.paidAt ?? undefined,
-      });
+      return applyPaymentResult(order, "paid", { method: payment.method ?? undefined });
     }
-    if (["failed", "canceled", "expired"].includes(payment.status)) {
-      return applyPaymentResult(order, "failed");
+    if (payment.status === "failed" || payment.status === "canceled" || payment.status === "expired") {
+      return applyPaymentResult(order, payment.status);
     }
   } catch (error) {
-    console.error(`[mollie] status van bestelling ${id} bijwerken mislukt:`, error);
+    console.error(`[mollie] status van bestelling ${order.reference} bijwerken mislukt:`, error);
   }
   return order;
 }

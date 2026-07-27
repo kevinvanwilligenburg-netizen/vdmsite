@@ -4,7 +4,7 @@ import type { Order } from "@/lib/types";
  * Mollie-betaallaag via de REST API (v2).
  *
  * Zonder MOLLIE_API_KEY draait de site in demomodus: de checkout stuurt de
- * klant dan naar een gesimuleerde betaalpagina (/betalen/demo/[orderId]).
+ * klant dan naar een gesimuleerde betaalpagina (/betalen/demo/[reference]).
  */
 
 const MOLLIE_API_URL = "https://api.mollie.com/v2";
@@ -12,6 +12,11 @@ const MOLLIE_API_KEY = process.env.MOLLIE_API_KEY;
 
 export function mollieEnabled(): boolean {
   return Boolean(MOLLIE_API_KEY);
+}
+
+/** Demomodus of Mollie-testsleutel → bestellingen tellen als test (isTest). */
+export function mollieTestMode(): boolean {
+  return !MOLLIE_API_KEY || MOLLIE_API_KEY.startsWith("test_");
 }
 
 export interface MolliePayment {
@@ -50,10 +55,10 @@ export async function createMolliePayment(
   const body: Record<string, unknown> = {
     amount: {
       currency: "EUR",
-      value: (order.totals.total / 100).toFixed(2),
+      value: order.total.toFixed(2),
     },
-    description: `De Voordeelmarkt bestelling ${order.id}`,
-    redirectUrl: `${baseUrl}/bestelling/${order.id}`,
+    description: `De Voordeelmarkt bestelling ${order.reference}`,
+    redirectUrl: `${baseUrl}/bestelling/${order.reference}`,
     locale: "nl_NL",
     metadata: { orderId: order.id },
   };

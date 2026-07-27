@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
 import { DemoPayButtons } from "@/components/order/DemoPayButtons";
-import { euro } from "@/lib/format";
+import { euros } from "@/lib/format";
 import { getOrder } from "@/lib/orders";
+import { isOpenStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,8 @@ export default async function DemoPaymentPage({
 }) {
   const order = await getOrder(params.orderId);
   if (!order) notFound();
-  if (order.status !== "pending_payment") {
-    redirect(`/bestelling/${order.id}`);
+  if (!isOpenStatus(order.paymentStatus)) {
+    redirect(`/bestelling/${order.reference}`);
   }
 
   return (
@@ -30,9 +31,9 @@ export default async function DemoPaymentPage({
           <p className="text-sm font-semibold uppercase tracking-wide text-white/60">
             Gesimuleerde betaalomgeving
           </p>
-          <p className="mt-2 text-3xl font-black">{euro(order.totals.total)}</p>
+          <p className="mt-2 text-3xl font-black">{euros(order.total)}</p>
           <p className="mt-1 text-sm text-white/70">
-            De Voordeelmarkt · bestelling {order.id}
+            De Voordeelmarkt · bestelling {order.reference}
           </p>
         </div>
         <div className="space-y-4 p-6">
@@ -41,7 +42,7 @@ export default async function DemoPaymentPage({
             (er is geen Mollie API-sleutel ingesteld). Kies hieronder de uitkomst
             van de betaling om de volledige bestelflow te testen.
           </p>
-          <DemoPayButtons orderId={order.id} />
+          <DemoPayButtons orderId={order.reference} />
           <p className="text-center text-xs text-ink-soft">
             In productie staat hier de echte betaalpagina van Mollie met iDEAL,
             Bancontact, creditcard en Apple Pay.
