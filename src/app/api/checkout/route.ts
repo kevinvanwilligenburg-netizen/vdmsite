@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { resolvePaintColor } from "@/lib/colors";
-import { deliveryInfo } from "@/lib/delivery";
+import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import { baseUrlFromRequest } from "@/lib/site";
-import { getProductById, getStore } from "@/lib/tilroy";
+import { getProductById, getStockForSkus, getStore } from "@/lib/tilroy";
 import type { CheckoutInput, OrderItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -174,10 +174,45 @@ export async function POST(request: Request) {
   if (fulfilment === "pickup" && store) {
     orderInput.store = { id: store.id, name: store.name, city: store.city };
   } else {
-    const promise = deliveryInfo();
+    // De bezorgbelofte volgt uit de voorraad: ligt alles in Nijverdal
+    // (webshopvoorraad), dan gaat het met DHL onder de 10:00-cutoff; anders
+    // verstuurt de winkel die het artikel heeft het met PostNL binnen één
+    // werkdag. Lukt de voorraadcheck niet, dan beloven we het voorzichtige
+    // scenario in plaats van iets wat we niet waar kunnen maken.
+    const promises = [];
+    let fulfilStoreId: string | undefined;
+    try {
+      for (const item of items) {
+        const stock = await getStockForSkus([item.sku ?? item.productId]);
+        if (!stock.live) {
+          promises.length = 0;
+          break;
+        }
+        promises.push(
+          deliveryPromise({
+            webshopQty: stock.webshopQty ?? 0,
+            otherStoresQty: stock.otherStoresQty ?? 0,
+          }),
+        );
+        if ((stock.webshopQty ?? 0) === 0) {
+          const from = stock.stores.find((row) => row.qty > 0 && row.storeId !== "nijverdal");
+          if (from && !fulfilStoreId) fulfilStoreId = from.storeId;
+        }
+      }
+    } catch (error) {
+      console.error("[checkout] voorraadcheck voor de bezorgbelofte mislukt:", error);
+    }
+
+    const promise =
+      promises.length > 0
+        ? combinePromises(promises)
+        : deliveryPromise({ webshopQty: 0, otherStoresQty: 1 });
+
     orderInput.delivery = {
-      type: promise.type,
-      expectedDate: promise.deliveryDate.toISOString(),
+      type: promise.type === "unavailable" ? "next-workday" : promise.type,
+      carrier: promise.carrier ?? "postnl",
+      expectedDate: (promise.deliveryDate ?? new Date()).toISOString(),
+      ...(fulfilStoreId ? { fulfilStoreId } : {}),
     };
   }
 

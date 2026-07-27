@@ -7,7 +7,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { getCategories, getStores } from "@/lib/tilroy";
 
 const USPS = [
-  "Vóór 10:00 besteld, vandaag bezorgd",
+  "Vóór 10:00 besteld, vandaag verzonden",
   "Verf gemengd in elke kleur",
   "Gratis bezorgen én gratis afhalen",
 ];

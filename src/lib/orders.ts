@@ -150,7 +150,7 @@ export interface CreateOrderInput {
   total: number; // euro's
   fulfilment: "pickup" | "delivery";
   store?: { id: string; name: string; city: string };
-  delivery?: { type: "same-day" | "next-day"; expectedDate: string };
+  delivery?: Order["delivery"];
   isTest?: boolean;
 }
 

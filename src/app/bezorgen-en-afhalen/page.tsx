@@ -33,20 +33,25 @@ export default async function ShippingPage() {
       <section className="card overflow-hidden">
         <div className="flex items-center gap-3 bg-brand p-5 text-white">
           <Icon name="truck" className="h-7 w-7 shrink-0" aria-hidden />
-          <h2 className="text-lg font-black">Bezorgen met DHL — gratis</h2>
+          <h2 className="text-lg font-black">Bezorgen — altijd gratis</h2>
         </div>
         <div className="space-y-3 p-6 text-ink-soft">
           <p className="text-lg font-bold text-ink">
-            Vóór 10:00 besteld? Vandaag bezorgd.
+            Vóór 10:00 besteld uit onze webshopvoorraad? Vandaag bezorgd.
           </p>
           <p>
-            Bestel je tussen 10:00 en 23:59 uur, dan bezorgt DHL je bestelling
-            de volgende dag. Je ontvangt een track &amp; trace-code per e-mail
-            zodra je pakket onderweg is, zodat je precies weet waar het blijft.
+            Onze webshopvoorraad ligt in Nijverdal. Ligt jouw artikel daar, dan
+            gaat het met DHL de deur uit: vóór 10:00 besteld is dezelfde dag
+            bezorgd, daarna de volgende dag.
           </p>
           <p>
-            Bezorgen is altijd gratis, ongeacht het bedrag. We bezorgen binnen
-            Nederland.
+            Ligt het artikel in een van onze andere winkels, dan verstuurt die
+            winkel het met PostNL en heb je het binnen één werkdag in huis.
+          </p>
+          <p>
+            Op elke productpagina staat welke levertijd voor dat artikel geldt.
+            Je ontvangt een track &amp; trace-code zodra je pakket onderweg is.
+            Bezorgen is altijd gratis, ongeacht het bedrag.
           </p>
         </div>
       </section>

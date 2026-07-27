@@ -44,7 +44,7 @@ const SECTIONS: { title: string; paragraphs: string[] }[] = [
   {
     title: "Artikel 5 – Bezorgen",
     paragraphs: [
-      "Bezorgen binnen Nederland is gratis en gaat via DHL. Bestel je vóór 10:00 uur, dan bezorgen we dezelfde dag; bestel je tussen 10:00 en 23:59 uur, dan bezorgen we de volgende dag.",
+      "Bezorgen binnen Nederland is gratis. Artikelen uit onze webshopvoorraad in Nijverdal gaan met DHL: besteld vóór 10:00 uur bezorgen we dezelfde dag, daarna de volgende dag. Artikelen die alleen in een van onze andere winkels liggen, worden door die winkel met PostNL verstuurd en zijn binnen één werkdag bezorgd. Op de productpagina staat welke levertijd geldt.",
       "Genoemde bezorgmomenten zijn een streven, geen fatale termijn. Lukt bezorging onverhoopt niet op tijd, dan laten we dat zo snel mogelijk weten. Duurt het langer dan 30 dagen, dan mag je de overeenkomst kosteloos ontbinden.",
       "Het risico van beschadiging of verlies gaat over op jou zodra jij (of iemand die jij aanwijst) het pakket in ontvangst neemt.",
     ],

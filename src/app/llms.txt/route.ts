@@ -23,8 +23,10 @@ export async function GET() {
 
 ## Bestellen en bezorgen
 
-- Bezorging is gratis binnen Nederland en gaat via DHL.
-- Besteld vóór 10:00 uur: dezelfde dag bezorgd. Besteld tussen 10:00 en 23:59 uur: de volgende dag bezorgd.
+- Bezorging is gratis binnen Nederland.
+- Artikelen uit de webshopvoorraad (vestiging Nijverdal) gaan met DHL: besteld vóór 10:00 uur is dezelfde dag bezorgd, daarna de volgende dag.
+- Artikelen die alleen in een van de andere winkels liggen, worden door die winkel met PostNL verstuurd en zijn binnen één werkdag bezorgd.
+- Op elke productpagina staat welke levertijd voor dat artikel geldt.
 - Afhalen in de winkel is ook gratis (Click & Collect); de klant krijgt bericht met een afhaalcode zodra de bestelling klaarstaat.
 - Betalen kan met iDEAL, Bancontact, creditcard en Apple Pay, via betaalprovider Mollie.
 - Retourneren kan binnen 14 dagen; op kleur gemengde verf is maatwerk en daarvan uitgezonderd.

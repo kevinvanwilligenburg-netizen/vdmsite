@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { Icon } from "@/components/icons";
-import { deliveryInfo, deliveryLabel, SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
+import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
 import { euro } from "@/lib/format";
 
 interface StoreOption {
@@ -33,10 +33,17 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Bezorgbelofte live bijhouden (elke 30 s herberekenen rond de cutoff).
-  const [promise, setPromise] = useState(() => deliveryInfo());
+  // De exacte bezorgdag hangt af van de voorraad per artikel; die bepaalt de
+  // server bij het plaatsen van de bestelling. Hier tonen we alleen of de
+  // 10:00-cutoff nog loopt.
+  const [beforeCutoff, setBeforeCutoff] = useState(
+    () => new Date().getHours() < SAME_DAY_CUTOFF_HOUR,
+  );
   useEffect(() => {
-    const timer = window.setInterval(() => setPromise(deliveryInfo()), 30_000);
+    const timer = window.setInterval(
+      () => setBeforeCutoff(new Date().getHours() < SAME_DAY_CUTOFF_HOUR),
+      30_000,
+    );
     return () => window.clearInterval(timer);
   }, []);
 
@@ -128,12 +135,12 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                   </span>
                 </span>
                 <span className="mt-0.5 block text-sm font-semibold text-green-700">
-                  {deliveryLabel(promise)}
+                  {beforeCutoff ? "Vandaag of binnen 1 werkdag" : "Binnen 1 werkdag"}
                 </span>
                 <span className="block text-xs text-ink-soft">
-                  {promise.type === "same-day"
-                    ? `Bestel vóór ${SAME_DAY_CUTOFF_HOUR}:00 en DHL bezorgt vandaag nog.`
-                    : "Na 10:00 besteld — DHL bezorgt morgen."}
+                  {beforeCutoff
+                    ? `Ligt alles in ons webshopmagazijn, dan bezorgt DHL vandaag nog (vóór ${SAME_DAY_CUTOFF_HOUR}:00 besteld). Anders verstuurt de winkel met PostNL, binnen één werkdag.`
+                    : "DHL bezorgt morgen als alles in ons webshopmagazijn ligt; anders verstuurt de winkel met PostNL binnen één werkdag."}
                 </span>
               </span>
             </label>
@@ -403,7 +410,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             <div className="flex justify-between">
               <dt className="text-ink-soft">Bezorgd</dt>
               <dd className="font-semibold text-ink">
-                {promise.type === "same-day" ? "Vandaag" : "Morgen"}
+                {beforeCutoff ? "Vandaag of binnen 1 werkdag" : "Binnen 1 werkdag"}
               </dd>
             </div>
           )}

@@ -22,8 +22,8 @@ const HIGHLIGHTS = [
   },
   {
     icon: "truck",
-    title: "Vóór 10:00 besteld, vandaag in huis",
-    text: "Daarna besteld? Dan bezorgen we morgen. Bezorgen is gratis.",
+    title: "Snel in huis",
+    text: "Uit ons webshopmagazijn vóór 10:00 besteld = vandaag bezorgd, anders binnen 1 werkdag.",
   },
   {
     icon: "store",
@@ -46,8 +46,8 @@ export default async function HomePage() {
   const heroTitle = banner?.title ?? "De beste verf voor de laagste prijs.";
   const heroSubtitle =
     banner?.subtitle ??
-    "Mengverf in elke RAL-kleur, gereedschap en alles om te klussen. Vóór 10:00 besteld = vandaag bezorgd, of haal gratis af in de winkel.";
-  const heroBadge = banner?.badge ?? "Vóór 10:00 besteld, vandaag bezorgd";
+    "Mengverf in elke kleur, gereedschap en alles om te klussen. Gratis bezorgd — vaak vandaag nog — of gratis afgehaald in de winkel.";
+  const heroBadge = banner?.badge ?? "Vóór 10:00 besteld, vandaag verzonden";
   const heroCtaLabel = banner?.ctaLabel ?? "Bekijk de topdeals";
   const heroCtaHref = banner?.ctaHref ?? "#topdeals";
 
@@ -113,7 +113,7 @@ export default async function HomePage() {
         </div>
         {/* Zwarte onderbalk, zoals op de actiebanners */}
         <div className="flex items-center justify-center gap-6 bg-ink px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white sm:justify-between sm:px-8">
-          <span>Vandaag of morgen bezorgd</span>
+          <span>Gratis bezorgd</span>
           <span className="hidden sm:inline">Gratis afhalen in de winkel</span>
           <span className="hidden md:inline">Verf op kleur gemengd</span>
           <span className="text-brand-bright">devoordeelmarkt.nl</span>
@@ -179,12 +179,12 @@ export default async function HomePage() {
             Bezorgen of afhalen
           </span>
           <h2 className="text-2xl font-black sm:text-3xl">
-            Vandaag besteld, vandaag in huis
+            Snel in huis of zelf ophalen
           </h2>
           <p className="font-semibold text-white/80">
-            Bestel vóór 10:00 en we bezorgen je bestelling vandaag nog — daarna
-            morgen. Liever zelf ophalen? Dat kan gratis in Nijverdal,
-            Apeldoorn, Deventer, Zutphen en Emmen.
+            Ligt je artikel in ons webshopmagazijn in Nijverdal, dan bezorgt DHL
+            het vandaag nog bij bestelling vóór 10:00. Andere artikelen sturen
+            we met PostNL binnen één werkdag. Ophalen kan altijd gratis.
           </p>
           <Link
             href="/winkels"
@@ -243,8 +243,9 @@ export default async function HomePage() {
         </p>
         <p className="mt-3 leading-relaxed">
           Online bestellen is zo gedaan: kies je producten en reken veilig af
-          met iDEAL, Bancontact, creditcard of Apple Pay. Bestel je vóór 10:00,
-          dan wordt je bestelling vandaag nog bezorgd; daarna komt hij morgen.
+          met iDEAL, Bancontact, creditcard of Apple Pay. Artikelen uit ons
+          webshopmagazijn in Nijverdal bezorgen we bij bestelling vóór 10:00
+          dezelfde dag nog; de rest sturen we binnen één werkdag met PostNL.
           Afhalen kan ook — gratis, in Nijverdal, Apeldoorn, Deventer, Zutphen
           of Emmen.
         </p>

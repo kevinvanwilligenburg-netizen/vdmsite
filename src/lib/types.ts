@@ -204,8 +204,20 @@ export interface Order {
   pickupCode?: string;
   readyForPickupAt?: string;
   pickedUpAt?: string;
-  /** Alleen bij bezorgen: de belofte op het bestelmoment. */
-  delivery?: { type: "same-day" | "next-day"; expectedDate: string };
+  /**
+   * Alleen bij bezorgen: de belofte op het bestelmoment.
+   *
+   * `carrier` bepaalt hoe de order wordt uitgevoerd: DHL vanuit de
+   * webshopvoorraad in Nijverdal, of PostNL vanuit de winkel die het artikel
+   * heeft. Bij PostNL wordt de order door die winkel in Tilroy verwerkt —
+   * `fulfilStoreId` zegt om welke winkel het gaat.
+   */
+  delivery?: {
+    type: "same-day" | "next-day" | "next-workday";
+    carrier: "dhl" | "postnl";
+    expectedDate: string;
+    fulfilStoreId?: string;
+  };
 }
 
 export interface CheckoutItemInput {

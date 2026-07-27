@@ -272,7 +272,7 @@ export function PurchasePanel({
 
       <ul className="space-y-1.5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
         {[
-          "Vóór 10:00 besteld, vandaag bezorgd",
+          "Vóór 10:00 besteld, vaak vandaag nog bezorgd",
           "Gratis bezorgen of gratis afhalen in de winkel",
           "Betaal veilig met iDEAL, Bancontact, creditcard of Apple Pay",
         ].map((usp) => (

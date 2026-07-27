@@ -165,7 +165,9 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
             <p className="text-xl font-black">
               {order.delivery?.type === "same-day"
                 ? "Wordt vandaag bezorgd"
-                : "Wordt morgen bezorgd"}
+                : order.delivery?.type === "next-day"
+                  ? "Wordt morgen bezorgd"
+                  : "Wordt binnen 1 werkdag bezorgd"}
             </p>
           </div>
           <div className="grid gap-4 p-6 sm:grid-cols-2">
@@ -189,7 +191,14 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
               )}
             </div>
             <div>
-              <h2 className="font-black text-ink">Track &amp; trace</h2>
+              <h2 className="font-black text-ink">
+                Track &amp; trace{" "}
+                {order.delivery?.carrier && (
+                  <span className="font-semibold text-ink-soft">
+                    ({order.delivery.carrier === "dhl" ? "DHL" : "PostNL"})
+                  </span>
+                )}
+              </h2>
               {order.shipment?.trackTrace ? (
                 /^https?:\/\//.test(order.shipment.trackTrace) ? (
                   <a

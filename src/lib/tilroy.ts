@@ -365,11 +365,16 @@ export async function getStore(idOrSlug: string): Promise<Store | undefined> {
 /* ── Voorraad via de dashboard-hub ─────────────────────────────── */
 
 /**
- * Vestigings-id's in Tilroy zoals de hub ze aanlevert. Naast de vijf winkels
- * bestaan er twee bijzondere "shops": het webshopmagazijn (waar bezorgingen
- * uit gaan) en een testvestiging die we altijd negeren.
+ * Vestigings-id's in Tilroy zoals de hub ze aanlevert.
+ *
+ * Nijverdal (7827) houdt de webshopvoorraad: wat daar ligt, gaat met DHL de
+ * deur uit en valt onder de strakke cutoff (vóór 10:00 = vandaag bezorgd).
+ * Ligt een artikel alleen in een andere winkel, dan verstuurt die winkel het
+ * met PostNL binnen één werkdag. De testvestiging telt nooit mee; het
+ * magazijn-id (8934) is administratief en wordt niet als winkel getoond.
  */
-const WEBSHOP_SHOP_ID = "8934";
+const NIJVERDAL_SHOP_ID = "7827";
+const WAREHOUSE_SHOP_ID = "8934";
 const TEST_SHOP_ID = "8602";
 
 interface HubStockItem {
@@ -424,8 +429,14 @@ export interface StoreStock {
 export interface ProductStock {
   /** Voorraad per winkel (voor afhalen). */
   stores: StoreStock[];
-  /** Voorraad in het webshopmagazijn (voor bezorgen); null als onbekend. */
+  /**
+   * Voorraad die met DHL onder de 10:00-cutoff verstuurd kan worden: dat is
+   * Nijverdal (webshopvoorraad) plus het administratieve magazijn.
+   * `null` als de voorraad onbekend is.
+   */
   webshopQty: number | null;
+  /** Voorraad in de overige winkels; die versturen met PostNL. */
+  otherStoresQty: number | null;
   /** Komen deze cijfers live uit de voorraad-hub? */
   live: boolean;
   /** Tijdstip van de voorraadstand volgens de hub. */
@@ -438,7 +449,7 @@ export async function getStockForSkus(skus: string[]): Promise<ProductStock> {
   const hub = await fetchHubStock([...new Set(skus)]);
 
   if (!hub) {
-    return { stores: [], webshopQty: null, live: false };
+    return { stores: [], webshopQty: null, otherStoresQty: null, live: false };
   }
 
   const sumForShop = (shopId: string) =>
@@ -447,17 +458,25 @@ export async function getStockForSkus(skus: string[]): Promise<ProductStock> {
       return Number.isFinite(qty) ? total + (qty as number) : total;
     }, 0);
 
+  const storeRows = stores.map((store) => ({
+    storeId: store.slug,
+    city: store.city,
+    // De testvestiging telt nooit mee.
+    qty:
+      store.tilroyShopId && store.tilroyShopId !== TEST_SHOP_ID
+        ? sumForShop(store.tilroyShopId)
+        : 0,
+  }));
+
+  const webshopQty = sumForShop(NIJVERDAL_SHOP_ID) + sumForShop(WAREHOUSE_SHOP_ID);
+  const otherStoresQty = storeRows
+    .filter((row) => row.storeId !== "nijverdal")
+    .reduce((total, row) => total + row.qty, 0);
+
   return {
-    stores: stores.map((store) => ({
-      storeId: store.slug,
-      city: store.city,
-      // De testvestiging telt nooit mee.
-      qty:
-        store.tilroyShopId && store.tilroyShopId !== TEST_SHOP_ID
-          ? sumForShop(store.tilroyShopId)
-          : 0,
-    })),
-    webshopQty: sumForShop(WEBSHOP_SHOP_ID),
+    stores: storeRows,
+    webshopQty,
+    otherStoresQty,
     live: true,
     asOf: hub.asOf,
   };
