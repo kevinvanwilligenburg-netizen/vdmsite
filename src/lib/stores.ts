@@ -25,6 +25,7 @@ export const demoStores: Store[] = [
     city: "Nijverdal",
     phone: "0548 626 190",
     email: "nijverdal@devoordeelmarkt.nl",
+    geo: { lat: 52.3639, lng: 6.4664 },
     openingHours: standardHours,
   },
   {
@@ -37,6 +38,7 @@ export const demoStores: Store[] = [
     city: "Apeldoorn",
     phone: "055 541 3463",
     email: "apeldoorn@devoordeelmarkt.nl",
+    geo: { lat: 52.2372, lng: 5.9410 },
     openingHours: standardHours,
   },
   {
@@ -49,6 +51,7 @@ export const demoStores: Store[] = [
     city: "Deventer",
     phone: "0570 633 012",
     email: "deventer@devoordeelmarkt.nl",
+    geo: { lat: 52.2452, lng: 6.1735 },
     openingHours: standardHours,
   },
   {
@@ -61,6 +64,7 @@ export const demoStores: Store[] = [
     city: "Zutphen",
     phone: "0575 540 880",
     email: "zutphen@devoordeelmarkt.nl",
+    geo: { lat: 52.1583, lng: 6.1806 },
     openingHours: standardHours,
   },
   {
@@ -73,9 +77,43 @@ export const demoStores: Store[] = [
     city: "Emmen",
     phone: "0591 820 439",
     email: "emmen@devoordeelmarkt.nl",
+    geo: { lat: 52.7792, lng: 6.9061 },
     openingHours: standardHours,
   },
 ];
+
+/** Diensten die in elke vestiging beschikbaar zijn (bron: devoordeelmarkt.nl). */
+export const STORE_SERVICES = [
+  "Verf mengen in elke kleur",
+  "Kleuradvies",
+  "Click & Collect",
+  "Gratis parkeren voor de deur",
+  "Zakelijk afhalen",
+];
+
+/** Openingstijden in schema.org-notatie, voor LocalBusiness-markup. */
+export function openingHoursSpecification(store: Store) {
+  const dayMap: Record<string, string> = {
+    Maandag: "Monday",
+    Dinsdag: "Tuesday",
+    Woensdag: "Wednesday",
+    Donderdag: "Thursday",
+    Vrijdag: "Friday",
+    Zaterdag: "Saturday",
+    Zondag: "Sunday",
+  };
+  return store.openingHours
+    .filter((entry) => entry.hours !== "Gesloten")
+    .map((entry) => {
+      const [opens, closes] = entry.hours.split("–").map((part) => part.trim());
+      return {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: `https://schema.org/${dayMap[entry.day] ?? entry.day}`,
+        opens,
+        closes,
+      };
+    });
+}
 
 export function mapsUrl(store: Store): string {
   const query = `${store.name}, ${store.address}, ${store.city}`;

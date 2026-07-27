@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CategoryCard } from "@/components/CategoryCard";
 import { Icon } from "@/components/icons";
 import { ProductCard } from "@/components/ProductCard";
+import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
 import { getCategories, getDeals, getStores } from "@/lib/tilroy";
@@ -119,6 +120,8 @@ export default async function HomePage() {
           <span className="text-brand-bright">devoordeelmarkt.nl</span>
         </div>
       </section>
+
+      <TrustpilotWidget variant="horizontal" className="py-1" />
 
       {/* USP's */}
       <section aria-label="Waarom De Voordeelmarkt" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { Icon } from "@/components/icons";
+import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
 import { euro } from "@/lib/format";
 
@@ -430,9 +431,12 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
         <p className="mt-3 text-center text-xs text-ink-soft">
           Je betaalt {euro(subtotal)}{" "}
           {fulfilment === "delivery"
-            ? "en DHL bezorgt gratis."
+            ? "— bezorgen is gratis."
             : "en haalt je bestelling gratis op."}
         </p>
+        <div className="mt-4 border-t border-ink/10 pt-4">
+          <TrustpilotWidget variant="micro" />
+        </div>
       </aside>
     </form>
   );

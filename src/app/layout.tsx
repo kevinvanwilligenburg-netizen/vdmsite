@@ -14,6 +14,12 @@ import {
   SITE_TAGLINE,
   SITE_URL,
 } from "@/lib/site";
+import {
+  aggregateRatingJsonLd,
+  getTrustpilotRating,
+  trustpilotEnabled,
+  trustpilotProfileUrl,
+} from "@/lib/trustpilot";
 
 import "./globals.css";
 
@@ -68,20 +74,25 @@ export const viewport: Viewport = {
   themeColor: "#F5821F",
 };
 
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: SITE_NAME,
-  url: SITE_URL,
-  logo: absoluteUrl("/icon.svg"),
-  contactPoint: {
-    "@type": "ContactPoint",
-    telephone: CONTACT_PHONE.replace(/\s/g, ""),
-    email: CONTACT_EMAIL,
-    contactType: "customer service",
-    availableLanguage: "Dutch",
-  },
-};
+function organizationJsonLd(rating: ReturnType<typeof aggregateRatingJsonLd>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: absoluteUrl("/icon.svg"),
+    ...(trustpilotEnabled() ? { sameAs: [trustpilotProfileUrl()] } : {}),
+    // Alleen echte Trustpilot-cijfers; nooit een verzonnen rating.
+    ...(rating ? { aggregateRating: rating } : {}),
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: CONTACT_PHONE.replace(/\s/g, ""),
+      email: CONTACT_EMAIL,
+      contactType: "customer service",
+      availableLanguage: "Dutch",
+    },
+  };
+}
 
 const websiteJsonLd = {
   "@context": "https://schema.org",
@@ -95,11 +106,13 @@ const websiteJsonLd = {
   },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const rating = aggregateRatingJsonLd(await getTrustpilotRating());
+
   return (
     <html lang="nl" className={mulish.variable}>
       <body>
-        <JsonLd data={organizationJsonLd} />
+        <JsonLd data={organizationJsonLd(rating)} />
         <JsonLd data={websiteJsonLd} />
         <a
           href="#hoofdinhoud"

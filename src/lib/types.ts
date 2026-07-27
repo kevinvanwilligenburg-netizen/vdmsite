@@ -62,6 +62,10 @@ export interface Store {
   /** Vestigings-id in Tilroy; key in de voorraad-feed van het dashboard. */
   tilroyShopId?: string;
   openingHours: { day: string; hours: string }[];
+  /** Coördinaten voor lokale SEO en kaartweergave. */
+  geo?: { lat: number; lng: number };
+  /** Diensten die deze vestiging levert (lokale SEO en klantinfo). */
+  services?: string[];
 }
 
 export interface RalColor {

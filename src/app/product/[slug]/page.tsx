@@ -10,7 +10,9 @@ import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
 import { StockList } from "@/components/StockList";
 import { getInitialColors } from "@/lib/colors";
+import { euro } from "@/lib/format";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
+import { aggregateRatingJsonLd, getTrustpilotRating } from "@/lib/trustpilot";
 import {
   getCategory,
   getCompanions,
@@ -40,8 +42,13 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await getProduct(params.slug);
   if (!product) return {};
-  const title = `${product.name} kopen`;
-  const description = `${product.shortDescription} Gratis bezorgd of gratis afgehaald in de winkel.`;
+  const prijs = euro(product.price);
+  const title = `${product.name} kopen — ${prijs}`;
+  const description = [
+    product.shortDescription.slice(0, 110),
+    `Nu ${prijs}${product.compareAtPrice ? ` (van ${euro(product.compareAtPrice)})` : ""}.`,
+    "Gratis bezorgd of gratis afhalen in de winkel.",
+  ].join(" ");
   return {
     title,
     description,
@@ -49,22 +56,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       type: "website",
       title: `${product.name} | ${SITE_NAME}`,
-      description: product.shortDescription,
+      description,
       url: absoluteUrl(`/product/${product.slug}`),
+      ...(product.image ? { images: [{ url: product.image, alt: product.name }] } : {}),
     },
-    other: { "product:price:currency": "EUR" },
+    twitter: {
+      card: product.image ? "summary_large_image" : "summary",
+      title: `${product.name} — ${prijs}`,
+      description,
+    },
+    other: {
+      "product:price:amount": (product.price / 100).toFixed(2),
+      "product:price:currency": "EUR",
+      "product:brand": product.brand,
+      "product:availability": product.inStock === false ? "oos" : "instock",
+    },
   };
 }
 
 export default async function ProductPage({ params }: Props) {
   const product = await getProduct(params.slug);
   if (!product) notFound();
-  const [category, related, companions, colors, stores] = await Promise.all([
+  const [category, related, companions, colors, stores, rating] = await Promise.all([
     getCategory(product.category),
     getRelatedProducts(product),
     getCompanions(product),
     product.colorMixable ? getInitialColors() : Promise.resolve([]),
     getStores(),
+    getTrustpilotRating(),
   ]);
 
   // Gratis bezorgen en 14 dagen retour gelden voor het hele assortiment.
@@ -124,11 +143,66 @@ export default async function ProductPage({ params }: Props) {
     "@type": "Product",
     name: product.name,
     sku: product.sku,
+    mpn: product.sku,
     ...(product.ean ? { gtin13: product.ean } : {}),
     description: product.shortDescription,
     brand: { "@type": "Brand", name: product.brand },
     category: category?.name,
+    ...(product.image ? { image: [product.image] } : {}),
+    url: absoluteUrl(`/product/${product.slug}`),
+    // Winkelbeoordelingen van Trustpilot; alleen als er echte reviews zijn.
+    ...(aggregateRatingJsonLd(rating)
+      ? { aggregateRating: aggregateRatingJsonLd(rating) }
+      : {}),
+    ...(product.specs && product.specs.length > 0
+      ? {
+          additionalProperty: product.specs.map((spec) => ({
+            "@type": "PropertyValue",
+            name: spec.label,
+            value: spec.value,
+          })),
+        }
+      : {}),
     offers,
+  };
+
+  // Vragen die klanten bij dit soort artikelen stellen — goed voor de
+  // vindbaarheid én voor AI-assistenten die productvragen beantwoorden.
+  const productFaqs = [
+    {
+      q: `Wat kost ${product.name}?`,
+      a: `${product.name} kost ${euro(product.price)}${
+        product.compareAtPrice
+          ? ` in plaats van de adviesprijs van ${euro(product.compareAtPrice)}`
+          : ""
+      }. Bezorgen is gratis, net als afhalen in de winkel.`,
+    },
+    {
+      q: "Hoe snel heb ik dit in huis?",
+      a: "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het dezelfde dag als je vóór 10:00 uur bestelt. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
+    },
+    ...(product.colorMixable
+      ? [
+          {
+            q: "Kan ik dit in elke kleur krijgen?",
+            a: "Ja. Kies je kleur met de kleurkiezer op deze pagina — je hebt keuze uit meer dan 18.000 kleuren. Wij mengen de verf gratis in de winkel en kiezen automatisch de juiste mengbasis bij jouw kleur.",
+          },
+        ]
+      : []),
+    {
+      q: "Kan ik dit artikel retourneren?",
+      a: "Je hebt 14 dagen bedenktijd. Ongebruikte artikelen kun je gratis terugbrengen naar elke winkel. Op kleur gemengde verf is maatwerk en daarvan uitgezonderd.",
+    },
+  ];
+
+  const productFaqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: productFaqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.q,
+      acceptedAnswer: { "@type": "Answer", text: faq.a },
+    })),
   };
 
   return (
@@ -143,6 +217,7 @@ export default async function ProductPage({ params }: Props) {
         ]}
       />
       <JsonLd data={productJsonLd} />
+      <JsonLd data={productFaqJsonLd} />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
         <div className="min-w-0 space-y-4">
@@ -196,6 +271,28 @@ export default async function ProductPage({ params }: Props) {
       </section>
 
       <Companions items={companions} />
+
+      <section aria-labelledby="product-faq-titel" className="max-w-3xl">
+        <h2
+          id="product-faq-titel"
+          className="mb-4 text-xl font-black uppercase text-ink sm:text-2xl"
+        >
+          Veelgestelde vragen
+        </h2>
+        <div className="space-y-3">
+          {productFaqs.map((faq) => (
+            <details key={faq.q} className="card group p-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold text-ink">
+                {faq.q}
+                <span className="shrink-0 transition group-open:rotate-180" aria-hidden>
+                  ▾
+                </span>
+              </summary>
+              <p className="mt-3 leading-relaxed text-ink-soft">{faq.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
 
       {related.length > 0 && (
         <section aria-labelledby="gerelateerd-titel">

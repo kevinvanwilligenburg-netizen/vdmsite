@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Icon } from "@/components/icons";
+import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
 import { getCategories, getStores } from "@/lib/tilroy";
 
@@ -37,6 +38,9 @@ export async function Footer() {
                 {method}
               </span>
             ))}
+          </div>
+          <div className="mt-4 rounded-lg bg-white/5 p-2">
+            <TrustpilotWidget variant="micro" />
           </div>
         </div>
 
