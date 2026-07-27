@@ -5,9 +5,13 @@ import type { Category, Product, ProductVariant } from "@/lib/types";
 
 /**
  * Echte productcatalogus van De Voordeelmarkt, via de productfeed van het
- * VDM-dashboard (GET {DASHBOARD_API_URL}/api/doofinder/feed).
+ * VDM-dashboard. Bij voorkeur de gepagineerde JSON-feed
+ * (GET /api/doofinder/json); is die niet bereikbaar, dan de XML-feed
+ * (GET /api/doofinder/feed) als terugval. De prijzen komen daar sinds
+ * juli 2026 rechtstreeks uit de Tilroy Price API, dus ze zijn actueel in
+ * plaats van zo vers als de laatste feedgeneratie.
  *
- * De feed is een RSS/XML-stroom van ~5.000 varianten met per item onder meer:
+ * De feed levert ~5.000 varianten met per item onder meer:
  *   id, group_id, group_leader, title, description, link, image_link, brand,
  *   categories ("Verf > Muurverf"), price (advies), sale_price (onze prijs),
  *   availability, voorraad, maat, inhoud_liter, mengverf (Ja/Nee), glans,
@@ -21,7 +25,13 @@ import type { Category, Product, ProductVariant } from "@/lib/types";
  */
 
 const FEED_URL = `${DASHBOARD_API_URL}/api/doofinder/feed`;
-const FEED_JSON_URL = `${DASHBOARD_API_URL}/api/doofinder/feed.json`;
+/**
+ * De gepagineerde JSON-feed. Let op het ontbreken van een punt in het pad:
+ * bij `feed.json` ziet Vercel het als een statisch bestand en wordt de route
+ * nooit uitgevoerd — dat gaf maandenlang een 404 op code die wél gedeployd
+ * was. Niet "verbeteren" naar een bestandsnaam met extensie.
+ */
+const FEED_JSON_URL = `${DASHBOARD_API_URL}/api/doofinder/json`;
 const CACHE_MS = 60 * 60 * 1000;
 /** Aantal artikelen per pagina uit de JSON-feed. */
 const PAGE_SIZE = 500;
@@ -415,6 +425,20 @@ async function fetchJsonFeed(): Promise<FeedItem[] | null> {
   return items.length > 0 ? items : null;
 }
 
+/**
+ * Welke feed de laatst geladen catalogus opleverde.
+ *
+ * De terugval van JSON naar XML is stil — dat is met opzet, want de winkel
+ * moet doordraaien. Maar dan moet je wel ergens kunnen zien welke bron actief
+ * is, anders draai je maanden op de terugval zonder het te merken. Zie
+ * /api/health.
+ */
+let laatsteBron: "json" | "xml" | "onbekend" = "onbekend";
+
+export function catalogusBron(): "json" | "xml" | "onbekend" {
+  return laatsteBron;
+}
+
 async function fetchFeed(): Promise<Product[]> {
   const viaJson = await fetchJsonFeed().catch((error) => {
     console.error("[catalogus] JSON-feed mislukt, val terug op XML:", error);
@@ -424,10 +448,12 @@ async function fetchFeed(): Promise<Product[]> {
   let items: FeedItem[];
   if (viaJson) {
     items = viaJson;
+    laatsteBron = "json";
   } else {
     const res = await fetchFeedResponse();
     if (!res.ok) throw new Error(`Productfeed gaf status ${res.status}`);
     items = parseItems(await res.text());
+    laatsteBron = "xml";
   }
 
   const groups = new Map<string, FeedItem[]>();
@@ -454,7 +480,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v4";
+const KV_KEY = "catalog:products:v5";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

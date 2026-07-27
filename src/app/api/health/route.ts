@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { kvPing } from "@/lib/kv";
 import { mollieEnabled, mollieTestMode } from "@/lib/mollie";
+import { catalogusBron } from "@/lib/product-feed";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import { getProducts } from "@/lib/tilroy";
 
@@ -44,6 +45,9 @@ export async function GET() {
 
   const products = await getProducts();
   const catalogus = {
+    // "xml" betekent dat de JSON-feed onbereikbaar was en we op de terugval
+    // draaien; "onbekend" dat de catalogus uit de Redis-cache kwam.
+    bron: catalogusBron(),
     producten: products.length,
     metFoto: products.filter((product) => product.image).length,
     mengverf: products.filter((product) => product.colorMixable).length,
