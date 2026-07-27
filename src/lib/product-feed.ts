@@ -187,8 +187,15 @@ function toCents(value: string | undefined): number {
  * `/s/resizeinbox/580x580/…` mee; die geeft bij de proxy een 403, terwijl
  * `/v7/…` voor precies dezelfde foto gewoon werkt (gemeten: 4/30 tegenover
  * 30/30, en alle 20 herschreven mislukkelingen kwamen door). De foto's
- * bestaan dus wel degelijk — het is puur de URL-vorm. Zolang de feed de
- * oude vorm levert, rechtzetten we hem hier.
+ * bestaan dus wel degelijk — het is puur de URL-vorm.
+ *
+ * Het dashboard normaliseert dit sinds 2026-07-27 zelf (PR #310), dus in
+ * de praktijk valt hier niets meer om te zetten. Blijft staan als vangnet:
+ * de omzetting is idempotent en kost niets, en hij vangt oude URL's uit de
+ * Redis-cache af zolang die nog rondgaan.
+ *
+ * Meten doe je met GET + Range-header, nooit met HEAD: de proxy antwoordt
+ * anders op HEAD, wat vals-negatieven geeft.
  */
 function fotoUrl(value: string | undefined): string | undefined {
   if (!value) return undefined;
