@@ -355,7 +355,12 @@ async function fetchFeed(): Promise<Product[]> {
   return products;
 }
 
-const KV_KEY = "catalog:products:v2";
+/**
+ * LET OP: hoog het versienummer op zodra het Product-schema verandert (nieuw
+ * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
+ * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
+ */
+const KV_KEY = "catalog:products:v3";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
