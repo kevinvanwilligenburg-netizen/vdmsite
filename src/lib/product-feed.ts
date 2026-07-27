@@ -21,7 +21,10 @@ import type { Category, Product, ProductVariant } from "@/lib/types";
  */
 
 const FEED_URL = `${DASHBOARD_API_URL}/api/doofinder/feed`;
+const FEED_JSON_URL = `${DASHBOARD_API_URL}/api/doofinder/feed.json`;
 const CACHE_MS = 60 * 60 * 1000;
+/** Aantal artikelen per pagina uit de JSON-feed. */
+const PAGE_SIZE = 500;
 
 /* ── Categorie-indeling ────────────────────────────────────────── */
 
@@ -361,11 +364,71 @@ async function fetchFeedResponse(attempt = 0): Promise<Response> {
   return res;
 }
 
+interface JsonFeedPage {
+  total?: number;
+  items?: Record<string, unknown>[];
+  next?: string | null;
+}
+
+/**
+ * Haal de catalogus op via de gepagineerde JSON-feed. Dat is de voorkeursweg:
+ * kleine pagina's in plaats van één verzoek van ruim 6 MB, waar de
+ * bot-mitigatie van het platform op aanslaat tijdens builds.
+ *
+ * `null` als het endpoint (nog) niet bestaat — dan gebruiken we de XML-feed.
+ */
+async function fetchJsonFeed(): Promise<FeedItem[] | null> {
+  const items: FeedItem[] = [];
+  let url: string | null = `${FEED_JSON_URL}?limit=${PAGE_SIZE}&offset=0`;
+  let pagina = 0;
+
+  while (url && pagina < 40) {
+    const res: Response = await fetch(url, {
+      signal: AbortSignal.timeout(45000),
+      next: { revalidate: 3600 },
+    });
+    if (res.status === 404) return null; // endpoint bestaat nog niet
+    if (!res.ok) throw new Error(`Productfeed (JSON) gaf status ${res.status}`);
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("json")) return null; // krijgt XML terug
+
+    const page = (await res.json()) as JsonFeedPage;
+    if (!Array.isArray(page.items)) return null;
+
+    for (const item of page.items) {
+      // De JSON-variant levert arrays waar de XML een veld herhaalt; die
+      // platten we tot dezelfde tekstvorm, zodat de rest van de parser
+      // ongewijzigd blijft werken.
+      const fields: FeedItem = {};
+      for (const [key, value] of Object.entries(item)) {
+        if (value == null) continue;
+        fields[key] = Array.isArray(value) ? value.join("|") : String(value);
+      }
+      if (fields.id) items.push(fields);
+    }
+
+    url = page.next ?? null;
+    pagina++;
+  }
+
+  return items.length > 0 ? items : null;
+}
+
 async function fetchFeed(): Promise<Product[]> {
-  const res = await fetchFeedResponse();
-  if (!res.ok) throw new Error(`Productfeed gaf status ${res.status}`);
-  const xml = await res.text();
-  const items = parseItems(xml);
+  const viaJson = await fetchJsonFeed().catch((error) => {
+    console.error("[catalogus] JSON-feed mislukt, val terug op XML:", error);
+    return null;
+  });
+
+  let items: FeedItem[];
+  if (viaJson) {
+    items = viaJson;
+  } else {
+    const res = await fetchFeedResponse();
+    if (!res.ok) throw new Error(`Productfeed gaf status ${res.status}`);
+    items = parseItems(await res.text());
+  }
 
   const groups = new Map<string, FeedItem[]>();
   for (const item of items) {
