@@ -32,11 +32,13 @@ interface Props {
 
 /**
  * De catalogus telt duizenden artikelen; die bouwen we niet allemaal vooraf.
- * De best lopende producten worden voorgerenderd, de rest op aanvraag (ISR).
+ * Een beperkte set wordt voorgerenderd, de rest op aanvraag (ISR). Bewust niet
+ * meer: elke build-worker haalt de feed apart op, en te veel parallelle
+ * verzoeken lokken bot-mitigatie uit bij de bron.
  */
 export async function generateStaticParams() {
   const products = await getProducts();
-  return products.slice(0, 200).map((product) => ({ slug: product.slug }));
+  return products.slice(0, 60).map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

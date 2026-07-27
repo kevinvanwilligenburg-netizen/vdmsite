@@ -297,16 +297,38 @@ function buildProduct(group: FeedItem[]): Product | null {
 let cache: { at: number; products: Product[] } | null = null;
 let inflight: Promise<Product[]> | null = null;
 
-async function fetchFeed(): Promise<Product[]> {
+/**
+ * Haal de feed op, met geduld bij tijdelijke blokkades.
+ *
+ * De feed is ~7 MB en doet er seconden over. Tijdens een build draaien er
+ * meerdere workers naast elkaar, en Vercel's bot-mitigatie beantwoordt zulke
+ * herhaalde zware verzoeken soms met een 403. Dat is tijdelijk, dus we wachten
+ * even en proberen het opnieuw in plaats van meteen op de demo-catalogus terug
+ * te vallen.
+ */
+async function fetchFeedResponse(attempt = 0): Promise<Response> {
   // LET OP: geen `cache: "no-store"` hier. Dat maakt elke pagina die de
   // catalogus gebruikt dynamisch, terwijl die statisch (ISR) is gedeclareerd —
   // Next gooit dan "Page changed from static to dynamic at runtime" en de
-  // pagina geeft een 500. De feed is ~9 MB en past niet in de Next-datacache
-  // (die logt daarover, verder onschuldig); het echte cachen doet Redis.
+  // pagina geeft een 500. Het echte cachen doet Redis.
   const res = await fetch(FEED_URL, {
     signal: AbortSignal.timeout(45000),
     next: { revalidate: 3600 },
   });
+  const retriable = res.status === 403 || res.status === 429 || res.status >= 500;
+  if (retriable && attempt < 3) {
+    const wachttijd = 2000 * 2 ** attempt + Math.floor(Math.random() * 500);
+    console.warn(
+      `[catalogus] feed gaf ${res.status}; opnieuw proberen over ${Math.round(wachttijd / 1000)}s.`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, wachttijd));
+    return fetchFeedResponse(attempt + 1);
+  }
+  return res;
+}
+
+async function fetchFeed(): Promise<Product[]> {
+  const res = await fetchFeedResponse();
   if (!res.ok) throw new Error(`Productfeed gaf status ${res.status}`);
   const xml = await res.text();
   const items = parseItems(xml);

@@ -14,6 +14,11 @@ const standardHours: Store["openingHours"] = [
 // De vijf vestigingen van De Voordeelmarkt (bron: devoordeelmarkt.nl).
 // tilroyShopId = vestigings-id in Tilroy, tevens de key in de
 // voorraad-feed van het VDM-dashboard (shops: {"7827": 4, ...}).
+//
+// LET OP: het dashboard vertaalt de slug van een winkel naar het Tilroy-id om
+// PostNL-orders bij de juiste vestiging te laten landen. Komt er een winkel
+// bij (of wijzigt een slug), geef dat dan door aan het dashboard — een
+// onbekende slug blokkeert daar de order-push.
 export const demoStores: Store[] = [
   {
     id: "nijverdal",
