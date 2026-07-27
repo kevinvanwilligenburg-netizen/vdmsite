@@ -480,7 +480,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v5";
+const KV_KEY = "catalog:products:v6";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
@@ -492,6 +492,8 @@ const KV_FRESH_MS = 60 * 60 * 1000;
 
 interface CachedCatalog {
   at: number;
+  /** Welke feed deze catalogus opleverde; nodig voor de diagnose. */
+  bron?: "json" | "xml";
   products: Product[];
 }
 
@@ -511,7 +513,11 @@ async function readFromKv(): Promise<CachedCatalog | null> {
 async function writeToKv(products: Product[]): Promise<void> {
   if (!isKvEnabled() || products.length === 0) return;
   try {
-    const payload: CachedCatalog = { at: Date.now(), products };
+    const payload: CachedCatalog = {
+      at: Date.now(),
+      bron: laatsteBron === "onbekend" ? undefined : laatsteBron,
+      products,
+    };
     await kvSetEx(KV_KEY, JSON.stringify(payload), KV_TTL_SECONDS);
   } catch (error) {
     console.error("[catalogus] naar KV schrijven mislukt:", error);
@@ -534,6 +540,10 @@ export async function loadFeedProducts(): Promise<Product[]> {
     const stored = await readFromKv();
     if (stored && Date.now() - stored.at < KV_FRESH_MS) {
       cache = { at: Date.now(), products: stored.products };
+      // Elke serverless functie is een eigen proces: deze haalt de feed nooit
+      // zelf op, dus zonder de bron uit de cache zou de diagnose altijd
+      // "onbekend" melden en niets zeggen.
+      if (stored.bron) laatsteBron = stored.bron;
       return stored.products;
     }
 
@@ -548,6 +558,7 @@ export async function loadFeedProducts(): Promise<Product[]> {
         const uren = Math.round((Date.now() - stored.at) / 3_600_000);
         console.warn(`[catalogus] terugval op opgeslagen catalogus (${uren} uur oud).`);
         cache = { at: Date.now() - CACHE_MS / 2, products: stored.products };
+        if (stored.bron) laatsteBron = stored.bron;
         return stored.products;
       }
       return cache?.products ?? [];
