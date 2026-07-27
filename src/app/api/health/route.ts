@@ -34,7 +34,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     orders: kv.enabled
-      ? { storage: "kv", ping: kv.ok ? "pong" : "geen antwoord" }
+      ? { storage: kv.mode, ping: kv.ok ? "pong" : "geen antwoord" }
       : { storage: "bestand (.data/orders)" },
     payments: mollieEnabled()
       ? { provider: "mollie", mode: mollieTestMode() ? "test" : "live" }

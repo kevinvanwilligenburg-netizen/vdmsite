@@ -83,18 +83,30 @@ async function fileRead<T>(name: string): Promise<T | null> {
 
 /* ── Opslaan & laden ───────────────────────────────────────────── */
 
+/**
+ * Bewaart de bestelling. Met KV gaat alles daarheen (het dashboard leest die
+ * store mee); lukt dat niet, dan valt de opslag terug op bestanden zodat een
+ * betaalde bestelling nooit verloren gaat.
+ */
 async function persist(order: Order): Promise<void> {
   memory.set(order.id, order);
+
   if (isKvEnabled()) {
-    await kvSetJSON(KEY.order(order.id), order);
-    await kvSetJSON(KEY.ref(order.reference), order.id);
-    await kvSAdd(KEY.index, order.id);
-    if (order.customer.email) await kvSAdd(KEY.email(order.customer.email), order.id);
-    if (order.molliePaymentId) {
-      await kvSetJSON(KEY.mollie(order.molliePaymentId), order.id);
+    const stored = await kvSetJSON(KEY.order(order.id), order);
+    if (stored) {
+      await kvSetJSON(KEY.ref(order.reference), order.id);
+      await kvSAdd(KEY.index, order.id);
+      if (order.customer.email) await kvSAdd(KEY.email(order.customer.email), order.id);
+      if (order.molliePaymentId) {
+        await kvSetJSON(KEY.mollie(order.molliePaymentId), order.id);
+      }
+      return;
     }
-    return;
+    console.error(
+      `[orders] ${order.reference} kon niet naar KV worden geschreven; bestandsopslag als terugval.`,
+    );
   }
+
   await fileWrite(`${order.id}.json`, order);
   await fileWrite(`ref-${order.reference.toUpperCase()}.json`, { id: order.id });
 }
@@ -103,6 +115,8 @@ async function loadById(id: string): Promise<Order | null> {
   if (!ID_PATTERN.test(id)) return null;
   const cached = memory.get(id);
   if (cached) return cached;
+  // Ook met KV de bestandsopslag raadplegen: daar kan een bestelling staan
+  // die tijdens een KV-storing is binnengekomen.
   const fromKv = isKvEnabled() ? await kvGetJSON<Order>(KEY.order(id)) : null;
   const order = fromKv ?? (await fileRead<Order>(`${id}.json`));
   if (order) memory.set(order.id, order);
@@ -120,7 +134,7 @@ export async function getOrder(idOrReference: string): Promise<Order | null> {
   }
   if (isKvEnabled()) {
     const id = await kvGetJSON<string>(KEY.ref(reference));
-    return id ? loadById(id) : null;
+    if (id) return loadById(id);
   }
   const pointer = await fileRead<{ id: string }>(`ref-${reference}.json`);
   return pointer?.id ? loadById(pointer.id) : null;
