@@ -1,0 +1,71 @@
+import { absoluteUrl, CONTACT_EMAIL, CONTACT_PHONE, SITE_NAME } from "@/lib/site";
+import { getCategories, getStores } from "@/lib/tilroy";
+
+export const revalidate = 86400;
+
+/**
+ * llms.txt — een korte, feitelijke samenvatting van de winkel voor
+ * AI-assistenten (ChatGPT, Claude, Perplexity, Copilot). Die halen hun
+ * antwoorden liever uit één beknopt bestand dan uit gerenderde HTML, en zo
+ * krijgen klanten die via een assistent zoeken de juiste openingstijden,
+ * bezorgvoorwaarden en vestigingen te horen.
+ *
+ * Zie https://llmstxt.org voor de conventie.
+ */
+export async function GET() {
+  const [categories, stores] = await Promise.all([getCategories(), getStores()]);
+
+  const body = `# ${SITE_NAME}
+
+> Verfspecialist en klusdiscounter met vijf winkels in Oost- en Noordoost-Nederland.
+> Kernbelofte: de beste verf voor de laagste prijs. Verf wordt gratis gemengd in
+> elke gewenste kleur (RAL en alle grote merkenwaaiers).
+
+## Bestellen en bezorgen
+
+- Bezorging is gratis binnen Nederland en gaat via DHL.
+- Besteld vóór 10:00 uur: dezelfde dag bezorgd. Besteld tussen 10:00 en 23:59 uur: de volgende dag bezorgd.
+- Afhalen in de winkel is ook gratis (Click & Collect); de klant krijgt bericht met een afhaalcode zodra de bestelling klaarstaat.
+- Betalen kan met iDEAL, Bancontact, creditcard en Apple Pay, via betaalprovider Mollie.
+- Retourneren kan binnen 14 dagen; op kleur gemengde verf is maatwerk en daarvan uitgezonderd.
+
+## Verf op kleur
+
+- Meer dan 18.000 kleuren uit ruim 140 kleurenwaaiers, waaronder RAL Classic.
+- Mengen is gratis en gebeurt in de winkel, meestal terwijl de klant wacht.
+- De juiste mengbasis (licht, midden of donker) wordt automatisch bij de gekozen kleur bepaald.
+- Kleurkiezer: ${absoluteUrl("/kleurkiezer")}
+
+## Assortiment
+
+${categories.map((category) => `- ${category.name}: ${category.description} → ${absoluteUrl(`/categorie/${category.slug}`)}`).join("\n")}
+
+## Winkels
+
+${stores
+  .map(
+    (store) =>
+      `- ${store.name}, ${store.address}, ${store.postalCode} ${store.city}. Telefoon ${store.phone}. Openingstijden: maandag t/m vrijdag 08:00–18:00, zaterdag 08:00–17:00, zondag gesloten. → ${absoluteUrl(`/winkels/${store.slug}`)}`,
+  )
+  .join("\n")}
+
+## Contact
+
+- Klantenservice: ${CONTACT_PHONE}, ${CONTACT_EMAIL}
+- Veelgestelde vragen: ${absoluteUrl("/klantenservice")}
+- Bezorgen en afhalen: ${absoluteUrl("/bezorgen-en-afhalen")}
+- Algemene voorwaarden: ${absoluteUrl("/algemene-voorwaarden")}
+
+## Bedrijfsgegevens
+
+- ${SITE_NAME}, Van den Bergsweg 3, 7442 CK Nijverdal
+- KvK 70367922, btw NL855528618B01
+`;
+
+  return new Response(body, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=3600, s-maxage=86400",
+    },
+  });
+}

@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
+import { Companions } from "@/components/product/Companions";
 import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
 import { StockList } from "@/components/StockList";
@@ -12,6 +13,7 @@ import { getInitialColors } from "@/lib/colors";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import {
   getCategory,
+  getCompanions,
   getProduct,
   getProducts,
   getRelatedProducts,
@@ -57,9 +59,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const product = await getProduct(params.slug);
   if (!product) notFound();
-  const [category, related, colors, stores] = await Promise.all([
+  const [category, related, companions, colors, stores] = await Promise.all([
     getCategory(product.category),
     getRelatedProducts(product),
+    getCompanions(product),
     product.colorMixable ? getInitialColors() : Promise.resolve([]),
     getStores(),
   ]);
@@ -192,10 +195,12 @@ export default async function ProductPage({ params }: Props) {
         )}
       </section>
 
+      <Companions items={companions} />
+
       {related.length > 0 && (
         <section aria-labelledby="gerelateerd-titel">
           <h2 id="gerelateerd-titel" className="mb-4 text-xl font-black uppercase text-ink sm:text-2xl">
-            Maak je klus af
+            Vergelijkbare artikelen
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {related.map((relatedProduct) => (

@@ -71,7 +71,110 @@ export async function getDeals(limit = 8): Promise<Product[]> {
     .slice(0, limit);
 }
 
-/** Bijverkoop: eerst uit dezelfde categorie, met foto en op voorraad. */
+/**
+ * "Maak je klus af": welk gereedschap hoort bij dit product?
+ *
+ * Bij verf hangt het benodigde gereedschap af van het soort verf: muurverf
+ * vraagt om een muurroller en afplaktape, lak om een lakkwast, schuurpapier
+ * en grondverf, beits om een beitskwast. De regels kijken naar de categorie,
+ * de glansgraad en de omschrijving uit de feed.
+ */
+interface CompanionRule {
+  /** Waar in het assortiment moet gezocht worden. */
+  needles: string[];
+  /** Waarom dit erbij hoort (voor de klant). */
+  reason: string;
+}
+
+function companionRulesFor(product: Product): CompanionRule[] {
+  const haystack = [product.name, product.category, ...(product.tags ?? [])]
+    .join(" ")
+    .toLowerCase();
+  const specs = (product.specs ?? []).map((spec) => spec.value.toLowerCase()).join(" ");
+  const glans = specs;
+
+  const isMuurverf = /muurverf|latex|muur|plafond|wand/.test(haystack);
+  const isLak = /lak|hoogglans|zijdeglans/.test(haystack) || /hoogglans|zijdeglans/.test(glans);
+  const isBeits = /beits|olie|vernis|hout/.test(haystack);
+  const isSpuitbus = /spuitbus|spuitlak|spray/.test(haystack);
+  const isVerf = product.colorMixable || isMuurverf || isLak || isBeits || isSpuitbus;
+
+  if (!isVerf) return [];
+
+  const rules: CompanionRule[] = [];
+  if (isMuurverf) {
+    rules.push(
+      { needles: ["muurverfroller", "muurroller", "roller"], reason: "Rollen zonder spatten" },
+      { needles: ["verfbak", "verfrooster"], reason: "Handig bij het rollen" },
+      { needles: ["afplaktape", "afplak", "tape"], reason: "Voor strakke randen" },
+      { needles: ["afdekzeil", "afdekfolie"], reason: "Vloer en meubels beschermd" },
+    );
+  }
+  if (isLak) {
+    rules.push(
+      { needles: ["lakkwast", "kwast"], reason: "Voor een gladde laklaag" },
+      { needles: ["lakroller", "roller"], reason: "Grote vlakken snel klaar" },
+      { needles: ["schuurpapier", "schuurblok"], reason: "Eerst schuren, dan lakken" },
+      { needles: ["grondverf", "primer"], reason: "Betere hechting en dekking" },
+    );
+  }
+  if (isBeits) {
+    rules.push(
+      { needles: ["beitskwast", "blokkwast", "kwast"], reason: "Beits gelijkmatig aanbrengen" },
+      { needles: ["schuurpapier"], reason: "Hout voorbereiden" },
+    );
+  }
+  if (isSpuitbus) {
+    rules.push(
+      { needles: ["afplak", "afdekfolie", "afdekzeil"], reason: "Voorkomt overspray" },
+      { needles: ["ontvetter", "schuurpapier"], reason: "Schone ondergrond, beter resultaat" },
+    );
+  }
+  if (product.colorMixable) {
+    rules.push({ needles: ["roerspaan", "verfstok", "verfbak"], reason: "Even goed doorroeren" });
+  }
+  return rules;
+}
+
+export interface CompanionProduct {
+  product: Product;
+  reason: string;
+}
+
+/** Passende accessoires bij dit product, met uitleg waarom. */
+export async function getCompanions(
+  product: Product,
+  limit = 4,
+): Promise<CompanionProduct[]> {
+  const rules = companionRulesFor(product);
+  if (rules.length === 0) return [];
+
+  const products = await getProducts();
+  const usable = products.filter(
+    (candidate) =>
+      candidate.id !== product.id &&
+      candidate.image &&
+      candidate.inStock !== false &&
+      !candidate.colorMixable,
+  );
+
+  const picks: CompanionProduct[] = [];
+  for (const rule of rules) {
+    if (picks.length >= limit) break;
+    const match = usable
+      .filter((candidate) => {
+        if (picks.some((pick) => pick.product.id === candidate.id)) return false;
+        const name = candidate.name.toLowerCase();
+        return rule.needles.some((needle) => name.includes(needle));
+      })
+      // Goedkoopste eerst: laagdrempelig om mee te bestellen.
+      .sort((a, b) => a.price - b.price)[0];
+    if (match) picks.push({ product: match, reason: rule.reason });
+  }
+  return picks.slice(0, limit);
+}
+
+/** Vergelijkbare producten: zelfde categorie, bij voorkeur zelfde merk. */
 export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
   const products = await getProducts();
   const sameCategory = products.filter(
@@ -111,6 +214,70 @@ export async function getUpsellProducts(limit = 6): Promise<Product[]> {
     )
     .sort((a, b) => a.price - b.price)
     .slice(0, limit);
+}
+
+/* ── Merken (eigen landingspagina's, goed vindbaar in zoekmachines) ─ */
+
+function brandSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export interface BrandSummary {
+  slug: string;
+  name: string;
+  count: number;
+  fromPrice: number;
+}
+
+export interface BrandPage extends BrandSummary {
+  products: Product[];
+}
+
+/** Merken met de meeste artikelen eerst. */
+export async function getBrands(limit = 40): Promise<BrandSummary[]> {
+  const products = await getProducts();
+  const byBrand = new Map<string, { name: string; items: Product[] }>();
+  for (const product of products) {
+    if (!product.brand || product.brand === "De Voordeelmarkt") continue;
+    const slug = brandSlug(product.brand);
+    if (!slug) continue;
+    const entry = byBrand.get(slug);
+    if (entry) entry.items.push(product);
+    else byBrand.set(slug, { name: product.brand, items: [product] });
+  }
+  return [...byBrand.entries()]
+    .map(([slug, entry]) => ({
+      slug,
+      name: entry.name,
+      count: entry.items.length,
+      fromPrice: Math.min(...entry.items.map((item) => item.price)),
+    }))
+    .filter((brand) => brand.count >= 3)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+export async function getBrand(slug: string): Promise<BrandPage | null> {
+  const products = await getProducts();
+  const items = products.filter((product) => brandSlug(product.brand) === slug);
+  if (items.length === 0) return null;
+  const sorted = [...items].sort((a, b) => {
+    const aScore = (a.image ? 2 : 0) + (a.inStock !== false ? 1 : 0);
+    const bScore = (b.image ? 2 : 0) + (b.inStock !== false ? 1 : 0);
+    return bScore - aScore || a.price - b.price;
+  });
+  return {
+    slug,
+    name: items[0].brand,
+    count: items.length,
+    fromPrice: Math.min(...items.map((item) => item.price)),
+    products: sorted,
+  };
 }
 
 /* ── Zoeken (server-side; de catalogus telt duizenden artikelen) ─ */

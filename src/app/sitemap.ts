@@ -2,14 +2,15 @@ import type { MetadataRoute } from "next";
 
 import { listPublishedPages } from "@/lib/content";
 import { absoluteUrl } from "@/lib/site";
-import { getCategories, getProducts, getStores } from "@/lib/tilroy";
+import { getBrands, getCategories, getProducts, getStores } from "@/lib/tilroy";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, categories, stores, pages] = await Promise.all([
+  const [products, categories, stores, pages, brands] = await Promise.all([
     getProducts(),
     getCategories(),
     getStores(),
     listPublishedPages(),
+    getBrands(60),
   ]);
   const lastModified = new Date();
 
@@ -46,6 +47,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 0.8,
       })),
+    ...brands.map((brand) => ({
+      url: absoluteUrl(`/merk/${brand.slug}`),
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
     ...stores.map((store) => ({
       url: absoluteUrl(`/winkels/${store.slug}`),
       lastModified,
