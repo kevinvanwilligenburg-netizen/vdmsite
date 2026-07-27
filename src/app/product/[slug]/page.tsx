@@ -15,6 +15,8 @@ import {
   getProduct,
   getProducts,
   getRelatedProducts,
+  getStores,
+  skusFor,
 } from "@/lib/tilroy";
 
 export const revalidate = 3600;
@@ -55,10 +57,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const product = await getProduct(params.slug);
   if (!product) notFound();
-  const [category, related, colors] = await Promise.all([
+  const [category, related, colors, stores] = await Promise.all([
     getCategory(product.category),
     getRelatedProducts(product),
     product.colorMixable ? getInitialColors() : Promise.resolve([]),
+    getStores(),
   ]);
 
   // Gratis bezorgen en 14 dagen retour gelden voor het hele assortiment.
@@ -150,7 +153,11 @@ export default async function ProductPage({ params }: Props) {
               priority
             />
           </div>
-          <StockList product={product} />
+          <StockList
+            skus={skusFor(product)}
+            stores={stores.map((store) => ({ storeId: store.slug, city: store.city }))}
+            fallbackInStock={product.inStock !== false}
+          />
         </div>
 
         <div className="min-w-0">

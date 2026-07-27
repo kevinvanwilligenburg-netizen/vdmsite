@@ -222,6 +222,10 @@ interface HubStockResponse {
 /**
  * Vraag voorraad per SKU op bij de hub (max 200 sku's per call).
  * `null` bij storing of zolang de hub nog niet geconfigureerd is.
+ *
+ * De hub doet bij een koude cache een volledige crawl (~40 s) en is daarna
+ * 5 minuten snel. Daarom een ruime timeout: deze functie draait alleen in
+ * onze eigen /api/voorraad-route, die de pagina niet blokkeert.
  */
 async function fetchHubStock(skus: string[]): Promise<HubStockResponse | null> {
   if (skus.length === 0) return null;
@@ -230,7 +234,7 @@ async function fetchHubStock(skus: string[]): Promise<HubStockResponse | null> {
       skus.slice(0, 200).join(","),
     )}`;
     const res = await fetch(url, {
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(55000),
       next: { revalidate: 300 },
     });
     if (!res.ok) return null;
@@ -238,13 +242,15 @@ async function fetchHubStock(skus: string[]): Promise<HubStockResponse | null> {
     if (!data || data.configured !== true || !Array.isArray(data.items)) return null;
     return data;
   } catch (error) {
-    console.error("[voorraad] hub niet bereikbaar, indicatie uit de feed:", error);
+    console.error("[voorraad] hub niet bereikbaar:", error);
     return null;
   }
 }
 
 export interface StoreStock {
-  store: Store;
+  /** Winkel-id (slug), zodat de client de naam zelf kan tonen. */
+  storeId: string;
+  city: string;
   qty: number;
 }
 
@@ -253,44 +259,44 @@ export interface ProductStock {
   stores: StoreStock[];
   /** Voorraad in het webshopmagazijn (voor bezorgen); null als onbekend. */
   webshopQty: number | null;
-  /** Komen deze cijfers live uit de voorraad-hub, of is het een indicatie? */
+  /** Komen deze cijfers live uit de voorraad-hub? */
   live: boolean;
+  /** Tijdstip van de voorraadstand volgens de hub. */
+  asOf?: string;
 }
 
-export async function getStockByStore(product: Product): Promise<ProductStock> {
+/** Voorraad voor een set sku's (alle varianten van één product). */
+export async function getStockForSkus(skus: string[]): Promise<ProductStock> {
   const stores = await getStores();
-  const skus = [product.sku, ...(product.variants ?? []).map((variant) => variant.sku)];
   const hub = await fetchHubStock([...new Set(skus)]);
 
-  if (hub) {
-    const sumForShop = (shopId: string) =>
-      hub.items.reduce((total, item) => {
-        const qty = item.shops?.[shopId];
-        return Number.isFinite(qty) ? total + (qty as number) : total;
-      }, 0);
-
-    return {
-      stores: stores.map((store) => ({
-        store,
-        // De testvestiging telt nooit mee.
-        qty:
-          store.tilroyShopId && store.tilroyShopId !== TEST_SHOP_ID
-            ? sumForShop(store.tilroyShopId)
-            : 0,
-      })),
-      webshopQty: sumForShop(WEBSHOP_SHOP_ID),
-      live: true,
-    };
+  if (!hub) {
+    return { stores: [], webshopQty: null, live: false };
   }
 
-  // Zonder hub: indicatie, maar respecteer of het artikel überhaupt
-  // leverbaar is volgens de productfeed.
+  const sumForShop = (shopId: string) =>
+    hub.items.reduce((total, item) => {
+      const qty = item.shops?.[shopId];
+      return Number.isFinite(qty) ? total + (qty as number) : total;
+    }, 0);
+
   return {
     stores: stores.map((store) => ({
-      store,
-      qty: product.inStock === false ? 0 : demoStockFor(product.id, store.id),
+      storeId: store.slug,
+      city: store.city,
+      // De testvestiging telt nooit mee.
+      qty:
+        store.tilroyShopId && store.tilroyShopId !== TEST_SHOP_ID
+          ? sumForShop(store.tilroyShopId)
+          : 0,
     })),
-    webshopQty: null,
-    live: false,
+    webshopQty: sumForShop(WEBSHOP_SHOP_ID),
+    live: true,
+    asOf: hub.asOf,
   };
+}
+
+/** Alle sku's van een product (hoofdartikel + varianten). */
+export function skusFor(product: Product): string[] {
+  return [...new Set([product.sku, ...(product.variants ?? []).map((v) => v.sku)])];
 }

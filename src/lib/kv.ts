@@ -163,6 +163,39 @@ export async function kvSetJSON(key: string, value: unknown): Promise<boolean> {
   return false;
 }
 
+/** Schrijft met een vervaltijd in seconden. `false` = niet gelukt. */
+export async function kvSetEx(key: string, value: string, seconds: number): Promise<boolean> {
+  if (isTcpUrl) {
+    const redis = await getClient();
+    if (!redis) return false;
+    try {
+      await redis.set(key, value, { EX: seconds });
+      return true;
+    } catch (error) {
+      console.error("[kv] SETEX mislukt:", error);
+      return false;
+    }
+  }
+  if (isRestUrl) return (await restCommand(["SET", key, value, "EX", seconds])) !== null;
+  return false;
+}
+
+/** Leest een rauwe string (zonder JSON-parse). */
+export async function kvGetRaw(key: string): Promise<string | null> {
+  if (isTcpUrl) {
+    const redis = await getClient();
+    if (!redis) return null;
+    try {
+      return await redis.get(key);
+    } catch (error) {
+      console.error("[kv] GET mislukt:", error);
+      return null;
+    }
+  }
+  if (isRestUrl) return restCommand<string>(["GET", key]);
+  return null;
+}
+
 export async function kvDel(key: string): Promise<void> {
   if (isTcpUrl) {
     const redis = await getClient();

@@ -1,3 +1,4 @@
+import { isKvEnabled, kvGetRaw, kvSetEx } from "@/lib/kv";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import type { Category, Product, ProductVariant } from "@/lib/types";
 
@@ -243,9 +244,10 @@ let cache: { at: number; products: Product[] } | null = null;
 let inflight: Promise<Product[]> | null = null;
 
 async function fetchFeed(): Promise<Product[]> {
+  // De feed is ~9 MB en past niet in de Next-datacache; niet proberen.
   const res = await fetch(FEED_URL, {
     signal: AbortSignal.timeout(45000),
-    next: { revalidate: 3600 },
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`Productfeed gaf status ${res.status}`);
   const xml = await res.text();
@@ -270,23 +272,58 @@ async function fetchFeed(): Promise<Product[]> {
   return products;
 }
 
-/** Alle producten uit de feed. Leeg bij storing (aanroeper valt dan terug). */
+const KV_KEY = "catalog:products:v1";
+const KV_TTL_SECONDS = 3600;
+
+/** Geparste catalogus uit Redis, zodat een nieuwe serverinstance niet 40 s wacht. */
+async function readFromKv(): Promise<Product[] | null> {
+  if (!isKvEnabled()) return null;
+  try {
+    const raw = await kvGetRaw(KV_KEY);
+    if (!raw) return null;
+    const products = JSON.parse(raw) as Product[];
+    return Array.isArray(products) && products.length > 0 ? products : null;
+  } catch (error) {
+    console.error("[catalogus] catalogus uit KV lezen mislukt:", error);
+    return null;
+  }
+}
+
+async function writeToKv(products: Product[]): Promise<void> {
+  if (!isKvEnabled() || products.length === 0) return;
+  try {
+    await kvSetEx(KV_KEY, JSON.stringify(products), KV_TTL_SECONDS);
+  } catch (error) {
+    console.error("[catalogus] catalogus naar KV schrijven mislukt:", error);
+  }
+}
+
+/**
+ * Alle producten. Volgorde: geheugen → Redis → feed ophalen (en wegschrijven).
+ * Leeg bij storing; de aanroeper valt dan terug op de demo-catalogus.
+ */
 export async function loadFeedProducts(): Promise<Product[]> {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.products;
   if (inflight) return inflight;
 
-  inflight = fetchFeed()
-    .then((products) => {
+  inflight = (async () => {
+    const fromKv = await readFromKv();
+    if (fromKv) {
+      cache = { at: Date.now(), products: fromKv };
+      return fromKv;
+    }
+    try {
+      const products = await fetchFeed();
       cache = { at: Date.now(), products };
+      await writeToKv(products);
       return products;
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error("[catalogus] productfeed niet beschikbaar:", error);
       return cache?.products ?? [];
-    })
-    .finally(() => {
-      inflight = null;
-    });
+    }
+  })().finally(() => {
+    inflight = null;
+  });
 
   return inflight;
 }
