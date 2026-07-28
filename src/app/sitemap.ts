@@ -18,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/", priority: 1, changeFrequency: "daily" },
     { path: "/kleurkiezer", priority: 0.9, changeFrequency: "weekly" },
     { path: "/klusadvies", priority: 0.9, changeFrequency: "monthly" },
+    { path: "/merken", priority: 0.8, changeFrequency: "weekly" },
     { path: "/winkels", priority: 0.8, changeFrequency: "monthly" },
     { path: "/bezorgen-en-afhalen", priority: 0.7, changeFrequency: "monthly" },
     { path: "/zakelijk", priority: 0.8, changeFrequency: "monthly" },

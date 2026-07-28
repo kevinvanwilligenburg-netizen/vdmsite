@@ -53,6 +53,67 @@ export async function getCategory(slug: string): Promise<Category | undefined> {
   return categories.find((category) => category.slug === slug);
 }
 
+/* ── Menu-inhoud ───────────────────────────────────────────────── */
+
+export interface MenuEntry {
+  label: string;
+  href: string;
+  count: number;
+}
+
+export interface MenuCategory extends Category {
+  count: number;
+  /** Soorten binnen de categorie ("Lakken", "Muurverf"). */
+  soorten: MenuEntry[];
+  /** De merken met de meeste artikelen in deze categorie. */
+  merken: MenuEntry[];
+}
+
+/**
+ * De inhoud van het hoofdmenu, afgeleid uit de catalogus.
+ *
+ * Een balk met alleen negen categorieën zegt een klant weinig: die wil zien
+ * dát er lakken, muurverf en beits zijn, en van welke merken. Deze functie
+ * levert per categorie de soorten en de grootste merken, zodat het menu
+ * meegroeit met het assortiment in plaats van handmatig bijgehouden te
+ * worden.
+ */
+export async function getMenu(): Promise<MenuCategory[]> {
+  const [categories, products] = await Promise.all([getCategories(), getProducts()]);
+
+  return categories.map((category) => {
+    const inCategory = products.filter((product) => product.category === category.slug);
+
+    const soortCounts = new Map<string, number>();
+    const merkCounts = new Map<string, number>();
+    for (const product of inCategory) {
+      const soort = product.attributes?.subcategorie;
+      if (soort) soortCounts.set(soort, (soortCounts.get(soort) ?? 0) + 1);
+      if (product.brand && product.brand !== "De Voordeelmarkt") {
+        merkCounts.set(product.brand, (merkCounts.get(product.brand) ?? 0) + 1);
+      }
+    }
+
+    const soorten = [...soortCounts.entries()]
+      .filter(([, count]) => count >= 3)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([label, count]) => ({
+        label,
+        count,
+        href: `/categorie/${category.slug}?subcategorie=${encodeURIComponent(label)}`,
+      }));
+
+    const merken = [...merkCounts.entries()]
+      .filter(([, count]) => count >= 3)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([label, count]) => ({ label, count, href: `/merk/${brandSlug(label)}` }));
+
+    return { ...category, count: inCategory.length, soorten, merken };
+  });
+}
+
 /** Aanbiedingen voor de homepage: hoogste voordeel eerst. */
 export async function getDeals(limit = 8): Promise<Product[]> {
   const products = await getProducts();
@@ -233,6 +294,8 @@ export interface BrandSummary {
   name: string;
   count: number;
   fromPrice: number;
+  /** Foto van een artikel van dit merk, als beeld op de merkenpagina. */
+  image?: string;
 }
 
 export interface BrandPage extends BrandSummary {
@@ -240,10 +303,17 @@ export interface BrandPage extends BrandSummary {
 }
 
 /** Merken met de meeste artikelen eerst. */
-export async function getBrands(limit = 40): Promise<BrandSummary[]> {
+export async function getBrands(
+  limit = 40,
+  options: { categorySlug?: string } = {},
+): Promise<BrandSummary[]> {
   const products = await getProducts();
+  const bron = options.categorySlug
+    ? products.filter((product) => product.category === options.categorySlug)
+    : products;
+
   const byBrand = new Map<string, { name: string; items: Product[] }>();
-  for (const product of products) {
+  for (const product of bron) {
     if (!product.brand || product.brand === "De Voordeelmarkt") continue;
     const slug = brandSlug(product.brand);
     if (!slug) continue;
@@ -257,6 +327,9 @@ export async function getBrands(limit = 40): Promise<BrandSummary[]> {
       name: entry.name,
       count: entry.items.length,
       fromPrice: Math.min(...entry.items.map((item) => item.price)),
+      // Een merklogo hebben we niet; een productfoto uit het merk geeft de
+      // kaart toch een gezicht.
+      image: entry.items.find((item) => item.image)?.image,
     }))
     .filter((brand) => brand.count >= 3)
     .sort((a, b) => b.count - a.count)

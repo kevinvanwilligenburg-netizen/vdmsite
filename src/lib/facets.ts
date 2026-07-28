@@ -25,6 +25,8 @@ export interface Facet {
 
 export interface ProductFilters {
   merk?: string[];
+  /** Soort binnen de categorie ("Lakken", "Muurverf"); voedt ook het menu. */
+  subcategorie?: string[];
   glans?: string[];
   verfsoort?: string[];
   inhoud?: string[];
@@ -36,6 +38,7 @@ export interface ProductFilters {
 }
 
 const ATTRIBUTE_LABELS: Record<string, string> = {
+  subcategorie: "Soort",
   glans: "Glansgraad",
   verfsoort: "Verfsoort",
   inhoud: "Inhoud",
@@ -63,6 +66,7 @@ export function parseFilters(searchParams: Record<string, string | string[] | un
 
   return {
     merk: list("merk"),
+    subcategorie: list("subcategorie"),
     glans: list("glans"),
     verfsoort: list("verfsoort"),
     inhoud: list("inhoud"),
@@ -85,7 +89,7 @@ function matches(product: Product, filters: ProductFilters): boolean {
   if (filters.opVoorraad && product.inStock === false) return false;
   if (filters.prijsMax && product.price > filters.prijsMax * 100) return false;
 
-  for (const key of ["glans", "verfsoort", "inhoud"] as const) {
+  for (const key of ["subcategorie", "glans", "verfsoort", "inhoud"] as const) {
     const wanted = filters[key];
     if (!wanted || wanted.length === 0) continue;
     const has = valuesOf(product, key);
@@ -148,7 +152,7 @@ export function buildFacets(products: Product[], filters: ProductFilters): Facet
   if (merken.length > 1) facets.push({ key: "merk", label: "Merk", options: merken });
 
   // Attributen
-  for (const key of ["glans", "verfsoort", "inhoud"] as const) {
+  for (const key of ["subcategorie", "glans", "verfsoort", "inhoud"] as const) {
     const counts = new Map<string, number>();
     for (const product of withoutSelf(key)) {
       for (const value of valuesOf(product, key)) {
@@ -172,6 +176,7 @@ export function buildFacets(products: Product[], filters: ProductFilters): Facet
 export function activeFilterCount(filters: ProductFilters): number {
   return (
     (filters.merk?.length ?? 0) +
+    (filters.subcategorie?.length ?? 0) +
     (filters.glans?.length ?? 0) +
     (filters.verfsoort?.length ?? 0) +
     (filters.inhoud?.length ?? 0) +

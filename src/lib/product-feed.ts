@@ -63,6 +63,7 @@ export const feedCategories: Category[] = [
   {
     slug: "verfbenodigdheden",
     name: "Verfbenodigdheden",
+    menuLabel: "Benodigdheden",
     description:
       "Kwasten, rollers, schuurpapier, afplaktape en behang: alles om je verfklus strak af te werken.",
     icon: "brush",
@@ -71,6 +72,7 @@ export const feedCategories: Category[] = [
   {
     slug: "lijm-en-kit",
     name: "Lijm, kit & vulmiddelen",
+    menuLabel: "Lijm & kit",
     description:
       "Kitten, lijmen, plamuur en vulmiddelen voor elke reparatie en afwerking in en om het huis.",
     icon: "can",
@@ -79,6 +81,7 @@ export const feedCategories: Category[] = [
   {
     slug: "bevestiging",
     name: "Bevestiging & ijzerwaren",
+    menuLabel: "Bevestiging",
     description:
       "Schroeven, pluggen, beslag en hang- en sluitwerk. Alles om het stevig vast te zetten.",
     icon: "screw",
@@ -95,6 +98,7 @@ export const feedCategories: Category[] = [
   {
     slug: "elektra",
     name: "Elektra & Verlichting",
+    menuLabel: "Elektra",
     description:
       "Lichtbronnen, zaklampen, verlengkabels en contactdozen: voordelig licht en stroom waar je het nodig hebt.",
     icon: "bulb",
@@ -103,6 +107,7 @@ export const feedCategories: Category[] = [
   {
     slug: "huishouden",
     name: "Huishouden & Reinigen",
+    menuLabel: "Huishouden",
     description: "Handige huishoudartikelen en schoonmaakmiddelen voor elke dag.",
     icon: "spray",
     hue: 190,
@@ -117,6 +122,7 @@ export const feedCategories: Category[] = [
   {
     slug: "overig",
     name: "Overig assortiment",
+    menuLabel: "Overig",
     description: "Alle overige artikelen uit onze winkels.",
     icon: "box",
     hue: 210,
@@ -129,6 +135,23 @@ function categorySlugFor(rawCategory: string): string {
     if (entry.match.some((needle) => sub.includes(needle))) return entry.slug;
   }
   return "overig";
+}
+
+/**
+ * De subcategorie uit de feed ("Verf > Lakken" → "Lakken").
+ *
+ * Tilroy zet alles onder één hoofdcategorie "Verf"; de bruikbare indeling
+ * zit in het deel erachter. Dezelfde subcategorie komt in meerdere
+ * schrijfwijzen voor ("LIJMEN, KITTEN EN VULMIDDELEN" naast "Lijmen,
+ * kitten en vulmiddelen"), dus normaliseren we naar één weergavevorm —
+ * anders staat hetzelfde filter er twee keer in.
+ */
+function subcategoryOf(rawCategory: string | undefined): string | undefined {
+  if (!rawCategory) return undefined;
+  const sub = (rawCategory.split(">").pop() ?? "").trim();
+  if (!sub) return undefined;
+  const lower = sub.toLocaleLowerCase("nl");
+  return lower.charAt(0).toLocaleUpperCase("nl") + lower.slice(1);
 }
 
 /* ── XML-parsing ───────────────────────────────────────────────── */
@@ -264,6 +287,7 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
     if (trimmed) attributes[key] = trimmed;
   };
 
+  add("subcategorie", subcategoryOf(leader.categories));
   add("glans", leader.glans);
   add("verfsoort", leader.verfsoort);
   add("toepassing", leader.toepassing);
@@ -502,7 +526,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v7";
+const KV_KEY = "catalog:products:v8";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

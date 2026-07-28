@@ -70,6 +70,14 @@ export async function Footer() {
             </li>
             <li>
               <Link
+                href="/merken"
+                className="text-white/80 transition hover:text-brand-bright"
+              >
+                Alle merken
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/klusadvies"
                 className="text-white/80 transition hover:text-brand-bright"
               >

@@ -117,51 +117,52 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           Er zijn op dit moment geen artikelen in deze categorie.
         </p>
       ) : (
-        <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
-          <Suspense fallback={null}>
-            <ProductFiltersPanel
-              facets={facets}
-              filters={filters}
-              total={gefilterd.length}
-              activeCount={actief}
-            />
-          </Suspense>
+        <Suspense fallback={null}>
+          <ProductFiltersPanel
+            facets={facets}
+            filters={filters}
+            total={gefilterd.length}
+            activeCount={actief}
+          >
+            <div className="space-y-6">
+              {zichtbaar.length === 0 ? (
+                <div className="card p-8 text-center">
+                  <p className="font-black text-ink">Geen artikelen met deze filters</p>
+                  <p className="mt-1 text-sm text-ink-soft">
+                    Probeer een filter weg te halen om meer te zien.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+                  {zichtbaar.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
 
-          <div className="mt-4 space-y-6 lg:mt-0">
-            {zichtbaar.length === 0 ? (
-              <div className="card p-8 text-center">
-                <p className="font-black text-ink">Geen artikelen met deze filters</p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  Probeer een filter weg te halen om meer te zien.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-                {zichtbaar.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
-
-            {paginas > 1 && (
-              <nav aria-label="Paginering" className="flex flex-wrap items-center justify-center gap-2">
-                {pagina > 1 && (
-                  <Link href={pageHref(pagina - 1)} className="btn btn-dark px-4 py-2 text-sm">
-                    ← Vorige
-                  </Link>
-                )}
-                <span className="px-2 text-sm text-ink-soft">
-                  Pagina {pagina} van {paginas}
-                </span>
-                {pagina < paginas && (
-                  <Link href={pageHref(pagina + 1)} className="btn btn-dark px-4 py-2 text-sm">
-                    Volgende →
-                  </Link>
-                )}
-              </nav>
-            )}
-          </div>
-        </div>
+              {paginas > 1 && (
+                <nav
+                  aria-label="Paginering"
+                  className="flex flex-wrap items-center justify-center gap-2"
+                >
+                  {pagina > 1 && (
+                    <Link href={pageHref(pagina - 1)} className="btn btn-dark px-4 py-2 text-sm">
+                      ← Vorige
+                    </Link>
+                  )}
+                  <span className="px-2 text-sm text-ink-soft">
+                    Pagina {pagina} van {paginas}
+                  </span>
+                  {pagina < paginas && (
+                    <Link href={pageHref(pagina + 1)} className="btn btn-dark px-4 py-2 text-sm">
+                      Volgende →
+                    </Link>
+                  )}
+                </nav>
+              )}
+            </div>
+          </ProductFiltersPanel>
+        </Suspense>
       )}
     </div>
   );

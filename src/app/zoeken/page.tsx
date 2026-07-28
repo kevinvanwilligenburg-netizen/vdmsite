@@ -141,17 +141,13 @@ export default async function SearchPage({ searchParams }: Props) {
             </div>
           )}
 
-          <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
-            <Suspense fallback={null}>
-              <ProductFiltersPanel
-                facets={facets}
-                filters={filters}
-                total={gefilterd.length}
-                activeCount={actief}
-              />
-            </Suspense>
-
-            <div className="mt-4 lg:mt-0">
+          <Suspense fallback={null}>
+            <ProductFiltersPanel
+              facets={facets}
+              filters={filters}
+              total={gefilterd.length}
+              activeCount={actief}
+            >
               {zichtbaar.length === 0 ? (
                 <div className="card p-8 text-center">
                   <p className="font-black text-ink">Geen artikelen met deze filters</p>
@@ -160,14 +156,14 @@ export default async function SearchPage({ searchParams }: Props) {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
                   {zichtbaar.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
               )}
-            </div>
-          </div>
+            </ProductFiltersPanel>
+          </Suspense>
         </>
       )}
     </div>

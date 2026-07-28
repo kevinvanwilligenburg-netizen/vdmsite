@@ -45,6 +45,11 @@ export async function GET() {
 - Grondverf is nodig op kaal hout, vers stucwerk en metaal, en bij een grote kleursprong.
 - Klusadvies: ${absoluteUrl("/klusadvies")}
 
+## Merken
+
+- Overzicht van alle gevoerde merken: ${absoluteUrl("/merken")}
+- Per merk een eigen pagina met het volledige assortiment: ${absoluteUrl("/merk/<merknaam>")}
+
 ## Assortiment
 
 ${categories.map((category) => `- ${category.name}: ${category.description} → ${absoluteUrl(`/categorie/${category.slug}`)}`).join("\n")}

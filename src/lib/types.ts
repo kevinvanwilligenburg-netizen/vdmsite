@@ -49,6 +49,12 @@ export interface Product {
 export interface Category {
   slug: string;
   name: string;
+  /**
+   * Kortere naam voor de menubalk. De volledige namen samen zijn breder dan
+   * een laptopscherm; met alleen de lange vorm moest de balk horizontaal
+   * scrollen en verdwenen de laatste categorieën uit beeld.
+   */
+  menuLabel?: string;
   description: string;
   icon: string;
   hue: number;

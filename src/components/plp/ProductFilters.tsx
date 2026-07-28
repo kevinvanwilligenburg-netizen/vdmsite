@@ -15,20 +15,30 @@ const SORT_LABELS: { value: SortKey; label: string }[] = [
 ];
 
 /**
- * Filters en sortering voor productlijsten. Alles staat in de URL, zodat een
- * gefilterde lijst deelbaar is, terugknop werkt en zoekmachines de pagina's
- * kunnen zien.
+ * Filters, sortering én de productlijst zelf. Alles staat in de URL, zodat
+ * een gefilterde lijst deelbaar is, de terugknop werkt en zoekmachines de
+ * pagina's kunnen zien.
+ *
+ * Deze component tekent bewust de hele kolomindeling, met de productlijst
+ * als `children`. Toen de aanroeper het raster maakte en dit component
+ * alleen zijn eigen delen teruggaf, telde React die delen elk als een eigen
+ * rastervak: de lijst schoof door naar de smalle filterkolom en de
+ * productkaarten werden een paar tientallen pixels breed. Houd het raster
+ * dus hier, dan kan dat niet meer misgaan.
  */
 export function ProductFiltersPanel({
   facets,
   filters,
   total,
   activeCount,
+  children,
 }: {
   facets: Facet[];
   filters: ProductFilters;
   total: number;
   activeCount: number;
+  /** De productlijst (en paginering) die naast de filters komt. */
+  children: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -180,10 +190,13 @@ export function ProductFiltersPanel({
         </div>
       </div>
 
-      {/* Desktop: vaste kolom */}
-      <aside className="hidden lg:block">
-        <div className="card sticky top-40 p-5">{panel}</div>
-      </aside>
+      {/* Filterkolom naast de productlijst */}
+      <div className="mt-4 lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
+        <aside className="hidden lg:block">
+          <div className="card sticky top-40 p-5">{panel}</div>
+        </aside>
+        <div className="min-w-0">{children}</div>
+      </div>
 
       {/* Mobiel: uitschuifpaneel */}
       {open && (
