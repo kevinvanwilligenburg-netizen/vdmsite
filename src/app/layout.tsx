@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Mulish } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { AddedToCart } from "@/components/cart/AddedToCart";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
@@ -138,6 +139,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               {children}
             </main>
             <Footer />
+            {/* Bevestiging na "in winkelwagen", met wat erbij hoort. */}
+            <AddedToCart />
           </CartProvider>
         </StoreProvider>
       </body>

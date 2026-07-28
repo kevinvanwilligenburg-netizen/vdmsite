@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { Icon } from "@/components/icons";
+import { ProductArt } from "@/components/ProductArt";
 import { euro } from "@/lib/format";
 
 export function CartPageClient() {
@@ -35,15 +36,14 @@ export function CartPageClient() {
       <ul className="space-y-3">
         {items.map((item) => (
           <li key={item.key} className="card flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap">
-            <span
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg"
-              style={{
-                background: `linear-gradient(135deg, hsl(${item.hue} 85% 94%), hsl(${item.hue} 70% 86%))`,
-                color: `hsl(${item.hue} 45% 38%)`,
-              }}
-              aria-hidden
-            >
-              <Icon name={item.icon} className="h-8 w-8" />
+            <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg ring-1 ring-black/5">
+              <ProductArt
+                icon={item.icon}
+                hue={item.hue}
+                image={item.image}
+                size="sm"
+                label={item.name}
+              />
             </span>
             <div className="min-w-0 flex-1">
               <Link

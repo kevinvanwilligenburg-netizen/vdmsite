@@ -124,6 +124,8 @@ export interface CartItem {
   qty: number;
   icon: string;
   hue: number;
+  /** Productfoto, zodat de winkelwagen het artikel toont en niet een icoon. */
+  image?: string;
 }
 
 /* ── Bestellingen ──────────────────────────────────────────────────

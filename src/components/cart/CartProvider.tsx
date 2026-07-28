@@ -23,6 +23,12 @@ interface CartContextValue {
   setQty: (key: string, qty: number) => void;
   removeItem: (key: string) => void;
   clear: () => void;
+  /**
+   * Het laatst toegevoegde artikel, voor de bevestiging die daarna opent.
+   * `null` zodra die bevestiging gesloten is.
+   */
+  laatstToegevoegd: CartItem | null;
+  sluitBevestiging: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -53,20 +59,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, hydrated]);
 
+  const [laatstToegevoegd, setLaatstToegevoegd] = useState<CartItem | null>(null);
+
   const addItem = useCallback((item: Omit<CartItem, "qty">, qty = 1) => {
+    const aantal = Math.max(1, Math.min(99, qty));
     setItems((prev) => {
       const index = prev.findIndex((entry) => entry.key === item.key);
       if (index >= 0) {
         const next = [...prev];
         next[index] = {
           ...next[index],
-          qty: Math.min(99, next[index].qty + qty),
+          qty: Math.min(99, next[index].qty + aantal),
         };
         return next;
       }
-      return [...prev, { ...item, qty: Math.max(1, Math.min(99, qty)) }];
+      return [...prev, { ...item, qty: aantal }];
     });
+    setLaatstToegevoegd({ ...item, qty: aantal });
   }, []);
+
+  const sluitBevestiging = useCallback(() => setLaatstToegevoegd(null), []);
 
   const setQty = useCallback((key: string, qty: number) => {
     setItems((prev) =>
@@ -87,8 +99,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CartContextValue>(() => {
     const count = items.reduce((sum, item) => sum + item.qty, 0);
     const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
-    return { items, count, subtotal, hydrated, addItem, setQty, removeItem, clear };
-  }, [items, hydrated, addItem, setQty, removeItem, clear]);
+    return {
+      items,
+      count,
+      subtotal,
+      hydrated,
+      addItem,
+      setQty,
+      removeItem,
+      clear,
+      laatstToegevoegd,
+      sluitBevestiging,
+    };
+  }, [
+    items,
+    hydrated,
+    addItem,
+    setQty,
+    removeItem,
+    clear,
+    laatstToegevoegd,
+    sluitBevestiging,
+  ]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

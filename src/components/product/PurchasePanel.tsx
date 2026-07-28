@@ -102,6 +102,7 @@ export function PurchasePanel({
         sku: activeVariant?.sku ?? product.sku,
         slug: product.slug,
         name: product.name,
+        image: product.image,
         variantId: activeVariant?.id,
         variantName: activeBase
           ? `${activeVariant?.size ?? activeVariant?.name} · ${PAINT_BASES[activeBase].label}`

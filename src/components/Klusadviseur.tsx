@@ -107,6 +107,7 @@ export function Klusadviseur() {
         kluspasUnitPrice: entry.product.kluspasPrice,
         icon: entry.product.art.icon,
         hue: entry.product.art.hue,
+        image: entry.product.image,
       },
       entry.aantal,
     );
