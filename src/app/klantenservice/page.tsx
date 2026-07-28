@@ -17,7 +17,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Wanneer wordt mijn bestelling bezorgd?",
     answer:
-      "Dat hangt af van waar het artikel ligt. Ligt het in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het dezelfde dag als je vóór 10:00 bestelt (en anders de volgende dag). Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag in huis. Op elke productpagina zie je welke levertijd voor dat artikel geldt, en je ontvangt een track & trace-code zodra je pakket onderweg is.",
+      "Dat hangt af van waar het artikel ligt. Ligt het in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het de volgende dag. Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor bezorging vandaag nog, tegen een toeslag van € 1,25. Ligt het artikel in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag in huis; vandaag bezorgen kan dan niet. Op elke productpagina zie je welke levertijd voor dat artikel geldt, en je ontvangt een track & trace-code zodra je pakket onderweg is.",
   },
   {
     question: "Wat kost bezorgen?",

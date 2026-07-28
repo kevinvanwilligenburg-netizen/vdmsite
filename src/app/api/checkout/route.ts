@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
+import { shippingCost, shippingCountry } from "@/lib/shipping";
 import {
   isPlausibleKluspasNumber,
   kluspasUnitPrice,
@@ -210,6 +211,10 @@ export async function POST(request: Request) {
   }
 
   const subtotal = subtotalCents / 100;
+  const land = shippingCountry(input.customer?.country);
+  // Afhalen is altijd gratis; bij bezorgen gelden de landtarieven.
+  const verzendkostenCents = fulfilment === "pickup" ? 0 : shippingCost(subtotalCents, land);
+
   const orderInput: CreateOrderInput = {
     customer: {
       firstName,
@@ -217,12 +222,12 @@ export async function POST(request: Request) {
       email,
       phone,
       ...(address ?? {}),
-      country: "NL",
+      country: land,
     },
     items,
     subtotal,
-    shipping: 0,
-    total: subtotal,
+    shipping: verzendkostenCents / 100,
+    total: (subtotalCents + verzendkostenCents) / 100,
     fulfilment,
     ...(kluspas
       ? {
@@ -270,10 +275,26 @@ export async function POST(request: Request) {
         ? combinePromises(promises)
         : deliveryPromise({ webshopQty: 0, otherStoresQty: 1 });
 
+    // Vandaag bezorgen alleen als de klant het vroeg én het op dít moment
+    // ook echt kan. De server beslist, niet het formulier: anders zou een
+    // oude pagina of een aangepast verzoek een spoedlabel opleveren voor een
+    // order die pas morgen de deur uit kan — of andersom, een klant die
+    // betaalde voor vandaag een gewoon label geven.
+    const wilSameDay = input.sameDay === true;
+    const sameDay = wilSameDay && promise.sameDayAvailable;
+
+    if (sameDay) {
+      const toeslag = promise.sameDaySurcharge / 100;
+      orderInput.shipping = Number((orderInput.shipping + toeslag).toFixed(2));
+      orderInput.total = Number((orderInput.total + toeslag).toFixed(2));
+    }
+
     orderInput.delivery = {
-      type: promise.type === "unavailable" ? "next-workday" : promise.type,
+      type: sameDay ? "same-day" : promise.type === "unavailable" ? "next-workday" : promise.type,
       carrier: promise.carrier ?? "postnl",
-      expectedDate: (promise.deliveryDate ?? new Date()).toISOString(),
+      expectedDate: (
+        (sameDay ? promise.sameDayDate : promise.deliveryDate) ?? new Date()
+      ).toISOString(),
       ...(fulfilStoreId ? { fulfilStoreId } : {}),
     };
   }

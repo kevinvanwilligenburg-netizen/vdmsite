@@ -270,9 +270,18 @@ export interface CheckoutInput {
     houseNumberSuffix?: string;
     postalCode?: string;
     city?: string;
+    /** "NL" of "BE"; bepaalt de verzendkosten. */
+    country?: string;
   };
   fulfilment: "pickup" | "delivery";
   storeId?: string;
+  /**
+   * Kiest de klant voor bezorging vandaag, tegen toeslag? De server
+   * controleert of dat op dat moment ook echt kan — een klant die dit
+   * meestuurt na de cutoff of zonder voorraad in Nijverdal krijgt gewoon de
+   * standaardbelofte, en betaalt de toeslag dan ook niet.
+   */
+  sameDay?: boolean;
   /** Optioneel Kluspas-nummer; levert 5% korting op het hele mandje. */
   kluspasNumber?: string;
   items: CheckoutItemInput[];

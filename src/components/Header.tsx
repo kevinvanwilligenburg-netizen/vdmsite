@@ -10,9 +10,9 @@ import { StorePicker } from "@/components/store/StorePicker";
 import { getMenu, getStores } from "@/lib/tilroy";
 
 const USPS = [
-  "Vóór 10:00 besteld, vandaag verzonden",
+  "Vóór 09:00 besteld? Vandaag bezorgd mogelijk",
   "Verf gemengd in elke kleur",
-  "Gratis bezorgen én gratis afhalen",
+  "Gratis bezorgd vanaf € 59 · altijd gratis afhalen",
 ];
 
 export async function Header() {

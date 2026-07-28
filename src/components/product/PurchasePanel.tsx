@@ -355,8 +355,8 @@ export function PurchasePanel({
 
       <ul className="space-y-1.5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
         {[
-          "Vóór 10:00 besteld, vaak vandaag nog bezorgd",
-          "Gratis bezorgen of gratis afhalen in de winkel",
+          "Vóór 09:00 besteld? Kies vandaag bezorgd voor € 1,25",
+          "Gratis bezorgd vanaf € 59, afhalen is altijd gratis",
           "Betaal veilig met iDEAL, Bancontact, creditcard of Apple Pay",
         ].map((usp) => (
           <li key={usp} className="flex items-start gap-2">

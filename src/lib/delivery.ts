@@ -38,10 +38,20 @@ export interface DeliveryPromise {
   carrier?: Carrier;
   /** De (lokale) bezorgdatum, op middernacht genormaliseerd. */
   deliveryDate?: Date;
-  /** Milliseconden tot de cutoff van 10:00; 0 zodra die voorbij is. */
+  /** Milliseconden tot de cutoff van 09:00; 0 zodra die voorbij is. */
   msUntilCutoff: number;
   /** Korte tekst voor de klant. */
   label: string;
+  /**
+   * Kan de klant hiervoor bijbetalen om het vandaag te krijgen? Alleen waar
+   * vóór de cutoff én met voorraad in Nijverdal; ligt het artikel in een
+   * andere winkel, dan gaat het met PostNL en kan vandaag niet.
+   */
+  sameDayAvailable: boolean;
+  /** Wat die keuze kost, in centen. */
+  sameDaySurcharge: number;
+  /** De bezorgdatum als de klant vandaag kiest. */
+  sameDayDate?: Date;
 }
 
 function startOfDay(d: Date): Date {
@@ -88,21 +98,19 @@ export function deliveryPromise(
   const beforeCutoff = now.getHours() < SAME_DAY_CUTOFF_HOUR;
 
   if (stock.webshopQty > 0) {
-    return beforeCutoff
-      ? {
-          type: "same-day",
-          carrier: "dhl",
-          deliveryDate: startOfDay(now),
-          msUntilCutoff,
-          label: "Vandaag bezorgd",
-        }
-      : {
-          type: "next-day",
-          carrier: "dhl",
-          deliveryDate: addDays(startOfDay(now), 1),
-          msUntilCutoff: 0,
-          label: "Morgen bezorgd",
-        };
+    // Morgen is de standaard en die is gratis. Vandaag is een keuze die de
+    // klant in de checkout maakt en betaalt — daarom staat hier nooit
+    // "same-day" als type: dat veld stuurt het DHL-spoedlabel aan.
+    return {
+      type: "next-day",
+      carrier: "dhl",
+      deliveryDate: addDays(startOfDay(now), 1),
+      msUntilCutoff,
+      label: "Morgen bezorgd",
+      sameDayAvailable: beforeCutoff,
+      sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
+      ...(beforeCutoff ? { sameDayDate: startOfDay(now) } : {}),
+    };
   }
 
   if (stock.otherStoresQty > 0) {
@@ -112,6 +120,8 @@ export function deliveryPromise(
       deliveryDate: nextWorkday(now),
       msUntilCutoff,
       label: "Binnen 1 werkdag bezorgd",
+      sameDayAvailable: false,
+      sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
     };
   }
 
@@ -119,13 +129,21 @@ export function deliveryPromise(
     type: "unavailable",
     msUntilCutoff,
     label: "Tijdelijk niet leverbaar",
+    sameDayAvailable: false,
+    sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
   };
 }
 
 /** Combineer de beloftes van meerdere artikelen: de traagste bepaalt de order. */
 export function combinePromises(promises: DeliveryPromise[]): DeliveryPromise {
   if (promises.length === 0) {
-    return { type: "unavailable", msUntilCutoff: 0, label: "Tijdelijk niet leverbaar" };
+    return {
+      type: "unavailable",
+      msUntilCutoff: 0,
+      label: "Tijdelijk niet leverbaar",
+      sameDayAvailable: false,
+      sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
+    };
   }
   const rank: Record<DeliveryType, number> = {
     "same-day": 0,
@@ -133,18 +151,26 @@ export function combinePromises(promises: DeliveryPromise[]): DeliveryPromise {
     "next-workday": 2,
     unavailable: 3,
   };
-  return promises.reduce((slowest, current) =>
+  const traagste = promises.reduce((slowest, current) =>
     rank[current.type] > rank[slowest.type] ? current : slowest,
   );
+  // Vandaag bezorgen kan alleen als élke regel het aankan: ligt één artikel
+  // in een andere winkel, dan wacht de hele order op dat pakket.
+  return {
+    ...traagste,
+    sameDayAvailable: promises.every((promise) => promise.sameDayAvailable),
+  };
 }
 
 /** Korte uitleg onder de belofte. */
 export function deliveryExplanation(promise: DeliveryPromise): string {
   switch (promise.type) {
     case "same-day":
-      return `Op voorraad in ons webshopmagazijn — bestel vóór ${SAME_DAY_CUTOFF_HOUR}:00 en DHL bezorgt vandaag nog.`;
+      return "Op voorraad in ons webshopmagazijn — DHL bezorgt het vandaag nog.";
     case "next-day":
-      return "Op voorraad in ons webshopmagazijn — na 10:00 besteld, dus DHL bezorgt morgen.";
+      return promise.sameDayAvailable
+        ? `Op voorraad in ons webshopmagazijn. DHL bezorgt morgen, of vandaag nog als je daar bij het afrekenen voor kiest (bestel dan vóór ${SAME_DAY_CUTOFF_HOUR}:00).`
+        : `Op voorraad in ons webshopmagazijn — na ${SAME_DAY_CUTOFF_HOUR}:00 besteld, dus DHL bezorgt morgen.`;
     case "next-workday":
       return "Dit artikel ligt in een van onze winkels; die verstuurt het met PostNL, binnen één werkdag bij je thuis.";
     default:

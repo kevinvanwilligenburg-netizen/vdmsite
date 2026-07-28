@@ -8,9 +8,9 @@ import { getStores } from "@/lib/tilroy";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Bezorgen & afhalen – gratis, vaak dezelfde dag",
+  title: "Bezorgen & afhalen – gratis vanaf € 59",
   description:
-    "Vóór 10:00 besteld? Dan bezorgt DHL je bestelling vandaag nog. Daarna besteld is morgen in huis. Afhalen kan gratis in onze 5 winkels.",
+    "Vanaf € 59 bezorgen we gratis. Bestel je vóór 09:00, dan kun je kiezen voor bezorging vandaag nog voor € 1,25. Afhalen is altijd gratis in onze 5 winkels.",
   alternates: { canonical: "/bezorgen-en-afhalen" },
 };
 
@@ -26,32 +26,63 @@ export default async function ShippingPage() {
           Bezorgen &amp; afhalen
         </h1>
         <p className="mt-3 text-ink-soft">
-          Allebei gratis. Jij kiest wat het beste uitkomt.
+          Afhalen is altijd gratis, bezorgen vanaf € 59. Jij kiest wat het beste
+          uitkomt.
         </p>
       </header>
 
       <section className="card overflow-hidden">
         <div className="flex items-center gap-3 bg-brand p-5 text-white">
           <Icon name="truck" className="h-7 w-7 shrink-0" aria-hidden />
-          <h2 className="text-lg font-black">Bezorgen — altijd gratis</h2>
+          <h2 className="text-lg font-black">Bezorgen — gratis vanaf € 59</h2>
         </div>
         <div className="space-y-3 p-6 text-ink-soft">
           <p className="text-lg font-bold text-ink">
-            Vóór 10:00 besteld uit onze webshopvoorraad? Vandaag bezorgd.
+            Morgen in huis, of vandaag nog als je vóór 09:00 bestelt.
           </p>
           <p>
             Onze webshopvoorraad ligt in Nijverdal. Ligt jouw artikel daar, dan
-            gaat het met DHL de deur uit: vóór 10:00 besteld is dezelfde dag
-            bezorgd, daarna de volgende dag.
+            gaat het met DHL de deur uit en heb je het de volgende dag in huis.
+            Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor
+            bezorging vandaag nog, tegen een toeslag van € 1,25.
           </p>
           <p>
             Ligt het artikel in een van onze andere winkels, dan verstuurt die
             winkel het met PostNL en heb je het binnen één werkdag in huis.
+            Bezorging vandaag is dan niet mogelijk.
           </p>
+          <table className="w-full text-sm">
+            <caption className="mb-2 text-left font-bold text-ink">Verzendkosten</caption>
+            <tbody>
+              <tr className="border-t border-ink/10">
+                <th scope="row" className="py-2 text-left font-semibold text-ink">
+                  Nederland
+                </th>
+                <td className="py-2 text-right">
+                  Gratis vanaf € 59, daaronder € 4,95
+                </td>
+              </tr>
+              <tr className="border-t border-ink/10">
+                <th scope="row" className="py-2 text-left font-semibold text-ink">
+                  België
+                </th>
+                <td className="py-2 text-right">
+                  Gratis vanaf € 59, daaronder € 7,95
+                </td>
+              </tr>
+              <tr className="border-t border-ink/10">
+                <th scope="row" className="py-2 text-left font-semibold text-ink">
+                  Vandaag bezorgd
+                </th>
+                <td className="py-2 text-right">
+                  € 1,25 — bij bestellingen vóór 09:00
+                </td>
+              </tr>
+            </tbody>
+          </table>
           <p>
             Op elke productpagina staat welke levertijd voor dat artikel geldt.
             Je ontvangt een track &amp; trace-code zodra je pakket onderweg is.
-            Bezorgen is altijd gratis, ongeacht het bedrag.
           </p>
         </div>
       </section>

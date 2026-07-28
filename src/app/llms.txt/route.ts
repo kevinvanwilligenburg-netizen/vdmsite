@@ -23,8 +23,8 @@ export async function GET() {
 
 ## Bestellen en bezorgen
 
-- Bezorging is gratis binnen Nederland.
-- Artikelen uit de webshopvoorraad (vestiging Nijverdal) gaan met DHL: besteld vóór 10:00 uur is dezelfde dag bezorgd, daarna de volgende dag.
+- Bezorging is gratis vanaf € 59. Daaronder kost bezorging € 4,95 binnen Nederland en € 7,95 naar België.
+- Artikelen uit de webshopvoorraad (vestiging Nijverdal) gaan met DHL en zijn de volgende dag bezorgd. Wie vóór 09:00 uur bestelt, kan bij het afrekenen kiezen voor bezorging dezelfde dag tegen een toeslag van € 1,25.
 - Artikelen die alleen in een van de andere winkels liggen, worden door die winkel met PostNL verstuurd en zijn binnen één werkdag bezorgd.
 - Op elke productpagina staat welke levertijd voor dat artikel geldt.
 - Afhalen in de winkel is ook gratis (Click & Collect); de klant krijgt bericht met een afhaalcode zodra de bestelling klaarstaat.

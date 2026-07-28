@@ -26,9 +26,9 @@ export async function Footer() {
             De <span className="text-brand-bright">Voordeelmarkt</span>
           </p>
           <p className="text-sm leading-relaxed text-white/70">
-            De beste verf voor de laagste prijs. Vóór 10:00 besteld wordt vandaag
-            bezorgd — gratis, net als afhalen in de winkel. Verf mengen we gratis
-            in elke kleur.
+            De beste verf voor de laagste prijs. Vanaf € 59 bezorgen we gratis,
+            en afhalen in de winkel is dat altijd. Verf mengen we gratis in elke
+            kleur.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {PAYMENT_METHODS.map((method) => (

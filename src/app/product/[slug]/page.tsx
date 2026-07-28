@@ -11,6 +11,7 @@ import { StickyBuyBar } from "@/components/product/StickyBuyBar";
 import { StockList } from "@/components/StockList";
 import { getInitialColors } from "@/lib/colors";
 import { euro } from "@/lib/format";
+import { verzendtarief } from "@/lib/shipping";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { aggregateRatingJsonLd, getTrustpilotRating } from "@/lib/trustpilot";
 import {
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = [
     product.shortDescription.slice(0, 110),
     `Nu ${prijs}${product.compareAtPrice ? ` (van ${euro(product.compareAtPrice)})` : ""}.`,
-    "Gratis bezorgd of gratis afhalen in de winkel.",
+    "Gratis bezorgd vanaf € 59, afhalen is altijd gratis.",
   ].join(" ");
   return {
     title,
@@ -88,14 +89,20 @@ export default async function ProductPage({ params }: Props) {
     getTrustpilotRating(),
   ]);
 
-  // Gratis bezorgen en 14 dagen retour gelden voor het hele assortiment.
+  // Verzendkosten en 14 dagen retour gelden voor het hele assortiment. Het
+  // tarief moet hier kloppen met wat de klant afrekent: een "0" terwijl er
+  // onder € 59 wordt gerekend leest Google als een onjuiste prijsopgave.
   const offerTerms = {
     availability: "https://schema.org/InStock",
     url: absoluteUrl(`/product/${product.slug}`),
     seller: { "@type": "Organization", name: SITE_NAME },
     shippingDetails: {
       "@type": "OfferShippingDetails",
-      shippingRate: { "@type": "MonetaryAmount", value: "0", currency: "EUR" },
+      shippingRate: {
+        "@type": "MonetaryAmount",
+        value: (verzendtarief("NL") / 100).toFixed(2),
+        currency: "EUR",
+      },
       shippingDestination: { "@type": "DefinedRegion", addressCountry: "NL" },
       deliveryTime: {
         "@type": "ShippingDeliveryTime",
@@ -177,11 +184,11 @@ export default async function ProductPage({ params }: Props) {
         product.compareAtPrice
           ? ` in plaats van de adviesprijs van ${euro(product.compareAtPrice)}`
           : ""
-      }. Bezorgen is gratis, net als afhalen in de winkel.`,
+      }. Bezorgen is gratis vanaf € 59; afhalen in de winkel is dat altijd.`,
     },
     {
       q: "Hoe snel heb ik dit in huis?",
-      a: "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het dezelfde dag als je vóór 10:00 uur bestelt. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
+      a: "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het de volgende dag. Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor bezorging vandaag nog, tegen een toeslag van € 1,25. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
     },
     ...(product.colorMixable
       ? [

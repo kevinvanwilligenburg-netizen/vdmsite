@@ -30,6 +30,19 @@ interface StoreAvailability {
 
 type Fulfilment = "delivery" | "pickup";
 
+/** Antwoord van /api/bezorgopties: wat kan er, en wat kost het? */
+interface BezorgOpties {
+  standaard: { type: string; label: string; kosten: number };
+  sameDay: { beschikbaar: boolean; toeslag?: number; label?: string; cutoffUur: number };
+  verzending: {
+    land: "NL" | "BE";
+    kosten: number;
+    gratisVanaf: number;
+    tarief: number;
+    tekort: number;
+  };
+}
+
 export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const { items, subtotal, hydrated } = useCart();
   const { favourite } = useStore();
@@ -48,6 +61,9 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const [error, setError] = useState<string | null>(null);
   const [availability, setAvailability] = useState<StoreAvailability[] | null>(null);
   const [checkingStock, setCheckingStock] = useState(false);
+  const [country, setCountry] = useState<"NL" | "BE">("NL");
+  const [sameDay, setSameDay] = useState(false);
+  const [opties, setOpties] = useState<BezorgOpties | null>(null);
   const [kluspasNumber, setKluspasNumber] = useState("");
   const [kluspasOpen, setKluspasOpen] = useState(false);
 
@@ -126,6 +142,39 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
     };
   }, [fulfilment, items]);
 
+  // Bezorgopties bij de server opvragen: die kent de voorraad en de klok.
+  useEffect(() => {
+    if (fulfilment !== "delivery" || items.length === 0) return;
+    let actief = true;
+    fetch("/api/bezorgopties", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: items.map((item) => ({ sku: item.sku ?? item.productId, quantity: item.qty })),
+        subtotal,
+        country,
+      }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: BezorgOpties | null) => {
+        if (!actief || !data) return;
+        setOpties(data);
+        // Is vandaag intussen niet meer mogelijk (cutoff voorbij), dan valt de
+        // keuze terug op morgen in plaats van stilletjes te blijven staan.
+        if (!data.sameDay.beschikbaar) setSameDay(false);
+      })
+      .catch(() => undefined);
+    return () => {
+      actief = false;
+    };
+  }, [fulfilment, items, subtotal, country]);
+
+  // Bedragen die op meerdere plekken in het overzicht terugkomen.
+  const verzendkosten = fulfilment === "pickup" ? 0 : (opties?.verzending.kosten ?? 0);
+  const toeslag = fulfilment === "delivery" && sameDay ? (opties?.sameDay.toeslag ?? 0) : 0;
+  const totaal = subtotal + verzendkosten + toeslag;
+  const tekortVoorGratis = fulfilment === "delivery" ? (opties?.verzending.tekort ?? 0) : 0;
+
   if (!hydrated) {
     return <p className="py-16 text-center text-ink-soft">Bestelgegevens laden…</p>;
   }
@@ -158,10 +207,11 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             email,
             phone,
             ...(fulfilment === "delivery"
-              ? { street, houseNumber, houseNumberSuffix, postalCode, city }
+              ? { street, houseNumber, houseNumberSuffix, postalCode, city, country }
               : {}),
           },
           ...(fulfilment === "pickup" ? { storeId } : {}),
+          ...(fulfilment === "delivery" && sameDay ? { sameDay: true } : {}),
           ...(kluspasNumber.trim() ? { kluspasNumber: kluspasNumber.trim() } : {}),
           items: items.map((item) => ({
             productId: item.productId,
@@ -399,6 +449,21 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                     placeholder="Plaats"
                   />
                 </div>
+                <div>
+                  <label htmlFor="land" className="mb-1 block text-sm font-bold text-ink">
+                    Land
+                  </label>
+                  <select
+                    id="land"
+                    value={country}
+                    onChange={(event) => setCountry(event.target.value as "NL" | "BE")}
+                    autoComplete="country"
+                    className="input"
+                  >
+                    <option value="NL">Nederland</option>
+                    <option value="BE">België</option>
+                  </select>
+                </div>
               </>
             )}
           </div>
@@ -551,24 +616,84 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
           )}
         </div>
 
+        {/* Bezorgsnelheid: morgen is gratis, vandaag kost een toeslag en kan
+            alleen vóór de cutoff met voorraad in ons magazijn. Wat hier staat
+            komt van de server, zodat de klant nooit iets kiest wat niet kan. */}
+        {fulfilment === "delivery" && opties?.sameDay.beschikbaar && (
+          <fieldset className="mt-4 border-t border-ink/10 pt-4">
+            <legend className="mb-2 text-sm font-black text-ink">Wanneer wil je het hebben?</legend>
+            <div className="space-y-2">
+              <label
+                className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 p-3 text-sm transition ${
+                  !sameDay ? "border-brand bg-brand-light" : "border-ink/10 hover:border-ink/30"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="bezorgsnelheid"
+                    checked={!sameDay}
+                    onChange={() => setSameDay(false)}
+                    className="accent-brand"
+                  />
+                  <span className="font-bold text-ink">Morgen bezorgd</span>
+                </span>
+                <span className="font-bold text-green-700">Gratis</span>
+              </label>
+              <label
+                className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 p-3 text-sm transition ${
+                  sameDay ? "border-brand bg-brand-light" : "border-ink/10 hover:border-ink/30"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="bezorgsnelheid"
+                    checked={sameDay}
+                    onChange={() => setSameDay(true)}
+                    className="accent-brand"
+                  />
+                  <span className="font-bold text-ink">Vandaag bezorgd</span>
+                </span>
+                <span className="font-bold text-ink">
+                  + {euro(opties.sameDay.toeslag ?? 0)}
+                </span>
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-ink-soft">
+              Vandaag bezorgen kan bij bestellingen vóór {opties.sameDay.cutoffUur}:00, zolang
+              alles in ons webshopmagazijn ligt.
+            </p>
+          </fieldset>
+        )}
+
         <dl className="mt-4 space-y-2 border-t border-ink/10 pt-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ink-soft">
-              {fulfilment === "delivery" ? "Bezorging (DHL)" : "Afhalen in de winkel"}
-            </dt>
-            <dd className="font-bold text-green-700">Gratis</dd>
+            <dt className="text-ink-soft">Subtotaal</dt>
+            <dd className="font-semibold text-ink">{euro(subtotal)}</dd>
           </div>
-          {fulfilment === "delivery" && (
+          <div className="flex justify-between">
+            <dt className="text-ink-soft">
+              {fulfilment === "delivery" ? "Bezorging" : "Afhalen in de winkel"}
+            </dt>
+            <dd className={verzendkosten === 0 ? "font-bold text-green-700" : "font-semibold text-ink"}>
+              {verzendkosten === 0 ? "Gratis" : euro(verzendkosten)}
+            </dd>
+          </div>
+          {fulfilment === "delivery" && sameDay && opties?.sameDay.beschikbaar && (
             <div className="flex justify-between">
-              <dt className="text-ink-soft">Bezorgd</dt>
-              <dd className="font-semibold text-ink">
-                {beforeCutoff ? "Vandaag of binnen 1 werkdag" : "Binnen 1 werkdag"}
-              </dd>
+              <dt className="text-ink-soft">Vandaag bezorgd</dt>
+              <dd className="font-semibold text-ink">{euro(opties.sameDay.toeslag ?? 0)}</dd>
             </div>
+          )}
+          {fulfilment === "delivery" && tekortVoorGratis > 0 && (
+            <p className="rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark">
+              Nog {euro(tekortVoorGratis)} en je bezorging is gratis.
+            </p>
           )}
           <div className="flex justify-between text-base">
             <dt className="font-black text-ink">Totaal (incl. btw)</dt>
-            <dd className="font-black text-brand">{euro(subtotal)}</dd>
+            <dd className="font-black text-brand">{euro(totaal)}</dd>
           </div>
         </dl>
         {error && (
@@ -580,10 +705,12 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
           {submitting ? "Bezig met bestellen…" : "Bestellen en betalen →"}
         </button>
         <p className="mt-3 text-center text-xs text-ink-soft">
-          Je betaalt {euro(subtotal)}{" "}
-          {fulfilment === "delivery"
-            ? "— bezorgen is gratis."
-            : "en haalt je bestelling gratis op."}
+          Je betaalt {euro(totaal)}{" "}
+          {fulfilment === "pickup"
+            ? "en haalt je bestelling gratis op."
+            : verzendkosten === 0 && toeslag === 0
+              ? "— bezorgen is gratis."
+              : "inclusief bezorging."}
         </p>
         <div className="mt-4 border-t border-ink/10 pt-4">
           <TrustpilotWidget variant="micro" />
