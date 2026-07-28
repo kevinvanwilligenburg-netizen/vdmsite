@@ -330,6 +330,29 @@ function naamZonderMaat(titel: string, group: FeedItem[]): string {
 /** Losse maataanduidingen die vaak los in een titel staan. */
 const MAAT_PATRONEN_BRON: string[] = [];
 
+/**
+ * Ruimt de productnaam op.
+ *
+ * De brondata laat er soms magazijncodes in staan — "1SIZE" betekent alleen
+ * "dit artikel heeft geen maat" en hoort niet op een productpagina. Ook
+ * dubbele spaties en losse leestekens aan het eind gaan eruit.
+ */
+function schoneNaam(naam: string): string {
+  return naam
+    .replace(/\b1\s?size\b/gi, " ")
+    .replace(/\s*\|\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[\s\-–,|]+$/g, "")
+    .trim();
+}
+
+/** Zet de glansgraad achter de naam, als die er nog niet in staat. */
+function metGlans(naam: string, glans: string | undefined): string {
+  const waarde = glans?.trim();
+  if (!waarde) return naam;
+  return naam.toLowerCase().includes(waarde.toLowerCase()) ? naam : `${naam} ${waarde}`;
+}
+
 /** "4 stuks", "1 maal", "200 ST" uit de titel — het verpakkingsaantal. */
 function verpakkingUit(titel: string | undefined): string | undefined {
   const match = titel?.match(/\b(\d+)\s*(stuks?|st\b|maal)/i);
@@ -437,14 +460,19 @@ function buildProduct(group: FeedItem[]): Product | null {
   // Mengverf-familie: de basissen zijn samengevoegd, dus de titel van één
   // basis-artikel ("… Lichte basis") klopt niet meer als productnaam.
   const isBaseFamily = variants.some((variant) => variant.base);
-  const name = isBaseFamily
-    ? leader.productlijn || leader.title
+  const name = schoneNaam(
+    isBaseFamily
+    ? // De groepen lopen per glansgraad uiteen, maar de productlijn noemt die
+      // niet: dan staan Mat, Zijdeglans en Hoogglans als drie regels met
+      // exact dezelfde naam en verschillende prijzen in de lijst.
+      metGlans(leader.productlijn || leader.title, leader.glans)
     : // Zijn er meerdere maten samengevoegd, dan mag de maat van de eerste
       // niet in de naam blijven staan: "Mack Houtbout M8 x 80 mm" met daaronder
       // ook 90, 100 en 120 leest als een fout.
       group.length > 1 && heeftEchteMaat(leader.maat)
       ? naamZonderMaat(leader.title, group)
-      : leader.title;
+      : leader.title,
+  );
 
   return {
     id: groupId,
@@ -633,7 +661,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v10";
+const KV_KEY = "catalog:products:v12";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
