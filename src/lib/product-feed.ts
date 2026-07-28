@@ -222,7 +222,14 @@ function toCents(value: string | undefined): number {
  */
 function fotoUrl(value: string | undefined): string | undefined {
   if (!value) return undefined;
-  return value.replace(/\/s\/resizeinbox\/\d+x\d+\//, "/v7/");
+  return (
+    value
+      .replace(/\/s\/resizeinbox\/\d+x\d+\//, "/v7/")
+      // Een plus in de bestandsnaam ("HOUTBOUT + MOER") wordt onderweg als
+      // spatie gelezen en levert een 404 op; als %2B komt precies dezelfde
+      // foto wél door. Raakt 388 artikelen, waarvan er geen enkele laadde.
+      .replace(/\+/g, "%2B")
+  );
 }
 
 /**
@@ -265,6 +272,73 @@ function buildSpecs(item: FeedItem): { label: string; value: string }[] {
  * voor de klant is het één product: hij kiest een kleur en een inhoud, en wij
  * kiezen de basis (zie lib/paint-bases.ts).
  */
+/** Maten die geen maat zijn: die zeggen alleen "dit artikel heeft er geen". */
+const GEEN_MAAT = new Set(["1size", "one size", "n.v.t.", "nvt", "-"]);
+
+function heeftEchteMaat(maat: string | undefined): boolean {
+  const waarde = maat?.trim().toLowerCase();
+  return Boolean(waarde) && !GEEN_MAAT.has(waarde!);
+}
+
+/**
+ * De titel zonder maat- en aantalvermeldingen.
+ *
+ * Hiermee herkennen we artikelen die in werkelijkheid maten van hetzelfde
+ * product zijn. Tilroy geeft elke maat een eigen group_id, dus zonder deze
+ * stap staan er 103 losse "Mack Spaanplaatschroef PZ2" in de catalogus en
+ * vier aparte blikken Histor Leliewit die alleen in inhoud verschillen.
+ */
+function titelRomp(titel: string, maat: string | undefined): string {
+  let tekst = ` ${titel.toLowerCase()} `;
+  if (maat) tekst = tekst.split(maat.toLowerCase()).join(" ");
+  return tekst
+    .replace(/\b\d+(?:[.,]\d+)?\s*(mm|cm|mtr|meter|ml|l|liter|gr|gram|kg|watt|w|volt|v|inch)\b/g, " ")
+    .replace(/\bm\d+\s*x\s*\d+(?:[.,]\d+)?\b/g, " ")
+    .replace(/\b\d+(?:[.,]\d+)?\s*x\s*\d+(?:[.,]\d+)?\b/g, " ")
+    .replace(/\b\d+\s*(st|stuks?|maal)\b/g, " ")
+    .replace(/\b\d+(?:[.,]\d+)?\b/g, " ")
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Productnaam voor een groep samengevoegde maten.
+ *
+ * We knippen de titel af op het punt waar de maatvermelding begint, en
+ * houden netjes hoofdletters en leestekens van het origineel aan. Levert
+ * dat te weinig op, dan blijft de volledige titel staan — een half woord
+ * als productnaam is erger dan een titel met een maat erin.
+ */
+function naamZonderMaat(titel: string, group: FeedItem[]): string {
+  const kandidaten = group
+    .map((item) => item.maat?.trim())
+    .filter((maat): maat is string => Boolean(maat));
+
+  let afkap = titel.length;
+  for (const maat of [...kandidaten, ...MAAT_PATRONEN_BRON]) {
+    const index = titel.toLowerCase().indexOf(maat.toLowerCase());
+    if (index > 0) afkap = Math.min(afkap, index);
+  }
+  const patroon = titel.match(/\b\d+(?:[.,]\d+)?\s*(?:mm|cm|ml|l|liter|inch|st|stuks?|maal)\b/i);
+  if (patroon?.index && patroon.index > 0) afkap = Math.min(afkap, patroon.index);
+
+  const kort = titel.slice(0, afkap).replace(/[\s\-–,]+$/, "").trim();
+  return kort.length >= 8 ? kort : titel;
+}
+
+/** Losse maataanduidingen die vaak los in een titel staan. */
+const MAAT_PATRONEN_BRON: string[] = [];
+
+/** "4 stuks", "1 maal", "200 ST" uit de titel — het verpakkingsaantal. */
+function verpakkingUit(titel: string | undefined): string | undefined {
+  const match = titel?.match(/\b(\d+)\s*(stuks?|st\b|maal)/i);
+  if (!match) return undefined;
+  const aantal = Number(match[1]);
+  if (!Number.isFinite(aantal) || aantal < 1) return undefined;
+  return aantal === 1 ? "per stuk" : `${aantal} stuks`;
+}
+
 function groupKeyFor(item: FeedItem): string {
   if (item.mengverf === "Ja" && item.productlijn && parseBase(item.mengbasis)) {
     return `meng:${[item.productlijn, item.glans, item.verfsoort]
@@ -272,6 +346,18 @@ function groupKeyFor(item: FeedItem): string {
       .join("|")
       .toLowerCase()}`;
   }
+
+  // Maatvarianten van hetzelfde artikel samen onder één product. Alleen als
+  // er een échte maat staat: bij "1SIZE" zegt het veld niets, en dan zouden
+  // bijvoorbeeld alle behangdessins van een serie op één hoop belanden.
+  if (heeftEchteMaat(item.maat) && item.title) {
+    const romp = titelRomp(item.title, item.maat);
+    // Blijft er te weinig over, dan is de romp geen betrouwbaar kenmerk meer.
+    if (romp.length >= 6) {
+      return `maat:${(item.brand ?? "").toLowerCase()}|${romp}`;
+    }
+  }
+
   return item.group_id ?? item.id;
 }
 
@@ -319,12 +405,20 @@ function buildProduct(group: FeedItem[]): Product | null {
     .filter((item) => item.maat)
     .map((item) => {
       const base = parseBase(item.mengbasis);
+      // Staat dezelfde maat er meerdere keren in, dan verschillen die
+      // artikelen op iets anders — meestal het aantal per verpakking. Dat
+      // zetten we erbij, anders staan er twee identieke keuzes.
+      const verpakking = verpakkingUit(item.title);
+      const label =
+        verpakking && group.filter((ander) => ander.maat === item.maat).length > 1
+          ? `${item.maat} — ${verpakking}`
+          : item.maat;
       return {
         id: item.id,
-        name: item.maat,
+        name: label,
         price: toCents(item.sale_price ?? item.price),
         sku: item.id,
-        size: item.maat,
+        size: label,
         ...(base ? { base } : {}),
       };
     });
@@ -343,7 +437,14 @@ function buildProduct(group: FeedItem[]): Product | null {
   // Mengverf-familie: de basissen zijn samengevoegd, dus de titel van één
   // basis-artikel ("… Lichte basis") klopt niet meer als productnaam.
   const isBaseFamily = variants.some((variant) => variant.base);
-  const name = isBaseFamily ? (leader.productlijn || leader.title) : leader.title;
+  const name = isBaseFamily
+    ? leader.productlijn || leader.title
+    : // Zijn er meerdere maten samengevoegd, dan mag de maat van de eerste
+      // niet in de naam blijven staan: "Mack Houtbout M8 x 80 mm" met daaronder
+      // ook 90, 100 en 120 leest als een fout.
+      group.length > 1 && heeftEchteMaat(leader.maat)
+      ? naamZonderMaat(leader.title, group)
+      : leader.title;
 
   return {
     id: groupId,
@@ -370,7 +471,13 @@ function buildProduct(group: FeedItem[]): Product | null {
     specs: buildSpecs(leader),
     attributes: buildAttributes(leader, group),
     tags: (leader.zoektermen ?? "").split(/\s+/).filter(Boolean).slice(0, 24),
-    image: fotoUrl(leader.image_link),
+    // Pak de eerste variant die wél een foto heeft. Bij samengevoegde maten
+    // is de "leider" willekeurig de eerste uit de feed; heeft juist die geen
+    // foto, dan zou het hele product er geen tonen terwijl de andere maten
+    // van hetzelfde artikel er een hebben.
+    image: fotoUrl(
+      leader.image_link || group.find((item) => item.image_link)?.image_link,
+    ),
     inStock,
     // Elke variant heeft een eigen URL op de huidige site; die moeten
     // straks allemaal naar deze pagina wijzen.
@@ -526,7 +633,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v8";
+const KV_KEY = "catalog:products:v10";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
