@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { Logo, Tagline } from "@/components/Logo";
 import { MegaMenu } from "@/components/MegaMenu";
 import { MobileNav } from "@/components/MobileNav";
+import { SearchBox } from "@/components/search/SearchBox";
 import { StorePicker } from "@/components/store/StorePicker";
 import { getMenu, getStores } from "@/lib/tilroy";
 
@@ -53,26 +54,7 @@ export async function Header() {
           <Logo className="h-9 w-auto sm:h-11" />
           <Tagline />
         </div>
-        <form action="/zoeken" role="search" className="order-last flex w-full flex-1 sm:order-none sm:w-auto">
-          <label htmlFor="site-zoeken" className="sr-only">
-            Zoeken in het assortiment
-          </label>
-          <input
-            id="site-zoeken"
-            type="search"
-            name="q"
-            enterKeyHint="search"
-            placeholder="Zoeken naar…"
-            className="w-full rounded-l-lg border-2 border-r-0 border-ink/10 px-4 py-2 outline-none transition focus:border-brand"
-          />
-          <button
-            type="submit"
-            className="rounded-r-lg bg-brand px-4 font-bold text-white transition hover:bg-brand-dark"
-            aria-label="Zoeken"
-          >
-            <Icon name="search" className="h-5 w-5" />
-          </button>
-        </form>
+        <SearchBox />
         <div className="ml-auto flex items-center gap-1 sm:gap-3">
           <StorePicker />
           <CartBadge />

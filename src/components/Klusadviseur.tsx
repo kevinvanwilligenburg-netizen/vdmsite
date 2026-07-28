@@ -61,9 +61,9 @@ const ROL_LABEL: Record<AdviesProductDto["rol"], string> = {
   gereedschap: "Gereedschap",
 };
 
-export function Klusadviseur() {
+export function Klusadviseur({ startVraag = "" }: { startVraag?: string }) {
   const { addItem } = useCart();
-  const [vraag, setVraag] = useState("");
+  const [vraag, setVraag] = useState(startVraag);
   const [bezig, setBezig] = useState(false);
   const [advies, setAdvies] = useState<AdviesDto | null>(null);
   const [fout, setFout] = useState<string | null>(null);

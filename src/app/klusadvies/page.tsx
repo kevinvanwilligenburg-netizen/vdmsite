@@ -6,6 +6,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { Klusadviseur } from "@/components/Klusadviseur";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 
+// Leest `?vraag=` uit de URL en is daarmee per definitie dynamisch; de
+// pagina zelf is licht, dus dat kost niets.
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
@@ -38,7 +40,14 @@ const VRAGEN = [
   },
 ];
 
-export default function KlusadviesPage() {
+export default function KlusadviesPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
+  const ruw = searchParams.vraag;
+  const startVraag = (Array.isArray(ruw) ? ruw[0] : ruw ?? "").slice(0, 600);
+
   return (
     <div className="space-y-8">
       <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Klusadvies" }]} />
@@ -53,7 +62,9 @@ export default function KlusadviesPage() {
         </p>
       </header>
 
-      <Klusadviseur />
+      {/* Komt de bezoeker vanaf het zoeken ("trap verven"), dan staat die
+          vraag al ingevuld — die hoeft hij niet nog eens te typen. */}
+      <Klusadviseur startVraag={startVraag} />
 
       <section className="max-w-3xl">
         <h2 className="text-xl font-black uppercase text-ink">Veelgestelde vragen</h2>
