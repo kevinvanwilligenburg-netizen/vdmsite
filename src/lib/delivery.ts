@@ -3,19 +3,29 @@
  *
  * De belofte hangt af van waar het artikel ligt:
  *
- *  - **Op voorraad in Nijverdal** (dat is het webshopmagazijn): dan geldt de
- *    strakke belofte. Besteld vóór 10:00 → vandaag bezorgd met DHL; daarna →
- *    morgen.
+ *  - **Op voorraad in Nijverdal** (dat is het webshopmagazijn): standaard
+ *    morgen bezorgd met DHL. Bestelt de klant vóór 09:00, dan kan hij
+ *    daarnaast kiezen voor vandaag, tegen een toeslag.
  *  - **Alleen in een andere winkel**: die winkel verstuurt het pakket zelf met
  *    PostNL, bezorging binnen één werkdag. Zulke orders worden in Tilroy
- *    verwerkt door de winkel die het artikel heeft.
+ *    verwerkt door de winkel die het artikel heeft. Vandaag bezorgen kan dan
+ *    niet.
  *  - **Nergens op voorraad**: geen bezorgbelofte.
+ *
+ * Vandaag bezorgen is dus een keuze die de klant maakt en betaalt, geen
+ * automatische toekenning. Dat is niet alleen een prijskwestie: het dashboard
+ * hangt aan `delivery.type === "same-day"` een DHL-label met spoedoptie. Staat
+ * dat veld verkeerd, dan krijgt een klant die voor spoed betaalde een gewoon
+ * label — of andersom.
  *
  * Alles rekent in lokale tijd (NL-publiek); `now` is injecteerbaar zodat de
  * logica deterministisch te testen is.
  */
 
-export const SAME_DAY_CUTOFF_HOUR = 10;
+export const SAME_DAY_CUTOFF_HOUR = 9;
+
+/** Toeslag voor vandaag bezorgen, in centen. */
+export const SAME_DAY_SURCHARGE_CENTS = 125;
 
 /** Vestiging die de webshopvoorraad houdt. */
 export const WEBSHOP_STORE_ID = "nijverdal";

@@ -353,6 +353,29 @@ function metGlans(naam: string, glans: string | undefined): string {
   return naam.toLowerCase().includes(waarde.toLowerCase()) ? naam : `${naam} ${waarde}`;
 }
 
+/**
+ * De maat als getal, om varianten op te kunnen sorteren.
+ *
+ * Liters wegen zwaarder dan millimeters, zodat inhoud en lengte nooit door
+ * elkaar sorteren binnen één product. `inhoud_liter` uit de feed gaat voor;
+ * anders lezen we het getal uit het maatveld.
+ */
+function maatWaarde(item: FeedItem): number {
+  const liter = Number(item.inhoud_liter ?? 0);
+  if (Number.isFinite(liter) && liter > 0) return liter;
+  const match = item.maat?.match(/([\d]+(?:[.,]\d+)?)/);
+  if (!match) return 0;
+  const waarde = Number(match[1].replace(",", "."));
+  return Number.isFinite(waarde) ? waarde : 0;
+}
+
+/** Verpakkingsaantal als getal ("4 stuks" → 4, "1 maal" → 1). */
+function aantalUit(titel: string | undefined): number {
+  const match = titel?.match(/\b(\d+)\s*(?:stuks?|st\b|maal)/i);
+  const waarde = match ? Number(match[1]) : 1;
+  return Number.isFinite(waarde) ? waarde : 1;
+}
+
 /** "4 stuks", "1 maal", "200 ST" uit de titel — het verpakkingsaantal. */
 function verpakkingUit(titel: string | undefined): string | undefined {
   const match = titel?.match(/\b(\d+)\s*(stuks?|st\b|maal)/i);
@@ -420,9 +443,15 @@ function buildProduct(group: FeedItem[]): Product | null {
   const leader = group.find((item) => item.group_leader === "true") ?? group[0];
   if (!leader?.title) return null;
 
-  const sorted = [...group].sort(
-    (a, b) => Number(a.inhoud_liter ?? 0) - Number(b.inhoud_liter ?? 0),
-  );
+  // Op maat sorteren, van klein naar groot. Zonder dit staan 20, 120, 40 en
+  // 180 mm door elkaar in de keuzelijst, wat er slordig uitziet en waarin de
+  // klant zijn maat niet terugvindt. Bij gelijke maat het kleinste
+  // verpakkingsaantal eerst.
+  const sorted = [...group].sort((a, b) => {
+    const verschil = maatWaarde(a) - maatWaarde(b);
+    if (verschil !== 0) return verschil;
+    return aantalUit(a.title) - aantalUit(b.title);
+  });
 
   const variants: ProductVariant[] = sorted
     .filter((item) => item.maat)
@@ -431,17 +460,16 @@ function buildProduct(group: FeedItem[]): Product | null {
       // Staat dezelfde maat er meerdere keren in, dan verschillen die
       // artikelen op iets anders — meestal het aantal per verpakking. Dat
       // zetten we erbij, anders staan er twee identieke keuzes.
-      const verpakking = verpakkingUit(item.title);
-      const label =
-        verpakking && group.filter((ander) => ander.maat === item.maat).length > 1
-          ? `${item.maat} — ${verpakking}`
-          : item.maat;
+      const meerdereVerpakkingen =
+        group.filter((ander) => ander.maat === item.maat).length > 1;
+      const verpakking = meerdereVerpakkingen ? verpakkingUit(item.title) : undefined;
       return {
         id: item.id,
-        name: label,
+        name: verpakking ? `${item.maat} — ${verpakking}` : item.maat,
         price: toCents(item.sale_price ?? item.price),
         sku: item.id,
-        size: label,
+        size: item.maat,
+        ...(verpakking ? { packaging: verpakking } : {}),
         ...(base ? { base } : {}),
       };
     });
@@ -661,7 +689,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v12";
+const KV_KEY = "catalog:products:v13";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

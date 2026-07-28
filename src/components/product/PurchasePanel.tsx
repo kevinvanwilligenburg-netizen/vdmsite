@@ -16,6 +16,7 @@ import {
   sizesInLiters,
   sizesOf,
 } from "@/lib/paint-bases";
+import { euro } from "@/lib/format";
 import type { PaintColor, Product } from "@/lib/types";
 
 export function PurchasePanel({
@@ -77,6 +78,27 @@ export function PurchasePanel({
   const activeVariant = basesInPlay
     ? pickVariant(product, size, color)
     : variants.find((variant) => variant.id === variantId);
+
+  // Maat en verpakking als twee keuzes: de unieke maten in de volgorde van de
+  // feed (die staat al op grootte), en daarbinnen de verpakkingen.
+  const maten = useMemo(() => {
+    const gezien: string[] = [];
+    for (const variant of variants) {
+      const maat = variant.size ?? variant.name;
+      if (maat && !gezien.includes(maat)) gezien.push(maat);
+    }
+    return gezien;
+  }, [variants]);
+
+  const actieveMaat = activeVariant?.size ?? activeVariant?.name;
+  const verpakkingenVanMaat = variants.filter(
+    (variant) => (variant.size ?? variant.name) === actieveMaat,
+  );
+
+  // "Kies je inhoud" klopt voor blikken verf, niet voor bouten van 70 mm.
+  const maatLabel = variants.some((variant) => /\b(ml|l|liter)\b/i.test(variant.size ?? ""))
+    ? "Kies je inhoud"
+    : "Kies je maat";
   const unitPrice = activeVariant?.price ?? product.price;
   const activeBase = activeVariant?.base;
   const coverage = coveragePerLiter(product);
@@ -160,26 +182,62 @@ export function PurchasePanel({
         )
       ) : (
         variants.length > 0 && (
-          <fieldset>
-            <legend className="mb-2 text-sm font-bold text-ink">Kies je inhoud</legend>
-            <div className="flex flex-wrap gap-2">
-              {variants.map((variant) => (
-                <button
-                  key={variant.id}
-                  type="button"
-                  onClick={() => setVariantId(variant.id)}
-                  aria-pressed={variant.id === variantId}
-                  className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
-                    variant.id === variantId
-                      ? "border-brand bg-brand-light text-brand"
-                      : "border-ink/10 text-ink hover:border-ink/30"
-                  }`}
-                >
-                  {variant.name}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <div className="space-y-4">
+            <fieldset>
+              <legend className="mb-2 text-sm font-bold text-ink">{maatLabel}</legend>
+              <div className="flex flex-wrap gap-2">
+                {maten.map((maat) => (
+                  <button
+                    key={maat}
+                    type="button"
+                    onClick={() => {
+                      // Bij het wisselen van maat de eerste verpakking van die
+                      // maat kiezen; de vorige bestaat er misschien niet in.
+                      const eerste = variants.find((variant) => (variant.size ?? variant.name) === maat);
+                      if (eerste) setVariantId(eerste.id);
+                    }}
+                    aria-pressed={maat === actieveMaat}
+                    className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
+                      maat === actieveMaat
+                        ? "border-brand bg-brand-light text-brand"
+                        : "border-ink/10 text-ink hover:border-ink/30"
+                    }`}
+                  >
+                    {maat}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            {/* Bestaat deze maat in meerdere verpakkingen, dan is dat een
+                tweede keuze. Anders zou de klant tientallen knoppen krijgen
+                waarin maat en aantal door elkaar lopen. */}
+            {verpakkingenVanMaat.length > 1 && (
+              <fieldset>
+                <legend className="mb-2 text-sm font-bold text-ink">Aantal per verpakking</legend>
+                <div className="flex flex-wrap gap-2">
+                  {verpakkingenVanMaat.map((variant) => (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => setVariantId(variant.id)}
+                      aria-pressed={variant.id === variantId}
+                      className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
+                        variant.id === variantId
+                          ? "border-brand bg-brand-light text-brand"
+                          : "border-ink/10 text-ink hover:border-ink/30"
+                      }`}
+                    >
+                      {variant.packaging ?? variant.name}
+                      <span className="ml-2 font-normal text-ink-soft">
+                        {euro(variant.price)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+          </div>
         )
       )}
 

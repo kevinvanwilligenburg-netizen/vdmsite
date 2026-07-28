@@ -8,8 +8,15 @@ export interface ProductVariant {
   name: string;
   price: number; // in centen, incl. btw
   sku: string;
-  /** Inhoud (bv. "2,5 L"); bij mengverf los van de basis. */
+  /** Inhoud of maat (bv. "2,5 L", "70 MM"); bij mengverf los van de basis. */
   size?: string;
+  /**
+   * Verpakkingsaantal ("3 stuks", "per stuk), als hetzelfde artikel in
+   * dezelfde maat in meerdere verpakkingen bestaat. Maat en verpakking zijn
+   * twee losse keuzes; als één lijst gecombineerd levert dat tientallen
+   * knoppen op waarin niemand zijn maat terugvindt.
+   */
+  packaging?: string;
   /** Basis waarin deze variant wordt gemengd; alleen bij mengverf. */
   base?: PaintBaseId;
 }
