@@ -198,6 +198,25 @@ export function ProductFiltersPanel({
         <div className="min-w-0">{children}</div>
       </div>
 
+      {/*
+        Zwevende filterknop op mobiel. De knop bovenaan de lijst verdwijnt uit
+        beeld zodra je gaat scrollen, en dan moest je helemaal terug omhoog om
+        te verfijnen. Deze blijft staan waar je duim al is.
+      */}
+      {facets.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="fixed bottom-5 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-black text-white shadow-lift transition hover:bg-brand lg:hidden"
+        >
+          <Icon name="level" className="h-4 w-4" />
+          Filteren
+          {activeCount > 0 && (
+            <span className="rounded-full bg-brand px-2 py-0.5 text-xs">{activeCount}</span>
+          )}
+        </button>
+      )}
+
       {/* Mobiel: uitschuifpaneel */}
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">

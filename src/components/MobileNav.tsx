@@ -12,15 +12,28 @@ interface NavLink {
   icon?: string;
 }
 
-/** Uitklapmenu voor mobiel: categorieën + service-links achter één knop. */
+/** Een categorie met de soorten die erin zitten, voor de uitklapboom. */
+export interface MobileCategory extends NavLink {
+  soorten?: { label: string; href: string; count: number }[];
+}
+
+/**
+ * Uitklapmenu voor mobiel.
+ *
+ * De categorieën zijn uitvouwbaar naar de soorten die erin zitten. Zonder dat
+ * moest een klant eerst een categoriepagina laden en daar verder filteren —
+ * op een telefoon een omweg van twee schermen voor iets wat hier in één tik
+ * kan. De categorie zelf blijft aantikbaar voor wie het hele assortiment wil.
+ */
 export function MobileNav({
   categories,
   stores,
 }: {
-  categories: NavLink[];
+  categories: MobileCategory[];
   stores: NavLink[];
 }) {
   const [open, setOpen] = useState(false);
+  const [uitgeklapt, setUitgeklapt] = useState<string | null>(null);
   const pathname = usePathname();
 
   // Sluit het menu bij navigatie en zet de pagina-scroll terug.
@@ -83,16 +96,63 @@ export function MobileNav({
                 Assortiment
               </p>
               <ul className="space-y-1">
-                {categories.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="block rounded-lg px-3 py-2.5 font-bold text-ink transition hover:bg-brand-light hover:text-brand"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                {categories.map((link) => {
+                  const heeftSoorten = (link.soorten?.length ?? 0) > 0;
+                  const isOpen = uitgeklapt === link.href;
+                  return (
+                    <li key={link.href}>
+                      <div className="flex items-stretch gap-1">
+                        <Link
+                          href={link.href}
+                          className="flex-1 rounded-lg px-3 py-2.5 font-bold text-ink transition hover:bg-brand-light hover:text-brand"
+                        >
+                          {link.label}
+                        </Link>
+                        {heeftSoorten && (
+                          <button
+                            type="button"
+                            onClick={() => setUitgeklapt(isOpen ? null : link.href)}
+                            aria-expanded={isOpen}
+                            aria-label={`${link.label} uitklappen`}
+                            className="rounded-lg px-3 text-ink-soft transition hover:bg-brand-light hover:text-brand"
+                          >
+                            <svg
+                              viewBox="0 0 16 16"
+                              className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                              aria-hidden
+                            >
+                              <path
+                                d="M3 6l5 5 5-5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+
+                      {heeftSoorten && isOpen && (
+                        <ul className="mb-1 ml-3 space-y-0.5 border-l-2 border-brand/20 pl-3">
+                          {link.soorten!.map((soort) => (
+                            <li key={soort.href}>
+                              <Link
+                                href={soort.href}
+                                className="flex items-baseline justify-between gap-2 rounded-lg px-3 py-2 text-sm text-ink transition hover:bg-brand-light hover:text-brand"
+                              >
+                                <span className="truncate">{soort.label}</span>
+                                <span className="shrink-0 text-xs text-ink-soft">
+                                  {soort.count}
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
                 <li>
                   <Link
                     href="/kleurkiezer"

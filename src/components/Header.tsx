@@ -44,6 +44,9 @@ export async function Header() {
           categories={categories.map((category) => ({
             href: `/categorie/${category.slug}`,
             label: category.name,
+            // Dezelfde soorten als in het megamenu, zodat een klant op zijn
+            // telefoon niet eerst een categoriepagina hoeft te laden.
+            soorten: category.soorten,
           }))}
           stores={stores.map((store) => ({
             href: `/winkels/${store.slug}`,
