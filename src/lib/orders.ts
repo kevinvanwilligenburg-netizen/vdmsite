@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { isKvEnabled, kvGetJSON, kvSAdd, kvSetJSON, kvSMembers } from "@/lib/kv";
 import { getMolliePayment } from "@/lib/mollie";
+import { stuurOrderbevestiging } from "@/lib/orderbevestiging";
 import {
   isPaidStatus,
   type Order,
@@ -235,12 +236,28 @@ export async function applyPaymentResult(
   info?: { method?: string },
 ): Promise<Order> {
   if (isPaidStatus(order.paymentStatus)) return order;
-  return (
+
+  // De bevestiging markeren we in dezelfde schrijfactie als de statuswissel.
+  // Deze functie wordt vanuit twee kanten aangeroepen — de Mollie-webhook en
+  // het openen van de besteldpagina — en die kunnen elkaar kruisen. Door het
+  // stempel meteen mee te schrijven is er maar één aanroep die 'm daarna ook
+  // echt verstuurt.
+  const magMailen = outcome === "paid" && !order.confirmationSentAt;
+  const bijgewerkt =
     (await updateOrder(order.id, {
       paymentStatus: outcome,
       paymentMethod: info?.method ?? order.paymentMethod,
-    })) ?? order
-  );
+      ...(magMailen ? { confirmationSentAt: new Date().toISOString() } : {}),
+    })) ?? order;
+
+  if (magMailen) {
+    // Bewust afwachten: op een serverless functie wordt werk dat na het
+    // antwoord doorloopt zonder pardon afgekapt, en dan komt de bevestiging
+    // nooit aan.
+    await stuurOrderbevestiging(bijgewerkt);
+  }
+
+  return bijgewerkt;
 }
 
 /**

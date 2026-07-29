@@ -1,5 +1,6 @@
 import { bezorgbaarheid, type TeBezorgenArtikel } from "@/lib/bezorgbaarheid";
 import { isKvEnabled, kvGetRaw, kvSetEx } from "@/lib/kv";
+import { isGeloofwaardigeKluspasPrijs } from "@/lib/kluspas";
 import { parseBase } from "@/lib/paint-bases";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import type { Category, Product, ProductVariant } from "@/lib/types";
@@ -622,7 +623,7 @@ function buildProduct(group: FeedItem[]): Product | null {
         name: verpakking ? `${item.maat} — ${verpakking}` : item.maat,
         price: eigenPrijs,
         ...(eigenAdvies > eigenPrijs ? { compareAtPrice: eigenAdvies } : {}),
-        ...(eigenKluspas > 0 && eigenKluspas < eigenPrijs
+        ...(isGeloofwaardigeKluspasPrijs(eigenPrijs, eigenKluspas)
           ? { kluspasPrice: eigenKluspas }
           : {}),
         sku: item.id,
@@ -652,9 +653,12 @@ function buildProduct(group: FeedItem[]): Product | null {
   const vanafVariant = variants.find((variant) => variant.price === price);
   const compareAtPrice = vanafVariant?.compareAtPrice ?? toCents(leader.price);
   // Kluspas-prijs uit de feed (komma-notatie, bv. "4,13").
-  const kluspasPrice = vanafVariant
+  const eigenKluspas = vanafVariant
     ? (vanafVariant.kluspasPrice ?? 0)
     : toCents(leader.kluspas_prijs);
+  // Onwaarschijnlijke kortingen (zie lib/kluspas.ts) laten we hier al vallen,
+  // zodat ze nergens in de site meer opduiken.
+  const kluspasPrice = isGeloofwaardigeKluspasPrijs(price, eigenKluspas) ? eigenKluspas : 0;
 
   const groupId = (leader.group_id ?? leader.id).replace(/^g:/, "");
   const inStock = group.some((item) => Number(item.voorraad ?? 0) > 0);
@@ -694,7 +698,7 @@ function buildProduct(group: FeedItem[]): Product | null {
         .join(" ") || name,
     price,
     compareAtPrice: compareAtPrice > price ? compareAtPrice : undefined,
-    kluspasPrice: kluspasPrice > 0 && kluspasPrice < price ? kluspasPrice : undefined,
+    kluspasPrice: kluspasPrice > 0 ? kluspasPrice : undefined,
     unit: leader.maat_range || leader.maat || undefined,
     colorMixable: leader.mengverf === "Ja",
     variants: variants.length > 1 ? variants : undefined,
@@ -864,7 +868,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v17";
+const KV_KEY = "catalog:products:v18";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

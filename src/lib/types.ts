@@ -243,6 +243,8 @@ export interface Order {
   total: number; // euro's
   /** Kluspas-nummer van de klant; de korting zit al in de bedragen. */
   kluspasNumber?: string;
+  /** Wanneer de orderbevestiging is verstuurd; voorkomt een tweede mail. */
+  confirmationSentAt?: string;
   /** Wat de Kluspas op deze bestelling scheelde (euro's). */
   kluspasSavings?: number;
   isTest?: boolean;
