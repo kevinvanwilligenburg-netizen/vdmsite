@@ -131,7 +131,15 @@ export function SearchBox() {
   const volgende = () => ++index;
 
   return (
-    <div ref={wrapper} className="relative order-last w-full flex-1 sm:order-none sm:w-auto">
+    // Op een telefoon hoort de zoekbalk op een eigen regel onder de logo-rij.
+    // Dat deed `w-full` niet zolang `flex-1` erbij stond: die zet de
+    // flex-basis op 0, dus het vak kroop mee in de ruimte die overbleef naast
+    // het logo en de winkelwagen — een invoerveld van vijftig pixels waar
+    // niets in paste. Pas vanaf een tablet mag hij weer meegroeien.
+    <div
+      ref={wrapper}
+      className="relative order-last w-full shrink-0 sm:order-none sm:w-auto sm:flex-1"
+    >
       <form action="/zoeken" role="search" onSubmit={verzend} className="flex">
         <label htmlFor="site-zoeken" className="sr-only">
           Zoeken in het assortiment

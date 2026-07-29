@@ -11,16 +11,37 @@ import type { MenuCategory } from "@/lib/tilroy";
  *
  * De vorige balk schoof horizontaal: bij negen categorieën liep hij ruim
  * 300 pixels buiten een laptopscherm, compleet met scrollbalk, en de laatste
- * items waren onvindbaar. Nu wrapt de balk in plaats van te scrollen, en
- * opent elke categorie een paneel met de soorten en de merken die er
- * werkelijk in zitten — zo ziet een klant het assortiment zonder eerst te
- * moeten klikken.
+ * items waren onvindbaar. Elke categorie opent nu een paneel met de soorten
+ * en de merken die er werkelijk in zitten — zo ziet een klant het
+ * assortiment zonder eerst te moeten klikken.
+ *
+ * Niet álle categorieën staan in de balk. Met tien stuks plus de twee knoppen
+ * is er 1.195 pixels nodig; op een laptop van 1024 valt de Kleurkiezer dan
+ * buiten beeld, en bij een wrappende balk staat er één categorie eenzaam op
+ * een tweede regel. Daarom vijf vaste rubrieken en daarachter "Alle
+ * categorieën", met de rest in het paneel — dezelfde oplossing die Gamma
+ * gebruikt. Voeg hier niets aan toe zonder na te meten op 1024 pixels.
  *
  * Openen gaat met de muis (hover) én met het toetsenbord (focus, Escape om
  * te sluiten). De categorie zelf blijft een gewone link, dus wie het paneel
  * niet gebruikt komt gewoon op de categoriepagina uit.
  */
+/** Sleutel voor het paneel met alle categorieën; geen categorie-slug. */
+const ALLES = "__alles__";
+
+/** Rubrieken die vast in de balk staan, in deze volgorde. */
+const VASTE_RUBRIEKEN = [
+  "verf",
+  "verfbenodigdheden",
+  "lijm-en-kit",
+  "bevestiging",
+  "gereedschap",
+];
+
 export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
+  const inBalk = VASTE_RUBRIEKEN.map((slug) =>
+    categories.find((category) => category.slug === slug),
+  ).filter((category): category is MenuCategory => Boolean(category));
   const [open, setOpen] = useState<string | null>(null);
   const sluitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -70,8 +91,8 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
         alles ruim past.
       */}
       <div className="container-page flex items-center justify-between gap-4 py-1 text-sm font-bold">
-        <div className="flex flex-wrap items-center gap-x-1">
-          {categories.map((category) => {
+        <div className="flex items-center gap-x-0.5">
+          {inBalk.map((category) => {
           const isOpen = open === category.slug;
           const heeftPaneel = category.soorten.length > 0 || category.merken.length > 0;
           return (
@@ -101,6 +122,30 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
               </div>
             );
           })}
+
+          {/* Alles wat niet in de balk past, in één paneel. */}
+          <div className="static">
+            <button
+              type="button"
+              aria-expanded={open === ALLES}
+              onMouseEnter={() => {
+                annuleerSluiten();
+                setOpen(ALLES);
+              }}
+              onFocus={() => {
+                annuleerSluiten();
+                setOpen(ALLES);
+              }}
+              className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-1.5 transition ${
+                open === ALLES ? "bg-white/10 text-brand-bright" : "hover:text-brand-bright"
+              }`}
+            >
+              Alle categorieën
+              <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 opacity-60" aria-hidden>
+                <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
@@ -119,7 +164,36 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
         </div>
       </div>
 
-      {categories.map((category) => {
+      {open === ALLES && (
+        <div
+          onMouseEnter={annuleerSluiten}
+          onMouseLeave={sluitStraks}
+          className="absolute inset-x-0 top-full z-50 border-t-2 border-brand bg-white text-ink shadow-lift"
+        >
+          <div className="container-page py-6">
+            <p className="text-xs font-black uppercase tracking-wide text-ink-soft">
+              Het hele assortiment
+            </p>
+            <ul className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-3 lg:grid-cols-4">
+              {categories.map((category) => (
+                <li key={category.slug}>
+                  <Link
+                    href={`/categorie/${category.slug}`}
+                    className="flex items-baseline justify-between gap-3 rounded-md px-2 py-1.5 font-semibold text-ink transition hover:bg-brand-light hover:text-brand"
+                  >
+                    <span className="truncate">{category.name}</span>
+                    <span className="shrink-0 text-xs font-normal text-ink-soft">
+                      {category.count}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {inBalk.map((category) => {
         if (open !== category.slug) return null;
         if (category.soorten.length === 0 && category.merken.length === 0) return null;
         return (

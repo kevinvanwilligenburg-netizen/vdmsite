@@ -35,7 +35,20 @@ export function CartPageClient() {
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <ul className="space-y-3">
         {items.map((item) => (
-          <li key={item.key} className="card flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap">
+          /*
+            Op een telefoon staat alles op twee regels: foto en tekst boven,
+            aantal-prijs-verwijderen daaronder over de volle breedte. In één
+            wrappende rij vocht de titel om ruimte met de aantalknoppen en werd
+            "Pattex Schilderskit Premium" over drie regels afgebroken, terwijl
+            de prijs los onder de foto belandde.
+
+            `sm:contents` laat de knoppenrij vanaf een tablet weer oplossen in
+            de omringende flexrij, zodat die opzet ongewijzigd blijft.
+          */
+          <li
+            key={item.key}
+            className="card grid grid-cols-[4rem_1fr] items-start gap-x-4 gap-y-3 p-4 sm:flex sm:flex-nowrap sm:items-center"
+          >
             <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg ring-1 ring-black/5">
               <ProductArt
                 icon={item.icon}
@@ -45,29 +58,29 @@ export function CartPageClient() {
                 label={item.name}
               />
             </span>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 sm:flex-1">
               <Link
                 href={`/product/${item.slug}`}
                 className="font-bold text-ink hover:text-brand"
               >
                 {item.name}
               </Link>
-              <p className="text-sm text-ink-soft">
-                {item.variantName && <span>{item.variantName}</span>}
-                {item.variantName && item.color && <span> · </span>}
-                {item.color && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="inline-block h-3.5 w-3.5 rounded-sm ring-1 ring-black/10"
-                      style={{ backgroundColor: item.color.hex }}
-                      aria-hidden
-                    />
-                    {[item.color.code, item.color.name].filter(Boolean).join(" ")}
-                  </span>
-                )}
-              </p>
+              {item.variantName && (
+                <p className="text-sm text-ink-soft">{item.variantName}</p>
+              )}
+              {item.color && (
+                <p className="flex items-center gap-1.5 text-sm text-ink-soft">
+                  <span
+                    className="inline-block h-3.5 w-3.5 shrink-0 rounded-sm ring-1 ring-black/10"
+                    style={{ backgroundColor: item.color.hex }}
+                    aria-hidden
+                  />
+                  {[item.color.code, item.color.name].filter(Boolean).join(" ")}
+                </p>
+              )}
               <p className="mt-1 text-sm text-ink-soft">{euro(item.unitPrice)} per stuk</p>
             </div>
+            <div className="col-span-2 flex items-center justify-between gap-3 sm:contents">
             <div className="inline-flex items-center rounded-lg border-2 border-ink/10">
               <button
                 type="button"
@@ -87,17 +100,18 @@ export function CartPageClient() {
                 +
               </button>
             </div>
-            <p className="w-24 text-right font-black text-ink">
+            <p className="ml-auto font-black text-ink sm:ml-0 sm:w-24 sm:text-right">
               {euro(item.unitPrice * item.qty)}
             </p>
             <button
               type="button"
               aria-label={`${item.name} verwijderen`}
               onClick={() => removeItem(item.key)}
-              className="text-ink-soft transition hover:text-brand"
+              className="shrink-0 text-ink-soft transition hover:text-brand"
             >
               <Icon name="x" className="h-5 w-5" />
             </button>
+            </div>
           </li>
         ))}
       </ul>
