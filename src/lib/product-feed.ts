@@ -247,19 +247,50 @@ function legacyPathFrom(link: string | undefined): string | undefined {
   }
 }
 
-function buildSpecs(item: FeedItem): { label: string; value: string }[] {
+/**
+ * Specificatietabel.
+ *
+ * Zo volledig als de bron toelaat: klanten vergelijken hierop, en een lege
+ * tabel maakt een productpagina waardeloos. Alleen velden die de feed ook
+ * echt vult komen erin — een regel "Ondergrond: —" is erger dan geen regel.
+ */
+function buildSpecs(item: FeedItem, group: FeedItem[]): { label: string; value: string }[] {
   const specs: { label: string; value: string }[] = [];
-  const add = (label: string, key: string) => {
-    if (item[key]) specs.push({ label, value: item[key] });
+  const gezien = new Set<string>();
+  const add = (label: string, waarde: string | undefined) => {
+    const tekst = waarde?.trim();
+    if (!tekst || gezien.has(label)) return;
+    gezien.add(label);
+    specs.push({ label, value: tekst });
   };
-  add("Merk", "brand");
-  add("Productlijn", "productlijn");
-  add("Inhoud", "maat_range");
-  add("Verfsoort", "verfsoort");
-  add("Glans", "glans");
-  add("Toepassing", "toepassing");
-  add("Ondergrond", "ondergrond");
-  add("Kwaliteit", "kwaliteit");
+
+  add("Merk", item.brand);
+  add("Productlijn", item.productlijn);
+  add("Type", item.subtitel);
+
+  // Alle maten van de groep, niet alleen die van het eerste artikel: na het
+  // samenvoegen van maatvarianten dekt "maat_range" de rest niet meer.
+  const maten = [...new Set(group.map((entry) => entry.maat?.trim()).filter(Boolean))];
+  add(
+    maten.some((maat) => /\b(ml|l|liter)\b/i.test(maat!)) ? "Inhoud" : "Maten",
+    maten.length > 1 ? maten.join(", ") : (maten[0] ?? item.maat_range),
+  );
+
+  // Verpakkingsaantallen: staan alleen in de titel, terwijl een klant er wel
+  // op koopt ("krijg ik er één of tien?"). Oplopend, net als de maten.
+  const verpakkingen = [...new Set(group.map((entry) => verpakkingUit(entry.title)).filter(Boolean))]
+    .sort((a, b) => aantalUit(a!) - aantalUit(b!));
+  add("Verpakking", verpakkingen.length > 0 ? verpakkingen.join(", ") : undefined);
+
+  add("Kleur", item.kleur);
+  add("Verfsoort", item.verfsoort);
+  add("Glans", item.glans);
+  add("Toepassing", item.toepassing || item.objectList?.replace(/\|/g, ", "));
+  add("Ondergrond", item.ondergrondList?.replace(/\|/g, ", ") || item.ondergrond);
+  add("Eigenschappen", item.eigenschappen?.replace(/\|/g, ", "));
+  add("Kwaliteit", item.kwaliteit);
+  add("Artikelnummer", item.id);
+
   return specs;
 }
 
@@ -524,7 +555,7 @@ function buildProduct(group: FeedItem[]): Product | null {
     unit: leader.maat_range || leader.maat || undefined,
     colorMixable: leader.mengverf === "Ja",
     variants: variants.length > 1 ? variants : undefined,
-    specs: buildSpecs(leader),
+    specs: buildSpecs(leader, sorted),
     attributes: buildAttributes(leader, group),
     tags: (leader.zoektermen ?? "").split(/\s+/).filter(Boolean).slice(0, 24),
     // Pak de eerste variant die wél een foto heeft. Bij samengevoegde maten
@@ -689,7 +720,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v13";
+const KV_KEY = "catalog:products:v15";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

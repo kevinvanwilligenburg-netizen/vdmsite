@@ -229,8 +229,12 @@ export default async function ProductPage({ params }: Props) {
       <JsonLd data={productFaqJsonLd} />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-        <div className="min-w-0 space-y-4">
-          <div className="card overflow-hidden">
+        {/* Links alleen het beeld; alles waarop de klant een besluit neemt —
+            prijs, maat, koopknop, levertijd en voorraad — staat rechts bij
+            elkaar. Stonden de bezorgblokken onder de foto, dan las je links
+            over levertijd terwijl de koopknop rechts al voorbij was. */}
+        <div className="min-w-0">
+          <div className="card overflow-hidden lg:sticky lg:top-40">
             <ProductArt
               icon={product.art.icon}
               hue={product.art.hue}
@@ -240,22 +244,24 @@ export default async function ProductPage({ params }: Props) {
               priority
             />
           </div>
+        </div>
+
+        <div className="min-w-0 space-y-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-ink-soft">
+              {product.brand} · {product.sku}
+            </p>
+            <h1 className="mt-1 text-2xl font-black text-ink sm:text-3xl">{product.name}</h1>
+            <p className="mt-3 text-ink-soft">{product.shortDescription}</p>
+          </div>
+          <div id="koopblok" className="scroll-mt-32">
+            <PurchasePanel product={product} colors={colors} />
+          </div>
           <StockList
             skus={skusFor(product)}
             stores={stores}
             fallbackInStock={product.inStock !== false}
           />
-        </div>
-
-        <div className="min-w-0">
-          <p className="text-sm font-semibold uppercase tracking-wide text-ink-soft">
-            {product.brand} · {product.sku}
-          </p>
-          <h1 className="mt-1 text-2xl font-black text-ink sm:text-3xl">{product.name}</h1>
-          <p className="mt-3 text-ink-soft">{product.shortDescription}</p>
-          <div id="koopblok" className="mt-6 scroll-mt-32">
-            <PurchasePanel product={product} colors={colors} />
-          </div>
         </div>
       </div>
 
