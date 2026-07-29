@@ -6,10 +6,25 @@ import { ProductArt } from "@/components/ProductArt";
 import { discountPct } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
+/**
+ * Kenmerken die in een lijst het verschil maken, in deze volgorde.
+ *
+ * Zonder `kwaliteit`: die staat op "Basis" bij alle mengverf, en achter een
+ * verfnaam leest "Basis" als mengbasis in plaats van als kwaliteitsklasse.
+ * Als filter is het veld prima, op de kaart verwarrend.
+ */
+const KENMERKEN = ["glans", "verfsoort", "toepassing"] as const;
+
 export function ProductCard({ product }: { product: Product }) {
   const hasDiscount = Boolean(
     product.compareAtPrice && product.compareAtPrice > product.price,
   );
+  const kenmerken = KENMERKEN.map((sleutel) => product.attributes?.[sleutel]).filter(
+    (waarde): waarde is string => Boolean(waarde),
+  );
+  const maten = (product.variants ?? [])
+    .map((variant) => variant.size ?? variant.name)
+    .filter((maat, index, alle) => maat && alle.indexOf(maat) === index);
   return (
     <Link
       href={`/product/${product.slug}`}
@@ -40,9 +55,34 @@ export function ProductCard({ product }: { product: Product }) {
         <h3 className="line-clamp-2 font-bold leading-snug text-ink group-hover:text-brand">
           {product.name}
         </h3>
+        {/* De kenmerken waar iemand in een lijst op vergelijkt. Staan ze er
+            niet, dan moet je elk artikel openen om te zien of het mat of
+            zijdeglans is. */}
+        {kenmerken.length > 0 && (
+          <p className="line-clamp-1 text-xs text-ink-soft">{kenmerken.join(" · ")}</p>
+        )}
         <p className="line-clamp-2 hidden text-sm text-ink-soft sm:block">
           {product.shortDescription}
         </p>
+        {/* Welke maten er zijn, zonder de pagina te openen. Bij ons is één
+            product vaak vier blikken; dat zag je in de lijst nergens. */}
+        {maten.length > 1 && (
+          <div className="flex flex-wrap gap-1 pt-1">
+            {maten.slice(0, 4).map((maat) => (
+              <span
+                key={maat}
+                className="rounded-md border border-ink/15 px-1.5 py-0.5 text-xs font-bold text-ink-soft"
+              >
+                {maat}
+              </span>
+            ))}
+            {maten.length > 4 && (
+              <span className="px-1 py-0.5 text-xs font-bold text-ink-soft">
+                +{maten.length - 4}
+              </span>
+            )}
+          </div>
+        )}
         <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
           <Price
             price={product.price}

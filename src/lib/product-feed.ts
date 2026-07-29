@@ -567,7 +567,19 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
 
   // Inhoud: alle maten van de groep, zodat filteren op "2,5 L" ook werkt bij
   // een product dat meerdere maten heeft.
-  const maten = [...new Set(group.map((item) => item.maat?.trim()).filter(Boolean))];
+  //
+  // "1SIZE" is geen maat maar Tilroy's manier om te zeggen dát er geen maat
+  // is; die stond als filteroptie tussen de liters en grammen, twee keer zelfs
+  // ("1SIZE" en "1Size"). Zulke waarden horen hier niet, en verschillen in
+  // hoofdletters vatten we samen — anders staat dezelfde maat er dubbel in.
+  const maten = [
+    ...new Map(
+      group
+        .map((item) => item.maat?.trim())
+        .filter((maat): maat is string => heeftEchteMaat(maat))
+        .map((maat) => [maat.toLocaleLowerCase("nl"), maat] as const),
+    ).values(),
+  ];
   if (maten.length > 0) attributes.inhoud = maten.join("|");
 
   if (leader.mengverf === "Ja") attributes.mengverf = "Ja";
@@ -852,7 +864,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v16";
+const KV_KEY = "catalog:products:v17";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

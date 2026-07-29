@@ -229,6 +229,38 @@ export const FILTER_KEYS: string[] = [
   "voorraad",
 ];
 
+/**
+ * De opvallendste filterwaarden over alle groepen heen, als één rijtje
+ * bovenaan de kolom — zoals Gamma dat doet met "Populaire filters".
+ *
+ * Waarom: de meeste klanten weten wél wát ze zoeken ("Histor", "2,5 L",
+ * "mat"), maar niet onder wélke kop dat filter staat. Acht dichtgeklapte
+ * groepen doorlopen kost meer moeite dan één lijstje met de grote namen.
+ *
+ * We nemen per groep de sterkste optie en sorteren op aantal, zodat er
+ * variatie in staat en niet acht merken achter elkaar.
+ */
+export function popularFacets(facets: Facet[], max = 8): (FacetOption & { key: string; groep: string })[] {
+  const perGroep = facets
+    .map((facet) =>
+      facet.options
+        .slice(0, 3)
+        .map((option) => ({ ...option, key: facet.key, groep: facet.label })),
+    )
+    .filter((opties) => opties.length > 0);
+
+  // Om beurten uit elke groep pakken; anders vult het merkfilter de hele lijst.
+  const uit: (FacetOption & { key: string; groep: string })[] = [];
+  for (let ronde = 0; ronde < 3 && uit.length < max; ronde++) {
+    for (const opties of perGroep) {
+      if (uit.length >= max) break;
+      const optie = opties[ronde];
+      if (optie) uit.push(optie);
+    }
+  }
+  return uit;
+}
+
 /** Aantal actieve filters, voor de "wis filters"-knop. */
 export function activeFilterCount(filters: ProductFilters): number {
   return (

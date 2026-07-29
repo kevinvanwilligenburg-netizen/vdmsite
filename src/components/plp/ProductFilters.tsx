@@ -1,10 +1,16 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { FILTER_KEYS, type Facet, type ProductFilters, type SortKey } from "@/lib/facets";
+import {
+  FILTER_KEYS,
+  popularFacets,
+  type Facet,
+  type ProductFilters,
+  type SortKey,
+} from "@/lib/facets";
 
 const SORT_LABELS: { value: SortKey; label: string }[] = [
   { value: "relevantie", label: "Relevantie" },
@@ -35,40 +41,68 @@ function FacetGroep({
   onToggle: (key: string, value: string) => void;
 }) {
   const [alles, setAlles] = useState(false);
+  const [open, setOpen] = useState(true);
+  const gekozen = facet.options.filter((optie) => isChecked(facet.key, optie.value)).length;
   // Een aangevinkte optie hoort altijd zichtbaar te zijn, ook als hij
   // verderop in de lijst staat — anders lijkt het filter uit te staan.
   const zichtbaar =
-    alles || facet.options.some((optie, index) => index >= OPTIES_ZICHTBAAR && isChecked(facet.key, optie.value))
+    alles ||
+    facet.options.some(
+      (optie, index) => index >= OPTIES_ZICHTBAAR && isChecked(facet.key, optie.value),
+    )
       ? facet.options
       : facet.options.slice(0, OPTIES_ZICHTBAAR);
 
   return (
-    <fieldset className="border-t border-ink/10 pt-4">
-      <legend className="mb-2 text-sm font-black text-ink">{facet.label}</legend>
-      <div className="space-y-1.5">
-        {zichtbaar.map((option) => (
-          <label key={option.value} className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={isChecked(facet.key, option.value)}
-              onChange={() => onToggle(facet.key, option.value)}
-              className="h-4 w-4 shrink-0 accent-brand"
-            />
-            <span className="min-w-0 flex-1 truncate text-ink" title={option.label}>
-              {option.label}
+    <fieldset className="overflow-hidden rounded-xl border border-ink/10">
+      <legend className="sr-only">{facet.label}</legend>
+      <button
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 bg-ink/[0.04] px-3 py-2.5 text-left"
+      >
+        <span className="text-sm font-black text-ink">
+          {facet.label}
+          {gekozen > 0 && (
+            <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-xs text-white">
+              {gekozen}
             </span>
-            <span className="shrink-0 text-xs text-ink-soft">{option.count}</span>
-          </label>
-        ))}
-      </div>
-      {facet.options.length > zichtbaar.length && (
-        <button
-          type="button"
-          onClick={() => setAlles(true)}
-          className="mt-1.5 text-sm font-bold text-brand hover:underline"
+          )}
+        </span>
+        <span
+          className={`shrink-0 text-ink-soft transition ${open ? "rotate-180" : ""}`}
+          aria-hidden
         >
-          Toon alle {facet.options.length}
-        </button>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="space-y-1.5 px-3 py-3">
+          {zichtbaar.map((option) => (
+            <label key={option.value} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isChecked(facet.key, option.value)}
+                onChange={() => onToggle(facet.key, option.value)}
+                className="h-4 w-4 shrink-0 accent-brand"
+              />
+              <span className="min-w-0 flex-1 truncate font-semibold text-ink" title={option.label}>
+                {option.label}
+              </span>
+              <span className="shrink-0 text-xs text-ink-soft">{option.count}</span>
+            </label>
+          ))}
+          {facet.options.length > zichtbaar.length && (
+            <button
+              type="button"
+              onClick={() => setAlles(true)}
+              className="pt-1 text-sm font-bold text-brand hover:underline"
+            >
+              Toon alle {facet.options.length}
+            </button>
+          )}
+        </div>
       )}
     </fieldset>
   );
@@ -154,10 +188,40 @@ export function ProductFiltersPanel({
       for (const key of FILTER_KEYS) params.delete(key);
     });
 
+  const populair = useMemo(() => popularFacets(facets), [facets]);
+
+  // Alles wat nu aanstaat, met de groepsnaam erbij. De labels van de vaste
+  // schakelaars staan hier ook, anders kun je "In de aanbieding" wel aanzetten
+  // maar niet terugzien.
+  const VLAG_LABELS: Record<string, string> = {
+    voorraad: "Direct leverbaar",
+    aanbieding: "In de aanbieding",
+    mengverf: "Mengbaar in elke kleur",
+  };
+  const actieveChips = facets
+    .flatMap((facet) =>
+      searchParams.getAll(facet.key).map((value) => ({
+        key: facet.key,
+        groep: facet.label,
+        value,
+        verwijder: () => toggleValue(facet.key, value),
+      })),
+    )
+    .concat(
+      Object.entries(VLAG_LABELS)
+        .filter(([key]) => searchParams.get(key) === "1")
+        .map(([key, label]) => ({
+          key,
+          groep: "",
+          value: label,
+          verwijder: () => toggleFlag(key, false),
+        })),
+    );
+
   const panel = (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Snelfilters */}
-      <div className="space-y-2">
+      <div className="space-y-2 rounded-xl border border-ink/10 px-3 py-3">
         {[
           { key: "voorraad", label: "Direct leverbaar", on: Boolean(filters.opVoorraad) },
           { key: "aanbieding", label: "In de aanbieding", on: Boolean(filters.aanbieding) },
@@ -174,6 +238,36 @@ export function ProductFiltersPanel({
           </label>
         ))}
       </div>
+
+      {/* Populaire filters: de grote namen uit alle groepen bij elkaar, zodat
+          je niet eerst hoeft te raden onder welke kop "Histor" of "2,5 L"
+          staat. */}
+      {populair.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-ink/10">
+          <p className="bg-ink/[0.04] px-3 py-2.5 text-sm font-black text-ink">
+            Populaire filters
+          </p>
+          <div className="space-y-1.5 px-3 py-3">
+            {populair.map((optie) => (
+              <label
+                key={`${optie.key}:${optie.value}`}
+                className="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked(optie.key, optie.value)}
+                  onChange={() => toggleValue(optie.key, optie.value)}
+                  className="h-4 w-4 shrink-0 accent-brand"
+                />
+                <span className="min-w-0 flex-1 truncate font-semibold text-ink">
+                  {optie.label}
+                </span>
+                <span className="shrink-0 text-xs text-ink-soft">{optie.count}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {facets.map((facet) => (
         <FacetGroep
@@ -239,6 +333,34 @@ export function ProductFiltersPanel({
           </select>
         </div>
       </div>
+
+      {/* Wat staat er nu aan? Als chips, meteen boven de lijst, elk met een
+          kruisje. Zonder deze rij moest je de kolom door om te zien waaróm er
+          nog maar twaalf artikelen over waren. */}
+      {actieveChips.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {actieveChips.map((chip) => (
+            <button
+              key={`${chip.key}:${chip.value}`}
+              type="button"
+              onClick={() => chip.verwijder()}
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink/10 bg-white py-1 pl-3 pr-2 text-sm transition hover:border-brand"
+            >
+              <span className="text-ink-soft">{chip.groep}</span>
+              <span className="font-bold text-ink">{chip.value}</span>
+              <Icon name="x" className="h-3.5 w-3.5 text-ink-soft" aria-hidden />
+              <span className="sr-only">verwijder filter</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-sm font-bold text-brand hover:underline"
+          >
+            Wis alles
+          </button>
+        </div>
+      )}
 
       {/* Filterkolom naast de productlijst */}
       <div className="mt-4 lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">

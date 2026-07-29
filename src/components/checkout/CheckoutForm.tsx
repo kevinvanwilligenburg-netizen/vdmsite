@@ -93,6 +93,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
       setBetaalmethode(methoden[0]?.id ?? "ideal");
     }
   }, [methoden, betaalmethode]);
+  const gekozenMethode = methoden.find((methode) => methode.id === betaalmethode);
 
   // Artikelen die niet in een pakket passen (kruiwagen, zak strooizout van
   // 25 kg). Zitten die in het mandje, dan kan de bestelling alleen afgehaald
@@ -213,7 +214,21 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   // Bedragen die op meerdere plekken in het overzicht terugkomen.
   const verzendkosten = fulfilment === "pickup" ? 0 : (opties?.verzending.kosten ?? 0);
   const toeslag = fulfilment === "delivery" && sameDay ? (opties?.sameDay.toeslag ?? 0) : 0;
-  const totaal = subtotal + verzendkosten + toeslag;
+
+  // Kluspas-korting hier meteen doorrekenen. Deed de checkout dat niet, dan
+  // vulde de klant zijn pasnummer in, veranderde er niets op het scherm, en
+  // stond er pas bij Mollie een lager bedrag. Dat leest als een fout.
+  const kluspasKorting = kluspasNumber.trim()
+    ? items.reduce(
+        (som, item) =>
+          som +
+          (item.kluspasUnitPrice && item.kluspasUnitPrice < item.unitPrice
+            ? (item.unitPrice - item.kluspasUnitPrice) * item.qty
+            : 0),
+        0,
+      )
+    : 0;
+  const totaal = subtotal - kluspasKorting + verzendkosten + toeslag;
   const tekortVoorGratis = fulfilment === "delivery" ? (opties?.verzending.tekort ?? 0) : 0;
 
   if (!hydrated) {
@@ -767,6 +782,14 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             <dt className="text-ink-soft">Subtotaal</dt>
             <dd className="font-semibold text-ink">{euro(subtotal)}</dd>
           </div>
+          {kluspasKorting > 0 && (
+            <div className="flex justify-between">
+              <dt className="font-semibold text-green-700">
+                Kluspas-korting
+              </dt>
+              <dd className="font-bold text-green-700">− {euro(kluspasKorting)}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-ink-soft">
               {fulfilment === "delivery" ? "Bezorging" : "Afhalen in de winkel"}
@@ -796,16 +819,20 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             {error}
           </p>
         )}
+        {/* Bedrag én methode in de knop: dan weet de klant precies wat er
+            gebeurt als hij erop drukt, en dat scheelt twijfel op de laatste
+            stap. "Bestellen en betalen" liet allebei open. */}
         <button type="submit" disabled={submitting} className="btn btn-primary mt-5 w-full disabled:opacity-60">
-          {submitting ? "Bezig met bestellen…" : "Bestellen en betalen →"}
+          {submitting
+            ? "Je wordt doorgestuurd…"
+            : `${euro(totaal)} betalen met ${gekozenMethode?.label ?? "iDEAL"} →`}
         </button>
         <p className="mt-3 text-center text-xs text-ink-soft">
-          Je betaalt {euro(totaal)}{" "}
           {fulfilment === "pickup"
-            ? "en haalt je bestelling gratis op."
+            ? "Afhalen is gratis. Je krijgt bericht zodra je bestelling klaarligt."
             : verzendkosten === 0 && toeslag === 0
-              ? "— bezorgen is gratis."
-              : "inclusief bezorging."}
+              ? "Bezorgen is gratis. Bevalt het niet? 14 dagen bedenktijd."
+              : "Inclusief bezorging. Bevalt het niet? 14 dagen bedenktijd."}
         </p>
         <div className="mt-4 border-t border-ink/10 pt-4">
           <TrustpilotWidget variant="micro" />
