@@ -10,6 +10,7 @@ import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
 import { StockList } from "@/components/StockList";
 import { getInitialColors } from "@/lib/colors";
+import { haalSeoTekst } from "@/lib/seo-tekst";
 import { euro } from "@/lib/format";
 import { verzendtarief } from "@/lib/shipping";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
@@ -47,8 +48,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!product) return {};
   const prijs = euro(product.price);
   const title = `${product.name} kopen — ${prijs}`;
+  // Juist hier telt een eigen tekst: de meta-description is wat Google toont,
+  // en die was voor duizenden artikelen dezelfde zin.
+  const seo = await haalSeoTekst(product);
   const description = [
-    product.shortDescription.slice(0, 110),
+    (seo?.kort ?? product.shortDescription).slice(0, 110),
     `Nu ${prijs}${product.compareAtPrice ? ` (van ${euro(product.compareAtPrice)})` : ""}.`,
     "Gratis bezorgd vanaf € 59, afhalen is altijd gratis.",
   ].join(" ");
@@ -80,14 +84,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const product = await getProduct(params.slug);
   if (!product) notFound();
-  const [category, related, companions, colors, stores, rating] = await Promise.all([
+  const [category, related, companions, colors, stores, rating, seo] = await Promise.all([
     getCategory(product.category),
     getRelatedProducts(product),
     getCompanions(product),
     product.colorMixable ? getInitialColors() : Promise.resolve([]),
     getStores(),
     getTrustpilotRating(),
+    // Alleen ophalen, nooit maken: een paginabezoek wacht niet op het model.
+    haalSeoTekst(product),
   ]);
+
+  // Een eigen tekst gaat voor de terugvalzin uit de feed, die op duizenden
+  // artikelen hetzelfde is.
+  const korteTekst = seo?.kort ?? product.shortDescription;
+  const langeTekst = seo?.lang ?? product.description;
 
   // Verzendkosten en 14 dagen retour gelden voor het hele assortiment. Het
   // tarief moet hier kloppen met wat de klant afrekent: een "0" terwijl er
@@ -154,7 +165,7 @@ export default async function ProductPage({ params }: Props) {
     sku: product.sku,
     mpn: product.sku,
     ...(product.ean ? { gtin13: product.ean } : {}),
-    description: product.shortDescription,
+    description: korteTekst,
     brand: { "@type": "Brand", name: product.brand },
     category: category?.name,
     ...(product.image ? { image: [product.image] } : {}),
@@ -252,7 +263,7 @@ export default async function ProductPage({ params }: Props) {
               {product.brand} · {product.sku}
             </p>
             <h1 className="mt-1 text-2xl font-black text-ink sm:text-3xl">{product.name}</h1>
-            <p className="mt-3 text-ink-soft">{product.shortDescription}</p>
+            <p className="mt-3 text-ink-soft">{korteTekst}</p>
           </div>
           <div id="koopblok" className="scroll-mt-32">
             <PurchasePanel product={product} colors={colors} />
@@ -270,7 +281,12 @@ export default async function ProductPage({ params }: Props) {
       <section className="grid gap-6 lg:grid-cols-2 lg:gap-8">
         <div className="card p-6">
           <h2 className="text-lg font-black text-ink">Productomschrijving</h2>
-          <p className="mt-3 leading-relaxed text-ink-soft">{product.description}</p>
+          {/* Alinea's uit de gegenereerde tekst blijven alinea's. */}
+          <div className="mt-3 space-y-3 leading-relaxed text-ink-soft">
+            {langeTekst.split(/\n{2,}/).map((alinea, index) => (
+              <p key={index}>{alinea}</p>
+            ))}
+          </div>
         </div>
         {product.specs && product.specs.length > 0 && (
           <div className="card p-6">
