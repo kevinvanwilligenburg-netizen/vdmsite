@@ -245,6 +245,8 @@ export interface Order {
   kluspasNumber?: string;
   /** Wanneer de orderbevestiging is verstuurd; voorkomt een tweede mail. */
   confirmationSentAt?: string;
+  /** Wanneer de verzendmail is verstuurd; het dashboard mag opnieuw aankloppen. */
+  shippedMailSentAt?: string;
   /** Wat de Kluspas op deze bestelling scheelde (euro's). */
   kluspasSavings?: number;
   isTest?: boolean;

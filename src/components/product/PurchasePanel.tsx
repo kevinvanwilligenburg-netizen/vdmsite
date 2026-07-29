@@ -364,11 +364,24 @@ export function PurchasePanel({
         </p>
       )}
 
+      {/*
+        Hier hoort te staan waarom je dit bij óns koopt en niet bij de
+        Gamma of bol. Bezorgtarieven, betaalmethodes en een toeslag voor
+        same-day zijn dat niet: die heeft iedereen, en een toeslag is geen
+        voordeel maar een kostenpost. Die staan nu waar ze horen — bij de
+        levertijd en in de checkout.
+
+        Wat wél alleen van ons is: we mengen gratis aan, er staat een
+        verfspecialist achter de balie, en je kunt in vijf winkels terecht om
+        het op te halen, te vragen of terug te brengen.
+      */}
       <ul className="space-y-1.5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
         {[
-          "Vóór 09:00 besteld? Kies vandaag bezorgd voor € 1,25",
-          "Gratis bezorgd vanaf € 59, afhalen is altijd gratis",
-          "Betaal met iDEAL, creditcard of Apple Pay — of achteraf met Klarna",
+          product.colorMixable
+            ? "Gratis aangemengd in elke kleur — ruim 18.000 kleuren, door onze verfspecialist"
+            : "Verf, gereedschap en bevestiging onder één dak — je klus in één bestelling",
+          "Advies van een verfspecialist, en gratis afhalen in onze 5 winkels",
+          "14 dagen bedenktijd, gratis terug te brengen naar elke winkel",
         ].map((usp) => (
           <li key={usp} className="flex items-start gap-2">
             <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />

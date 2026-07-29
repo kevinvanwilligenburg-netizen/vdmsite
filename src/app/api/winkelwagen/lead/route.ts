@@ -32,7 +32,15 @@ export async function POST(request: Request) {
   try {
     await fetch(`${DASHBOARD_API_URL}/api/cart/lead`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Het dashboard accepteert deze sleutel sinds 29 juli 2026 en gaat
+        // hem binnenkort eisen. Zonder sleutel geldt daar een limiet per IP —
+        // dit endpoint stond eerst helemaal open.
+        ...(process.env.SITE_API_KEY
+          ? { Authorization: `Bearer ${process.env.SITE_API_KEY}` }
+          : {}),
+      },
       body: JSON.stringify({
         shop: "vdmsite",
         email,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { heeftDashboardSleutel } from "@/lib/account";
 import { kvPing } from "@/lib/kv";
+import { mailDiagnose } from "@/lib/mail";
 import { mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { catalogusBron } from "@/lib/product-feed";
 import { DASHBOARD_API_URL } from "@/lib/site";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
  * sleutels of andere gevoelige waarden terug.
  */
 export async function GET() {
-  const kv = await kvPing();
+  const [kv, mail] = await Promise.all([kvPing(), mailDiagnose()]);
 
   // De hub doet bij een koude cache een volledige crawl (~40 s). Een timeout
   // betekent dus "traag", niet "kapot" — dat onderscheid hoort hier te staan.
@@ -82,11 +83,9 @@ export async function GET() {
     // zichtbaar te zijn en niet pas als iemand het meldt.
     accounts: {
       dashboardSleutel: heeftDashboardSleutel() ? "aanwezig" : "ONTBREEKT (SITE_API_KEY)",
-      mail: heeftDashboardSleutel()
-        ? "via dashboard"
-        : process.env.RESEND_API_KEY
-          ? "via resend"
-          : "GEEN KANAAL — inloggen werkt niet",
+      // Niet "is de sleutel gezet" maar "kan er ook echt gemaild worden".
+      mail: mail.werkt ? "werkt" : "WERKT NIET — inloggen lukt niet",
+      mailDetails: mail,
       opslag: kv.enabled ? "redis" : "GEEN — inloggen werkt niet",
     },
     dashboard: DASHBOARD_API_URL,

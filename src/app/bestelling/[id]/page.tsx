@@ -7,6 +7,7 @@ import { OrderClientActions } from "@/components/order/OrderClientActions";
 import { ReorderColor, type SavedColor } from "@/components/order/ReorderColor";
 import { euros } from "@/lib/format";
 import { getOrderSynced } from "@/lib/orders";
+import { volgUrl } from "@/lib/verzendmail";
 import { isFailedStatus, isOpenStatus, isPaidStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -202,20 +203,35 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
                 )}
               </h2>
               {order.shipment?.trackTrace ? (
-                /^https?:\/\//.test(order.shipment.trackTrace) ? (
-                  <a
-                    href={order.shipment.trackTrace}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-2 font-bold text-brand hover:underline"
-                  >
-                    <Icon name="truck" className="h-4 w-4" /> Volg je pakket
-                  </a>
-                ) : (
-                  <p className="mt-1 font-mono text-sm font-semibold text-ink">
-                    {order.shipment.trackTrace}
-                  </p>
-                )
+                // Het dashboard stuurt meestal een kale barcode. Daar zelf een
+                // volglink van maken scheelt de klant het knippen en plakken
+                // op de site van de vervoerder.
+                (() => {
+                  const link = volgUrl(
+                    order.delivery?.carrier,
+                    order.shipment.trackTrace,
+                    order.customer.postalCode,
+                  );
+                  return link ? (
+                    <>
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-flex items-center gap-2 font-bold text-brand hover:underline"
+                      >
+                        <Icon name="truck" className="h-4 w-4" /> Volg je pakket
+                      </a>
+                      <p className="mt-0.5 font-mono text-xs text-ink-soft">
+                        {order.shipment.trackTrace}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-1 font-mono text-sm font-semibold text-ink">
+                      {order.shipment.trackTrace}
+                    </p>
+                  );
+                })()
               ) : (
                 <p className="mt-1 text-sm text-ink-soft">
                   Je ontvangt de track &amp; trace-code per e-mail zodra DHL je
