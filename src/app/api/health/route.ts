@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { heeftDashboardSleutel } from "@/lib/account";
 import { kvPing } from "@/lib/kv";
 import { mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { catalogusBron } from "@/lib/product-feed";
@@ -75,6 +76,19 @@ export async function GET() {
     klusadviseur: process.env.ANTHROPIC_API_KEY
       ? { taalbegrip: "ai", model: "claude-opus-5" }
       : { taalbegrip: "trefwoorden", hint: "zet ANTHROPIC_API_KEY in Vercel voor vrije taal" },
+    // Klantaccounts hangen aan twee dingen: een sleutel voor de
+    // dashboard-routes (klant, historie, mail) en een werkend mailkanaal.
+    // Ontbreekt er een, dan kan een klant niet inloggen — dat hoort hier
+    // zichtbaar te zijn en niet pas als iemand het meldt.
+    accounts: {
+      dashboardSleutel: heeftDashboardSleutel() ? "aanwezig" : "ONTBREEKT (SITE_API_KEY)",
+      mail: heeftDashboardSleutel()
+        ? "via dashboard"
+        : process.env.RESEND_API_KEY
+          ? "via resend"
+          : "GEEN KANAAL — inloggen werkt niet",
+      opslag: kv.enabled ? "redis" : "GEEN — inloggen werkt niet",
+    },
     dashboard: DASHBOARD_API_URL,
   });
 }

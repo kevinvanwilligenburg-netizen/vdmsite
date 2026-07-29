@@ -132,6 +132,23 @@ export async function beeindigSessie(token: string | undefined): Promise<void> {
 
 /* ── Klantgegevens uit Tilroy, via het dashboard ───────────────── */
 
+/**
+ * De sleutel waarmee we ons bij het dashboard legitimeren.
+ *
+ * Zonder sleutel weigeren die routes alles met een 401 — bewust, want het
+ * gaat om persoonsgegevens en een stille ontwikkelmodus zou dat ondermijnen.
+ * We proberen het dan niet eens; dat scheelt een zinloze aanroep en zet geen
+ * verwarrende fout in de logboeken.
+ */
+function dashboardKop(): Record<string, string> | null {
+  const sleutel = process.env.SITE_API_KEY;
+  return sleutel ? { Authorization: `Bearer ${sleutel}` } : null;
+}
+
+export function heeftDashboardSleutel(): boolean {
+  return Boolean(process.env.SITE_API_KEY);
+}
+
 interface DashboardKlant {
   tilroyId?: string;
   code?: string;
@@ -161,12 +178,18 @@ export async function haalKlant(email: string): Promise<Klant> {
   const adres = normaliseerEmail(email);
   const basis: Klant = { email: adres, inTilroy: false };
 
+  const kop = dashboardKop();
+  if (!kop) return basis;
+
   try {
     const res = await fetch(
       `${DASHBOARD_API_URL}/api/klanten/zoek?email=${encodeURIComponent(adres)}`,
-      { signal: AbortSignal.timeout(8000), cache: "no-store" },
+      { headers: kop, signal: AbortSignal.timeout(8000), cache: "no-store" },
     );
-    if (!res.ok) return basis;
+    if (!res.ok) {
+      console.error("[account] klant zoeken gaf status", res.status);
+      return basis;
+    }
     const data = (await res.json()) as { klant?: DashboardKlant };
     const klant = data.klant;
     if (!klant) return basis;
@@ -221,14 +244,29 @@ interface DashboardBon {
   customerCreditsSale?: number;
 }
 
-/** Winkelaankopen uit Tilroy, via het dashboard. */
+/**
+ * Winkelaankopen uit Tilroy, via het dashboard.
+ *
+ * Tilroy kent geen "verkopen van klant X"-endpoint, dus het dashboard crawlt
+ * een jaar verkopen en filtert daarop. Dat is gecachet, maar de eerste
+ * aanroep na cache-verval duurt tientallen seconden. Daarom haalt de
+ * accountpagina dit ná het renderen op: de klant ziet zijn Kluspas en zijn
+ * webshopbestellingen meteen, en de winkelaankopen schuiven erbij zodra ze
+ * er zijn. Een minuut naar een leeg scherm kijken is geen optie.
+ */
 export async function haalWinkelaankopen(email: string): Promise<Aankoop[]> {
+  const kop = dashboardKop();
+  if (!kop) return [];
+
   try {
     const res = await fetch(
-      `${DASHBOARD_API_URL}/api/klanten/historie?email=${encodeURIComponent(normaliseerEmail(email))}`,
-      { signal: AbortSignal.timeout(10000), cache: "no-store" },
+      `${DASHBOARD_API_URL}/api/klanten/historie?email=${encodeURIComponent(normaliseerEmail(email))}&limit=25`,
+      { headers: kop, signal: AbortSignal.timeout(60_000), cache: "no-store" },
     );
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error("[account] winkelhistorie gaf status", res.status);
+      return [];
+    }
     const data = (await res.json()) as { bonnen?: DashboardBon[] };
     return (data.bonnen ?? []).map((bon, index) => ({
       id: bon.id ?? `bon-${index}`,

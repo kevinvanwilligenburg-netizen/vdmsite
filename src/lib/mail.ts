@@ -28,10 +28,16 @@ export type MailResultaat =
 const AFZENDER = process.env.MAIL_FROM ?? "De Voordeelmarkt <noreply@devoordeelmarkt.nl>";
 
 async function viaDashboard(bericht: MailBericht): Promise<MailResultaat | null> {
+  const sleutel = process.env.SITE_API_KEY;
+  if (!sleutel) return null;
+
   try {
     const res = await fetch(`${DASHBOARD_API_URL}/api/mail/verstuur`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sleutel}`,
+      },
       body: JSON.stringify({
         shop: "vdmsite",
         to: bericht.aan,
@@ -39,12 +45,15 @@ async function viaDashboard(bericht: MailBericht): Promise<MailResultaat | null>
         text: bericht.tekst,
         html: bericht.html,
       }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) return { ok: true, via: "dashboard" };
-    // 404 betekent: die route bestaat (nog) niet. Dan proberen we Resend.
+    // De afzender kiezen we bewust niet zelf: dat zou van deze route een
+    // open relay maken waarmee iemand namens ons kan mailen.
+    console.error("[mail] dashboard gaf status", res.status);
     return null;
-  } catch {
+  } catch (error) {
+    console.error("[mail] dashboard onbereikbaar:", error);
     return null;
   }
 }
