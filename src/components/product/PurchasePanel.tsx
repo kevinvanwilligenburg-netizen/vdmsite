@@ -357,7 +357,7 @@ export function PurchasePanel({
         {[
           "Vóór 09:00 besteld? Kies vandaag bezorgd voor € 1,25",
           "Gratis bezorgd vanaf € 59, afhalen is altijd gratis",
-          "Betaal veilig met iDEAL, Bancontact, creditcard of Apple Pay",
+          "Betaal met iDEAL, creditcard of Apple Pay — of achteraf met Klarna",
         ].map((usp) => (
           <li key={usp} className="flex items-start gap-2">
             <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />

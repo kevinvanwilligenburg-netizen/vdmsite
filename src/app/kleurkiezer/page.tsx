@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { KleurkiezerClient } from "@/components/KleurkiezerClient";
+import { KleurTrechter } from "@/components/kleur/KleurTrechter";
 import { MyColors } from "@/components/MyColors";
 import { getColorCollections, getInitialColors } from "@/lib/colors";
-import { euro } from "@/lib/format";
 import { getProducts } from "@/lib/tilroy";
 
 export const revalidate = 3600;
@@ -23,16 +22,6 @@ export default async function KleurkiezerPage() {
     getColorCollections(),
   ]);
   const totalColors = collections.reduce((sum, entry) => sum + entry.count, 0);
-  // Toon de populairste mengverven; de catalogus telt er honderden.
-  const mixable = products
-    .filter((product) => product.colorMixable && product.inStock !== false)
-    .sort((a, b) => a.price - b.price)
-    .slice(0, 6)
-    .map((product) => ({
-      slug: product.slug,
-      name: product.name,
-      fromPrice: euro(product.price),
-    }));
 
   return (
     <div className="space-y-8">
@@ -50,7 +39,7 @@ export default async function KleurkiezerPage() {
         </p>
       </header>
       <MyColors />
-      <KleurkiezerClient colors={colors} products={mixable} />
+      <KleurTrechter initialColors={colors} producten={products} />
     </div>
   );
 }

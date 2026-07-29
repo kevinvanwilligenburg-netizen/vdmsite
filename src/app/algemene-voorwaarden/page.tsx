@@ -37,7 +37,7 @@ const SECTIONS: { title: string; paragraphs: string[] }[] = [
   {
     title: "Artikel 4 – Betalen",
     paragraphs: [
-      "Betalen doe je online via onze betaalpartner Mollie: iDEAL, Bancontact, creditcard of Apple Pay. Je bestelling wordt pas verwerkt nadat de betaling is bevestigd.",
+      "Betalen doe je online via onze betaalpartner Mollie: iDEAL, Bancontact, creditcard, Apple Pay of achteraf betalen met Klarna. Bij Klarna gelden de betaalvoorwaarden van Klarna zelf; de koopovereenkomst blijft tussen jou en De Voordeelmarkt. Je bestelling wordt verwerkt zodra de betaling of de Klarna-aankoop is bevestigd.",
       "Wij bewaren zelf geen betaalgegevens; die worden verwerkt door Mollie.",
     ],
   },

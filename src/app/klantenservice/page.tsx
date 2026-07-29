@@ -37,7 +37,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Hoe kan ik betalen?",
     answer:
-      "Je rekent veilig af via Mollie met iDEAL, Bancontact, creditcard of Apple Pay.",
+      "Je rekent veilig af via Mollie met iDEAL, Bancontact, creditcard of Apple Pay. Liever later betalen? Dat kan met Klarna: je ontvangt je bestelling eerst en betaalt daarna.",
   },
   {
     question: "Kan ik mijn bestelling retourneren?",

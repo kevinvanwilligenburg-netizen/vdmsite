@@ -552,7 +552,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             Je rekent veilig af via Mollie en kiest daar je betaalmethode.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {["iDEAL", "Bancontact", "Creditcard", "Apple Pay"].map((method) => (
+            {["iDEAL", "Bancontact", "Creditcard", "Apple Pay", "Klarna"].map((method) => (
               <span
                 key={method}
                 className="rounded-md bg-ink/5 px-3 py-1.5 text-sm font-bold text-ink"

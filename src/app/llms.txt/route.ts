@@ -28,7 +28,7 @@ export async function GET() {
 - Artikelen die alleen in een van de andere winkels liggen, worden door die winkel met PostNL verstuurd en zijn binnen één werkdag bezorgd.
 - Op elke productpagina staat welke levertijd voor dat artikel geldt.
 - Afhalen in de winkel is ook gratis (Click & Collect); de klant krijgt bericht met een afhaalcode zodra de bestelling klaarstaat.
-- Betalen kan met iDEAL, Bancontact, creditcard en Apple Pay, via betaalprovider Mollie.
+- Betalen kan met iDEAL, Bancontact, creditcard en Apple Pay, via betaalprovider Mollie. Achteraf betalen kan met Klarna.
 - Retourneren kan binnen 14 dagen; op kleur gemengde verf is maatwerk en daarvan uitgezonderd.
 
 ## Verf op kleur

@@ -5,7 +5,7 @@ import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
 import { getCategories, getStores } from "@/lib/tilroy";
 
-const PAYMENT_METHODS = ["iDEAL", "Bancontact", "Creditcard", "Apple Pay"];
+const PAYMENT_METHODS = ["iDEAL", "Bancontact", "Creditcard", "Apple Pay", "Klarna"];
 
 const SERVICE_LINKS = [
   { href: "/zakelijk", label: "Zakelijk inkopen" },
