@@ -60,6 +60,14 @@ export async function Header() {
         <SearchBox />
         <div className="ml-auto flex items-center gap-1 sm:gap-3">
           <StorePicker />
+          <Link
+            href="/account"
+            aria-label="Mijn Voordeelmarkt"
+            className="hidden items-center gap-1.5 rounded-lg border-2 border-ink/10 px-3 py-2 text-sm font-bold text-ink transition hover:border-brand hover:text-brand sm:inline-flex"
+          >
+            <Icon name="hand" className="h-5 w-5" />
+            <span className="hidden lg:inline">Mijn pas</span>
+          </Link>
           <CartBadge />
         </div>
       </div>

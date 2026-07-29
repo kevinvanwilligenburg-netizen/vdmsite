@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { isKvEnabled, kvGetJSON, kvSAdd, kvSetJSON } from "@/lib/kv";
+import { isKvEnabled, kvGetJSON, kvSAdd, kvSetJSON, kvSMembers } from "@/lib/kv";
 import { getMolliePayment } from "@/lib/mollie";
 import {
   isPaidStatus,
@@ -138,6 +138,31 @@ export async function getOrder(idOrReference: string): Promise<Order | null> {
   }
   const pointer = await fileRead<{ id: string }>(`ref-${reference}.json`);
   return pointer?.id ? loadById(pointer.id) : null;
+}
+
+/**
+ * Alle webshopbestellingen van één klant, nieuwste eerst.
+ *
+ * Voor de accountpagina. De index op e-mailadres wordt bij elke bestelling
+ * bijgehouden; zonder KV bestaat die niet en krijgt de klant een lege lijst
+ * in plaats van een fout.
+ */
+export async function getOrdersByEmail(email: string, limit = 25): Promise<Order[]> {
+  if (!isKvEnabled()) return [];
+  try {
+    const ids = await kvSMembers(KEY.email(email));
+    const orders: Order[] = [];
+    for (const id of ids.slice(0, limit * 2)) {
+      const order = await loadById(id);
+      if (order) orders.push(order);
+    }
+    return orders
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+      .slice(0, limit);
+  } catch (error) {
+    console.error("[orders] bestellingen van klant ophalen mislukt:", error);
+    return [];
+  }
 }
 
 /* ── Aanmaken & bijwerken ──────────────────────────────────────── */

@@ -171,6 +171,14 @@ export function MobileNav({
                 </li>
                 <li>
                   <Link
+                    href="/account"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 font-bold text-ink transition hover:bg-brand-light hover:text-brand"
+                  >
+                    <Icon name="hand" className="h-5 w-5 text-brand" /> Mijn Voordeelmarkt
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/merken"
                     className="flex items-center gap-2 rounded-lg px-3 py-2.5 font-bold text-ink transition hover:bg-brand-light hover:text-brand"
                   >
