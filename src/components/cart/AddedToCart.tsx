@@ -15,6 +15,8 @@ interface Suggestie {
   name: string;
   price: number;
   kluspasPrice?: number;
+  /** Gezet als dit artikel alleen afgehaald kan worden. */
+  pickupOnly?: string;
   image?: string;
   art: { icon: string; hue: number };
   waarom: string;
@@ -171,6 +173,7 @@ export function AddedToCart() {
                           kluspasUnitPrice: product.kluspasPrice,
                           icon: product.art.icon,
                           hue: product.art.hue,
+                          pickupOnly: product.pickupOnly,
                           image: product.image,
                         });
                         setToegevoegd((huidig) => [...huidig, product.id]);

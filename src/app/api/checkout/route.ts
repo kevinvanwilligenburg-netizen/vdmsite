@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isBetaalmethode } from "@/lib/betaalmethoden";
 import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { shippingCost, shippingCountry } from "@/lib/shipping";
@@ -102,6 +103,8 @@ export async function POST(request: Request) {
   // Prijzen en productgegevens altijd server-side bepalen; de client levert
   // alleen id's en aantallen aan. Bedragen in de order zijn EURO'S (contract).
   const items: OrderItem[] = [];
+  // Artikelen die niet met de pakketdienst mee kunnen (kruiwagen, 25 kg zout).
+  const nietVerzendbaar: string[] = [];
   let subtotalCents = 0;
   let kluspasSavingCents = 0;
   for (const entry of input.items) {
@@ -118,6 +121,12 @@ export async function POST(request: Request) {
       : undefined;
     if (entry.variantId && !variant) {
       return badRequest(`Ongeldige variant voor ${product.name}.`);
+    }
+
+    // Per gekozen maat beoordelen: een blik van 2,5 liter gaat prima mee,
+    // dezelfde verf in 25 liter niet.
+    if (variant?.pickupOnly ?? product.pickupOnly) {
+      nietVerzendbaar.push([product.name, variant?.name].filter(Boolean).join(" "));
     }
 
     let color: OrderItem["color"];
@@ -140,8 +149,13 @@ export async function POST(request: Request) {
 
     // Met een Kluspas geldt de kortingsprijs uit de feed; die rekenen we niet
     // zelf uit, zodat site en kassa altijd hetzelfde bedrag hanteren.
+    //
+    // ⚠️ De Kluspas-prijs hoort bij de gekozen maat. Namen we hier die van het
+    // product (= de goedkoopste maat), dan rekende een klant met pas voor een
+    // blik van 2,5 liter de pasprijs van het blikje van 500 ml af.
     const listCents = variant?.price ?? product.price;
-    const unitCents = kluspas ? kluspasUnitPrice(listCents, product.kluspasPrice) : listCents;
+    const listKluspas = variant ? variant.kluspasPrice : product.kluspasPrice;
+    const unitCents = kluspas ? kluspasUnitPrice(listCents, listKluspas) : listCents;
     subtotalCents += unitCents * qty;
     kluspasSavingCents += (listCents - unitCents) * qty;
 
@@ -171,6 +185,24 @@ export async function POST(request: Request) {
       icon: product.art.icon,
       hue: product.art.hue,
     });
+  }
+
+  // Te groot of te zwaar voor een pakket: dan kan die bestelling niet bezorgd
+  // worden. Hier tegenhouden en niet alleen op de productpagina melden, anders
+  // komt er een order binnen die de winkel moet terugbellen.
+  if (fulfilment === "delivery" && nietVerzendbaar.length > 0) {
+    const enkel = nietVerzendbaar.length === 1;
+    return NextResponse.json(
+      {
+        error: `${nietVerzendbaar.join(" en ")} ${
+          enkel ? "kan" : "kunnen"
+        } niet met de pakketdienst mee. Kies afhalen in de winkel, of haal ${
+          enkel ? "dit artikel" : "deze artikelen"
+        } uit je winkelwagen.`,
+        alleenAfhalen: nietVerzendbaar,
+      },
+      { status: 409 },
+    );
   }
 
   // Afhalen kan alleen als élk artikel in die winkel ligt — anders staat de
@@ -311,7 +343,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { paymentId, checkoutUrl } = await createMolliePayment(order, baseUrl);
+    const { paymentId, checkoutUrl } = await createMolliePayment(
+      order,
+      baseUrl,
+      // Alleen een methode die wij ook echt aanbieden; een willekeurige
+      // waarde uit het verzoek zou Mollie met een foutmelding weigeren.
+      isBetaalmethode(input.betaalmethode) ? input.betaalmethode : undefined,
+    );
     await setMolliePaymentId(order.id, paymentId);
     return NextResponse.json({ orderId: order.id, reference: order.reference, checkoutUrl });
   } catch (error) {

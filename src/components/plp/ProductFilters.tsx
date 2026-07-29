@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import type { Facet, ProductFilters, SortKey } from "@/lib/facets";
+import { FILTER_KEYS, type Facet, type ProductFilters, type SortKey } from "@/lib/facets";
 
 const SORT_LABELS: { value: SortKey; label: string }[] = [
   { value: "relevantie", label: "Relevantie" },
@@ -13,6 +13,66 @@ const SORT_LABELS: { value: SortKey; label: string }[] = [
   { value: "korting", label: "Hoogste korting" },
   { value: "naam", label: "Naam A → Z" },
 ];
+
+/** Zoveel opties tonen we uitgeklapt; de rest achter "toon alle". */
+const OPTIES_ZICHTBAAR = 6;
+
+/**
+ * Eén filtergroep.
+ *
+ * Bewust geen eigen scrollbalkje per groep meer: met acht groepen onder
+ * elkaar, elk met een eigen scrollgebiedje, wist niemand meer waar hij aan het
+ * scrollen was — en de kolom als geheel kon je al helemaal niet doorlopen.
+ * Nu staat er een korte lijst met een "toon alle"-knop, en scrollt de kolom.
+ */
+function FacetGroep({
+  facet,
+  isChecked,
+  onToggle,
+}: {
+  facet: Facet;
+  isChecked: (key: string, value: string) => boolean;
+  onToggle: (key: string, value: string) => void;
+}) {
+  const [alles, setAlles] = useState(false);
+  // Een aangevinkte optie hoort altijd zichtbaar te zijn, ook als hij
+  // verderop in de lijst staat — anders lijkt het filter uit te staan.
+  const zichtbaar =
+    alles || facet.options.some((optie, index) => index >= OPTIES_ZICHTBAAR && isChecked(facet.key, optie.value))
+      ? facet.options
+      : facet.options.slice(0, OPTIES_ZICHTBAAR);
+
+  return (
+    <fieldset className="border-t border-ink/10 pt-4">
+      <legend className="mb-2 text-sm font-black text-ink">{facet.label}</legend>
+      <div className="space-y-1.5">
+        {zichtbaar.map((option) => (
+          <label key={option.value} className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isChecked(facet.key, option.value)}
+              onChange={() => onToggle(facet.key, option.value)}
+              className="h-4 w-4 shrink-0 accent-brand"
+            />
+            <span className="min-w-0 flex-1 truncate text-ink" title={option.label}>
+              {option.label}
+            </span>
+            <span className="shrink-0 text-xs text-ink-soft">{option.count}</span>
+          </label>
+        ))}
+      </div>
+      {facet.options.length > zichtbaar.length && (
+        <button
+          type="button"
+          onClick={() => setAlles(true)}
+          className="mt-1.5 text-sm font-bold text-brand hover:underline"
+        >
+          Toon alle {facet.options.length}
+        </button>
+      )}
+    </fieldset>
+  );
+}
 
 /**
  * Filters, sortering én de productlijst zelf. Alles staat in de URL, zodat
@@ -83,14 +143,15 @@ export function ProductFiltersPanel({
     [update],
   );
 
+  // Waarden staan als herhaalde parameters in de URL, dus `getAll`. Met
+  // `get().split(",")` zag je alleen het eerste vinkje terug, en een waarde
+  // met een komma erin ("Beits, olie en vernis") nooit.
   const isChecked = (key: string, value: string) =>
-    (searchParams.get(key) ?? "").split(",").filter(Boolean).includes(value);
+    searchParams.getAll(key).includes(value);
 
   const clearAll = () =>
     update((params) => {
-      for (const key of ["merk", "glans", "verfsoort", "inhoud", "prijs", "aanbieding", "mengverf", "voorraad"]) {
-        params.delete(key);
-      }
+      for (const key of FILTER_KEYS) params.delete(key);
     });
 
   const panel = (
@@ -115,26 +176,12 @@ export function ProductFiltersPanel({
       </div>
 
       {facets.map((facet) => (
-        <fieldset key={facet.key} className="border-t border-ink/10 pt-4">
-          <legend className="mb-2 text-sm font-black text-ink">{facet.label}</legend>
-          <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
-            {facet.options.map((option) => (
-              <label
-                key={option.value}
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={isChecked(facet.key, option.value)}
-                  onChange={() => toggleValue(facet.key, option.value)}
-                  className="h-4 w-4 shrink-0 accent-brand"
-                />
-                <span className="min-w-0 flex-1 truncate text-ink">{option.label}</span>
-                <span className="shrink-0 text-xs text-ink-soft">{option.count}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <FacetGroep
+          key={facet.key}
+          facet={facet}
+          isChecked={isChecked}
+          onToggle={toggleValue}
+        />
       ))}
 
       {activeCount > 0 && (
@@ -196,7 +243,13 @@ export function ProductFiltersPanel({
       {/* Filterkolom naast de productlijst */}
       <div className="mt-4 lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
         <aside className="hidden lg:block">
-          <div className="card sticky top-40 p-5">{panel}</div>
+          {/* De kolom blijft meelopen, maar krijgt een eigen scrollbalk. Zonder
+              die maximale hoogte liep een lange filterlijst onder de rand van
+              het scherm door: sticky houdt hem vast, dus je kon er met geen
+              mogelijkheid bij. */}
+          <div className="card sticky top-40 max-h-[calc(100vh-11rem)] overflow-y-auto p-5">
+            {panel}
+          </div>
         </aside>
         <div className="min-w-0">{children}</div>
       </div>

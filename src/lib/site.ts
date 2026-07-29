@@ -7,6 +7,14 @@ export const SITE_URL = (
 export const CONTACT_PHONE = "+31 85 273 8338";
 export const CONTACT_EMAIL = "klantenservice@devoordeelmarkt.nl";
 
+/**
+ * WhatsApp-nummer van de klantenservice, in internationaal formaat zonder
+ * plus of spaties (bv. 31852738338). Staat de variabele niet gezet, dan tonen
+ * we de WhatsApp-knop niet: liever geen knop dan een knop naar een nummer
+ * waar niemand meeleest.
+ */
+export const WHATSAPP_NUMMER = (process.env.NEXT_PUBLIC_WHATSAPP ?? "").replace(/[^\d]/g, "");
+
 /** Basis-URL van het VDM-dashboard (voorraad-hub, kleurenfeed, fulfilment). */
 export const DASHBOARD_API_URL = (
   process.env.DASHBOARD_API_URL ?? "https://dashboardvdm.vercel.app"

@@ -1,3 +1,4 @@
+import { bezorgbaarheid, type TeBezorgenArtikel } from "@/lib/bezorgbaarheid";
 import { isKvEnabled, kvGetRaw, kvSetEx } from "@/lib/kv";
 import { parseBase } from "@/lib/paint-bases";
 import { DASHBOARD_API_URL } from "@/lib/site";
@@ -40,15 +41,100 @@ const PAGE_SIZE = 500;
 
 // De feed levert "Verf > <subcategorie>". Die subcategorieën bundelen we tot
 // een winkelbare indeling; alles wat niet genoemd is valt onder "overig".
+//
+// ⚠️ Vergelijk nieuwe regels altijd met de échte lijst subcategorieën uit de
+// feed (72 stuks) en tel het resultaat na. Hier stond eerder
+// "bevestigingsmateriaal" terwijl de feed "Bevestigingsmaterialen" zegt —
+// enkelvoud tegen meervoud, en `includes` matcht dat niet. Daardoor stonden
+// 1.519 artikelen (een kwart van de catalogus) onder "Overig assortiment" in
+// plaats van onder Bevestiging, zónder dat er iets kapot leek.
+
+/**
+ * Subcategorieën waarvan de naam niet zegt waar ze horen. Exacte match op de
+ * kleine letters, vóór de trefwoorden hieronder.
+ */
+const CATEGORY_EXACT: Record<string, string> = {
+  // In de feed zit hier behanglijm, behangplaksel en een behangtafel.
+  gereedschap: "verfbenodigdheden",
+  // Roerhoutjes en draagtasjes voor bij de kassa.
+  facilitair: "verfbenodigdheden",
+  // Afdekzeil — dat gebruik je bij het schilderen.
+  "overige bouwmaterialen": "verfbenodigdheden",
+  "alabastine toebehoren": "lijm-en-kit",
+  // Rookmelders en koolmonoxidemelders.
+  brandbeveiliging: "elektra",
+  "interbosch wielen en diversen": "elektra", // batterijen
+  horren: "huishouden",
+  stickers: "huishouden", // raamfolie
+  "fitex non paint": "verfbenodigdheden",
+  // Restpartijen die van alles bevatten; die laten we onder Overig staan.
+  euromat: "overig",
+  "business point": "overig",
+  "fitex diversen": "overig",
+  "intern gebruik": "overig",
+  postnl: "overig",
+};
+
 const CATEGORY_MAP: { slug: string; match: string[] }[] = [
-  { slug: "verf", match: ["muurverf", "lakken", "speciaalverven", "beits, olie en vernis", "verdunningsmiddelen"] },
-  { slug: "verfbenodigdheden", match: ["schildersger", "voorbewerken", "behang"] },
-  { slug: "lijm-en-kit", match: ["lijmen, kitten", "vulmiddelen"] },
-  { slug: "bevestiging", match: ["bevestigingsmateriaal", "ijzerwaren", "hang en sluitwerk"] },
-  { slug: "gereedschap", match: ["handgereedschap", "elektrisch gereedschap", "acc. elektrisch"] },
-  { slug: "elektra", match: ["lichtbronnen", "zaklampen", "verlengkabels", "tafelcontactdozen", "elektra"] },
+  {
+    slug: "verf",
+    match: [
+      "muurverf",
+      "lakken",
+      "alkydverf",
+      "speciaalverven",
+      "beits",
+      "vernis",
+      "verdunningsmiddelen",
+      "partij verf",
+      "mengpasta",
+      "verfmengmachine",
+      "rambo inter",
+      "deur/gevel",
+    ],
+  },
+  {
+    slug: "verfbenodigdheden",
+    match: [
+      "schildersger",
+      "voorbewerken",
+      "behang",
+      "anza",
+      "zelfklevende artikelen",
+      "werkkleding",
+      "bouwemmers",
+      "speciekuipen",
+    ],
+  },
+  { slug: "lijm-en-kit", match: ["lijmen, kitten", "vulmiddelen", "plamuur"] },
+  {
+    slug: "bevestiging",
+    // "bevestiging" en niet "bevestigingsmateriaal": de feed schrijft
+    // "Bevestigingsmaterialen", en materiaal/materialen matcht niet op elkaar.
+    match: ["bevestiging", "ijzerwaren", "hang en sluitwerk"],
+  },
+  { slug: "vloeren", match: ["laminaat", "plinten", "ondervloer", "karpetten"] },
+  {
+    slug: "gereedschap",
+    match: ["gereedschap", "acc. elektrisch", "kruiwagens"],
+  },
+  {
+    slug: "elektra",
+    match: [
+      "lichtbronnen",
+      "zaklampen",
+      "verlengkabels",
+      "tafelcontactdozen",
+      "elektra",
+      "electra",
+      "verlichting",
+      "licht en lampjes",
+      "batterijen",
+      "installatiemateriaal",
+    ],
+  },
   { slug: "huishouden", match: ["huishoudelijk", "reinig", "schoonmaak"] },
-  { slug: "auto-en-tuin", match: ["auto", "tuin", "buiten"] },
+  { slug: "auto-en-tuin", match: ["auto", "tuin", "camping", "fiets"] },
 ];
 
 export const feedCategories: Category[] = [
@@ -96,6 +182,15 @@ export const feedCategories: Category[] = [
     hue: 215,
   },
   {
+    slug: "vloeren",
+    name: "Vloeren & plinten",
+    menuLabel: "Vloeren",
+    description:
+      "Laminaat, vinyl, ondervloeren en bijpassende plinten. Alles voor een vloer die af is.",
+    icon: "level",
+    hue: 30,
+  },
+  {
     slug: "elektra",
     name: "Elektra & Verlichting",
     menuLabel: "Elektra",
@@ -131,6 +226,8 @@ export const feedCategories: Category[] = [
 
 function categorySlugFor(rawCategory: string): string {
   const sub = (rawCategory.split(">").pop() ?? rawCategory).trim().toLowerCase();
+  const exact = CATEGORY_EXACT[sub];
+  if (exact) return exact;
   for (const entry of CATEGORY_MAP) {
     if (entry.match.some((needle) => sub.includes(needle))) return entry.slug;
   }
@@ -443,6 +540,16 @@ function groupKeyFor(item: FeedItem): string {
  * voor hebben — een filter met drie opties op vijfduizend producten helpt
  * niemand.
  */
+/** Wat `bezorgbaarheid()` nodig heeft, uit één feedregel. */
+function teBezorgen(item: FeedItem): TeBezorgenArtikel {
+  return {
+    name: item.title ?? "",
+    variantName: item.maat,
+    liters: Number(item.inhoud_liter ?? 0) || undefined,
+    subcategorie: subcategoryOf(item.categories),
+  };
+}
+
 function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, string> {
   const attributes: Record<string, string> = {};
   const add = (key: string, value: string | undefined) => {
@@ -494,24 +601,48 @@ function buildProduct(group: FeedItem[]): Product | null {
       const meerdereVerpakkingen =
         group.filter((ander) => ander.maat === item.maat).length > 1;
       const verpakking = meerdereVerpakkingen ? verpakkingUit(item.title) : undefined;
+      const afhalen = bezorgbaarheid(teBezorgen(item));
+      const eigenPrijs = toCents(item.sale_price ?? item.price);
+      const eigenAdvies = toCents(item.price);
+      const eigenKluspas = toCents(item.kluspas_prijs);
       return {
         id: item.id,
         name: verpakking ? `${item.maat} — ${verpakking}` : item.maat,
-        price: toCents(item.sale_price ?? item.price),
+        price: eigenPrijs,
+        ...(eigenAdvies > eigenPrijs ? { compareAtPrice: eigenAdvies } : {}),
+        ...(eigenKluspas > 0 && eigenKluspas < eigenPrijs
+          ? { kluspasPrice: eigenKluspas }
+          : {}),
         sku: item.id,
         size: item.maat,
         ...(verpakking ? { packaging: verpakking } : {}),
         ...(base ? { base } : {}),
+        ...(afhalen.reden ? { pickupOnly: afhalen.reden } : {}),
       };
     });
+
+  // Alleen als élke maat afvalt is het hele product niet te bezorgen; anders
+  // hangt het aan de maat die de klant kiest.
+  const afhaalRedenen = group.map((item) => bezorgbaarheid(teBezorgen(item)).reden);
+  const pickupOnly = afhaalRedenen.every(Boolean) ? afhaalRedenen[0] : undefined;
 
   const prices = (variants.length > 0 ? variants.map((v) => v.price) : [toCents(leader.sale_price)])
     .filter((price) => price > 0);
   if (prices.length === 0) return null;
   const price = Math.min(...prices);
-  const compareAtPrice = toCents(leader.price);
+
+  // De "vanaf"-prijs is die van de goedkoopste maat, dus de adviesprijs en de
+  // Kluspas-prijs ernaast moeten van diezelfde maat komen. Namen we die van de
+  // groepsleider — een willekeurige maat na het samenvoegen — dan stond er bij
+  // Rubbol SB "vanaf € 44,84" met de adviesprijs van het blik van 2,5 liter
+  // erachter, en verdween de Kluspas-prijs helemaal omdat € 170,42 niet
+  // lager is dan € 44,84.
+  const vanafVariant = variants.find((variant) => variant.price === price);
+  const compareAtPrice = vanafVariant?.compareAtPrice ?? toCents(leader.price);
   // Kluspas-prijs uit de feed (komma-notatie, bv. "4,13").
-  const kluspasPrice = toCents(leader.kluspas_prijs);
+  const kluspasPrice = vanafVariant
+    ? (vanafVariant.kluspasPrice ?? 0)
+    : toCents(leader.kluspas_prijs);
 
   const groupId = (leader.group_id ?? leader.id).replace(/^g:/, "");
   const inStock = group.some((item) => Number(item.voorraad ?? 0) > 0);
@@ -566,6 +697,7 @@ function buildProduct(group: FeedItem[]): Product | null {
       leader.image_link || group.find((item) => item.image_link)?.image_link,
     ),
     inStock,
+    ...(pickupOnly ? { pickupOnly } : {}),
     // Elke variant heeft een eigen URL op de huidige site; die moeten
     // straks allemaal naar deze pagina wijzen.
     legacyPaths: [
@@ -720,7 +852,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v15";
+const KV_KEY = "catalog:products:v16";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

@@ -7,6 +7,14 @@ export interface ProductVariant {
   id: string;
   name: string;
   price: number; // in centen, incl. btw
+  /**
+   * Adviesprijs en Kluspas-prijs horen bij de maat, niet bij het product:
+   * 500 ml Rubbol kost € 44,84 (Kluspas € 42,60) en 2,5 L € 179,39
+   * (Kluspas € 170,42). Eén waarde voor het hele product laat de klant naar
+   * een korting kijken die niet bij zijn blik hoort.
+   */
+  compareAtPrice?: number;
+  kluspasPrice?: number;
   sku: string;
   /** Inhoud of maat (bv. "2,5 L", "70 MM"); bij mengverf los van de basis. */
   size?: string;
@@ -19,6 +27,12 @@ export interface ProductVariant {
   packaging?: string;
   /** Basis waarin deze variant wordt gemengd; alleen bij mengverf. */
   base?: PaintBaseId;
+  /**
+   * Reden waarom juist deze maat niet met de pakketdienst mee kan. Staat per
+   * variant omdat het per maat verschilt: 2,5 liter gaat prima mee, 25 liter
+   * niet.
+   */
+  pickupOnly?: string;
 }
 
 export interface Product {
@@ -45,6 +59,12 @@ export interface Product {
   /** Productfoto uit de feed; ontbreekt die, dan tonen we het icoon. */
   image?: string;
   inStock?: boolean;
+  /**
+   * Reden waarom dit artikel in géén enkele maat bezorgd kan worden — een
+   * kruiwagen, een zak strooizout van 25 kg. Alleen gezet als élke maat
+   * afvalt; verschilt het per maat, dan staat het bij de variant.
+   */
+  pickupOnly?: string;
   /**
    * Alle paden waarop dit artikel op de huidige site staat (één per variant),
    * zodat elke bestaande URL na de overgang blijft werken.
@@ -131,6 +151,8 @@ export interface CartItem {
   qty: number;
   icon: string;
   hue: number;
+  /** Gezet als dit artikel in deze maat alleen afgehaald kan worden. */
+  pickupOnly?: string;
   /** Productfoto, zodat de winkelwagen het artikel toont en niet een icoon. */
   image?: string;
 }
@@ -275,6 +297,8 @@ export interface CheckoutInput {
   };
   fulfilment: "pickup" | "delivery";
   storeId?: string;
+  /** Mollie-id van de gekozen betaalmethode ("ideal", "klarna", …). */
+  betaalmethode?: string;
   /**
    * Kiest de klant voor bezorging vandaag, tegen toeslag? De server
    * controleert of dat op dat moment ook echt kan — een klant die dit

@@ -21,10 +21,13 @@ export function StockList({
   skus,
   stores,
   fallbackInStock,
+  alleenAfhalen,
 }: {
   skus: string[];
   stores: Store[];
   fallbackInStock: boolean;
+  /** Reden waarom dit artikel niet verzonden kan worden, als dat zo is. */
+  alleenAfhalen?: string;
 }) {
   const { favourite, setFavourite } = useStore();
   const [stock, setStock] = useState<ProductStock | null>(null);
@@ -69,35 +72,46 @@ export function StockList({
 
   return (
     <div className="space-y-3">
-      {/* Bezorgen */}
-      <div className="card flex items-start gap-3 p-4">
-        <Icon
-          name="truck"
-          className={`mt-0.5 h-6 w-6 shrink-0 ${
-            delivery && delivery.type !== "unavailable" ? "text-green-700" : "text-ink-soft"
-          }`}
-        />
-        <div>
-          <p
-            className={`font-black ${
-              delivery && delivery.type !== "unavailable" ? "text-green-700" : "text-ink"
-            }`}
-          >
-            {delivery
-              ? delivery.label
-              : failed
-                ? fallbackInStock
-                  ? "Leverbaar"
-                  : "Levertijd onbekend"
-                : "Levertijd ophalen…"}
-          </p>
-          <p className="mt-0.5 text-sm text-ink-soft">
-            {delivery
-              ? deliveryExplanation(delivery)
-              : "Gratis bezorgd, of gratis afhalen in de winkel."}
-          </p>
+      {/* Te groot of te zwaar voor een pakket: dan is bezorgen geen optie en
+          zeggen we dat hier, niet pas in de checkout. */}
+      {alleenAfhalen ? (
+        <div className="card flex items-start gap-3 p-4">
+          <Icon name="store" className="mt-0.5 h-6 w-6 shrink-0 text-brand" />
+          <div>
+            <p className="font-black text-ink">Alleen afhalen in de winkel</p>
+            <p className="text-sm text-ink-soft">{alleenAfhalen}</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="card flex items-start gap-3 p-4">
+          <Icon
+            name="truck"
+            className={`mt-0.5 h-6 w-6 shrink-0 ${
+              delivery && delivery.type !== "unavailable" ? "text-green-700" : "text-ink-soft"
+            }`}
+          />
+          <div>
+            <p
+              className={`font-black ${
+                delivery && delivery.type !== "unavailable" ? "text-green-700" : "text-ink"
+              }`}
+            >
+              {delivery
+                ? delivery.label
+                : failed
+                  ? fallbackInStock
+                    ? "Leverbaar"
+                    : "Levertijd onbekend"
+                  : "Levertijd ophalen…"}
+            </p>
+            <p className="mt-0.5 text-sm text-ink-soft">
+              {delivery
+                ? deliveryExplanation(delivery)
+                : "Gratis bezorgd vanaf € 59, of gratis afhalen in de winkel."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Afhalen in jouw winkel */}
       <div className="card flex items-start gap-3 p-4">

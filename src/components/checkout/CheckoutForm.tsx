@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { Icon } from "@/components/icons";
 import { useStore } from "@/components/store/StoreProvider";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
+import { betaalmethodenVoor } from "@/lib/betaalmethoden";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
 import { KLUSPAS_DISCOUNT_LABEL } from "@/lib/kluspas";
 import { euro } from "@/lib/format";
@@ -66,6 +67,46 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const [opties, setOpties] = useState<BezorgOpties | null>(null);
   const [kluspasNumber, setKluspasNumber] = useState("");
   const [kluspasOpen, setKluspasOpen] = useState(false);
+  const [betaalmethode, setBetaalmethode] = useState("ideal");
+
+  // Apple Pay alleen tonen waar het ook echt werkt (Safari op een Apple-
+  // apparaat met een kaart in de Wallet). Bieden we het overal aan, dan kiest
+  // iemand op Windows het en weigert Mollie de betaling.
+  const [applePay, setApplePay] = useState(false);
+  useEffect(() => {
+    const sessie = (window as { ApplePaySession?: { canMakePayments?: () => boolean } })
+      .ApplePaySession;
+    setApplePay(Boolean(sessie?.canMakePayments?.()));
+  }, []);
+
+  const methoden = useMemo(
+    () =>
+      betaalmethodenVoor(country).filter(
+        (methode) => methode.id !== "applepay" || applePay,
+      ),
+    [country, applePay],
+  );
+  // Verdwijnt de gekozen methode (ander land, geen Apple Pay), val dan terug
+  // op de eerste die er wél is.
+  useEffect(() => {
+    if (!methoden.some((methode) => methode.id === betaalmethode)) {
+      setBetaalmethode(methoden[0]?.id ?? "ideal");
+    }
+  }, [methoden, betaalmethode]);
+
+  // Artikelen die niet in een pakket passen (kruiwagen, zak strooizout van
+  // 25 kg). Zitten die in het mandje, dan kan de bestelling alleen afgehaald
+  // worden — de checkout-route weigert 'm anders alsnog.
+  const zwareArtikelen = useMemo(
+    () =>
+      items
+        .filter((item) => item.pickupOnly)
+        .map((item) => [item.name, item.variantName].filter(Boolean).join(" ")),
+    [items],
+  );
+  useEffect(() => {
+    if (zwareArtikelen.length > 0) setFulfilment("pickup");
+  }, [zwareArtikelen.length]);
 
   // De exacte bezorgdag hangt af van de voorraad per artikel; die bepaalt de
   // server bij het plaatsen van de bestelling. Hier tonen we alleen of de
@@ -212,6 +253,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
           },
           ...(fulfilment === "pickup" ? { storeId } : {}),
           ...(fulfilment === "delivery" && sameDay ? { sameDay: true } : {}),
+          betaalmethode,
           ...(kluspasNumber.trim() ? { kluspasNumber: kluspasNumber.trim() } : {}),
           items: items.map((item) => ({
             productId: item.productId,
@@ -241,12 +283,31 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
       <div className="space-y-8">
         <section className="card p-6">
           <h2 className="text-lg font-black text-ink">1. Bezorgen of afhalen?</h2>
+          {/* Zit er iets in het mandje dat niet in een pakket past, dan is
+              bezorgen geen keuze meer. Dat hier zeggen scheelt een afgekeurde
+              bestelling — de server weigert hem anders alsnog. */}
+          {zwareArtikelen.length > 0 && (
+            <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+              <Icon name="store" className="mt-0.5 h-5 w-5 shrink-0" />
+              <span>
+                <strong className="font-black">
+                  {zwareArtikelen.join(" en ")}{" "}
+                  {zwareArtikelen.length === 1 ? "kan" : "kunnen"} niet bezorgd worden.
+                </strong>{" "}
+                Te zwaar of te groot voor een pakket. Haal je bestelling op in de winkel,
+                of haal {zwareArtikelen.length === 1 ? "dit artikel" : "deze artikelen"} uit
+                je winkelwagen.
+              </span>
+            </p>
+          )}
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <label
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
-                fulfilment === "delivery"
-                  ? "border-brand bg-brand-light"
-                  : "border-ink/10 hover:border-ink/25"
+              className={`flex items-start gap-3 rounded-xl border-2 p-4 transition ${
+                zwareArtikelen.length > 0
+                  ? "cursor-not-allowed border-ink/10 opacity-50"
+                  : fulfilment === "delivery"
+                    ? "cursor-pointer border-brand bg-brand-light"
+                    : "cursor-pointer border-ink/10 hover:border-ink/25"
               }`}
             >
               <input
@@ -254,6 +315,7 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                 name="fulfilment"
                 value="delivery"
                 checked={fulfilment === "delivery"}
+                disabled={zwareArtikelen.length > 0}
                 onChange={() => setFulfilment("delivery")}
                 className="mt-1 accent-brand"
               />
@@ -549,18 +611,51 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             {fulfilment === "pickup" ? "4." : "3."} Betalen
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Je rekent veilig af via Mollie en kiest daar je betaalmethode.
+            Kies hier hoe je betaalt, dan gaan we meteen door naar dat scherm.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {["iDEAL", "Bancontact", "Creditcard", "Apple Pay", "Klarna"].map((method) => (
-              <span
-                key={method}
-                className="rounded-md bg-ink/5 px-3 py-1.5 text-sm font-bold text-ink"
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {methoden.map((methode) => (
+              <label
+                key={methode.id}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition ${
+                  betaalmethode === methode.id
+                    ? "border-brand bg-brand-light"
+                    : "border-ink/10 hover:border-ink/25"
+                }`}
               >
-                {method}
-              </span>
+                <input
+                  type="radio"
+                  name="betaalmethode"
+                  value={methode.id}
+                  checked={betaalmethode === methode.id}
+                  onChange={() => setBetaalmethode(methode.id)}
+                  className="accent-brand"
+                />
+                {/* Mollie's eigen logo's, lokaal opgeslagen: geen verzoek naar
+                    buiten op het moment dat de klant gaat betalen. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={methode.logo}
+                  alt=""
+                  width={32}
+                  height={24}
+                  className="h-6 w-8 shrink-0"
+                />
+                <span className="min-w-0">
+                  <span className="block font-bold leading-tight text-ink">
+                    {methode.label}
+                  </span>
+                  <span className="block text-xs leading-tight text-ink-soft">
+                    {methode.uitleg}
+                  </span>
+                </span>
+              </label>
             ))}
           </div>
+          <p className="mt-3 flex items-center gap-2 text-xs text-ink-soft">
+            <Icon name="lock" className="h-4 w-4 shrink-0 text-green-700" />
+            Beveiligd afgehandeld door Mollie. Wij zien je bank- of kaartgegevens niet.
+          </p>
         </section>
       </div>
 

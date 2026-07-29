@@ -261,6 +261,7 @@ export default async function ProductPage({ params }: Props) {
             skus={skusFor(product)}
             stores={stores}
             fallbackInStock={product.inStock !== false}
+            alleenAfhalen={product.pickupOnly}
           />
         </div>
       </div>

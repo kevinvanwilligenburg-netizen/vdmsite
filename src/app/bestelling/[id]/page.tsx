@@ -275,16 +275,25 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
                 <p className="text-sm text-ink-soft">
                   {item.quantity} stuks
                   {item.variantLabel && ` · ${item.variantLabel}`}
-                  {item.color && (
-                    <span className="ml-1.5 inline-flex items-center">
-                      <span
-                        className="inline-block h-3 w-3 rounded-sm ring-1 ring-black/10"
-                        style={{ backgroundColor: item.color.hex }}
-                        aria-hidden
-                      />
-                    </span>
-                  )}
                 </p>
+                {/* Kleurcode én waaier voluit: daarmee mengt de winkel aan, en
+                    de klant kan later dezelfde kleur bijbestellen. Alleen een
+                    staaltje zegt niets — schermkleuren wijken af. */}
+                {item.color && (
+                  <p className="mt-1 inline-flex flex-wrap items-center gap-1.5 rounded-lg bg-ink/5 px-2 py-1 text-sm">
+                    <span
+                      className="inline-block h-4 w-4 shrink-0 rounded-sm ring-1 ring-black/10"
+                      style={{ backgroundColor: item.color.hex }}
+                      aria-hidden
+                    />
+                    <span className="font-bold text-ink">
+                      {[item.color.code, item.color.name].filter(Boolean).join(" ")}
+                    </span>
+                    {item.color.collection && (
+                      <span className="text-ink-soft">uit {item.color.collection}</span>
+                    )}
+                  </p>
+                )}
               </div>
               <p className="font-black text-ink">{euros(item.price * item.quantity)}</p>
             </li>

@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       kluspasPrice: product.kluspasPrice,
       image: product.image,
       art: product.art,
+      pickupOnly: product.pickupOnly,
       waarom,
     })),
   });

@@ -99,7 +99,14 @@ export function PurchasePanel({
   const maatLabel = variants.some((variant) => /\b(ml|l|liter)\b/i.test(variant.size ?? ""))
     ? "Kies je inhoud"
     : "Kies je maat";
+  // Prijs, adviesprijs en Kluspas-prijs horen bij de gekozen maat. Namen we
+  // die van het product, dan stond bij 2,5 liter de Kluspas-korting van het
+  // blik van 500 ml.
   const unitPrice = activeVariant?.price ?? product.price;
+  const compareAtPrice = activeVariant
+    ? activeVariant.compareAtPrice
+    : product.compareAtPrice;
+  const kluspasPrice = activeVariant ? activeVariant.kluspasPrice : product.kluspasPrice;
   const activeBase = activeVariant?.base;
   const coverage = coveragePerLiter(product);
 
@@ -139,8 +146,12 @@ export function PurchasePanel({
             }
           : undefined,
         unitPrice,
+        kluspasUnitPrice: kluspasPrice,
         icon: product.art.icon,
         hue: product.art.hue,
+        ...(activeVariant?.pickupOnly ?? product.pickupOnly
+          ? { pickupOnly: activeVariant?.pickupOnly ?? product.pickupOnly }
+          : {}),
       },
       qty,
     );
@@ -152,8 +163,8 @@ export function PurchasePanel({
     <div className="min-w-0 space-y-5">
       <Price
         price={unitPrice}
-        compareAtPrice={product.compareAtPrice}
-        kluspasPrice={product.kluspasPrice}
+        compareAtPrice={compareAtPrice}
+        kluspasPrice={kluspasPrice}
         size="lg"
       />
 

@@ -8,6 +8,7 @@ import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { StoreProvider } from "@/components/store/StoreProvider";
+import { WhatsAppKnop } from "@/components/WhatsAppKnop";
 import { getStores } from "@/lib/tilroy";
 import {
   absoluteUrl,
@@ -141,6 +142,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <Footer />
             {/* Bevestiging na "in winkelwagen", met wat erbij hoort. */}
             <AddedToCart />
+            {/* Vragen stellen zoals klanten dat zelf het liefst doen. */}
+            <WhatsAppKnop />
           </CartProvider>
         </StoreProvider>
       </body>

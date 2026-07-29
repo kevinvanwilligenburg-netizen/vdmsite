@@ -51,6 +51,11 @@ function isPubliclyReachable(baseUrl: string): boolean {
 export async function createMolliePayment(
   order: Order,
   baseUrl: string,
+  /**
+   * Vooraf gekozen betaalmethode. Geven we die mee, dan slaat Mollie zijn
+   * eigen keuzescherm over en landt de klant direct bij zijn bank of Klarna.
+   */
+  method?: string,
 ): Promise<{ paymentId: string; checkoutUrl: string }> {
   const body: Record<string, unknown> = {
     amount: {
@@ -61,6 +66,7 @@ export async function createMolliePayment(
     redirectUrl: `${baseUrl}/bestelling/${order.reference}`,
     locale: "nl_NL",
     metadata: { orderId: order.id },
+    ...(method ? { method } : {}),
   };
   // Mollie weigert webhooks naar localhost; lokaal synct de orderpagina
   // de betaalstatus zelf bij (zie getOrderSynced in lib/orders.ts).

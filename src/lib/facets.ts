@@ -29,6 +29,10 @@ export interface ProductFilters {
   subcategorie?: string[];
   glans?: string[];
   verfsoort?: string[];
+  toepassing?: string[];
+  ondergrond?: string[];
+  kwaliteit?: string[];
+  kleur?: string[];
   inhoud?: string[];
   prijsMax?: number;
   aanbieding?: boolean;
@@ -37,10 +41,35 @@ export interface ProductFilters {
   sort?: SortKey;
 }
 
-const ATTRIBUTE_LABELS: Record<string, string> = {
+/**
+ * Welke eigenschappen worden een filter, en hoe heten ze voor de klant?
+ *
+ * De volgorde is de volgorde in de kolom. `kleur` staat er sinds een telling
+ * op de feed: dat veld is in élke categorie voor 76 tot 99% gevuld en was het
+ * enige bruikbare filter bij kit, lijm, elektra en bevestiging — categorieën
+ * die daarvóór met één filter of helemaal zonder in beeld stonden.
+ */
+const FACET_KEYS = [
+  "subcategorie",
+  "kleur",
+  "glans",
+  "verfsoort",
+  "toepassing",
+  "ondergrond",
+  "kwaliteit",
+  "inhoud",
+] as const;
+
+type FacetKey = (typeof FACET_KEYS)[number];
+
+const ATTRIBUTE_LABELS: Record<FacetKey, string> = {
   subcategorie: "Soort",
+  kleur: "Kleur",
   glans: "Glansgraad",
   verfsoort: "Verfsoort",
+  toepassing: "Toepassing",
+  ondergrond: "Ondergrond",
+  kwaliteit: "Kwaliteit",
   inhoud: "Inhoud",
 };
 
@@ -79,6 +108,10 @@ export function parseFilters(searchParams: Record<string, string | string[] | un
     subcategorie: list("subcategorie"),
     glans: list("glans"),
     verfsoort: list("verfsoort"),
+    toepassing: list("toepassing"),
+    ondergrond: list("ondergrond"),
+    kwaliteit: list("kwaliteit"),
+    kleur: list("kleur"),
     inhoud: list("inhoud"),
     prijsMax: Number.isFinite(prijsMax) && prijsMax > 0 ? prijsMax : undefined,
     aanbieding: searchParams.aanbieding === "1",
@@ -99,7 +132,7 @@ function matches(product: Product, filters: ProductFilters): boolean {
   if (filters.opVoorraad && product.inStock === false) return false;
   if (filters.prijsMax && product.price > filters.prijsMax * 100) return false;
 
-  for (const key of ["subcategorie", "glans", "verfsoort", "inhoud"] as const) {
+  for (const key of FACET_KEYS) {
     const wanted = filters[key];
     if (!wanted || wanted.length === 0) continue;
     const has = valuesOf(product, key);
@@ -162,7 +195,7 @@ export function buildFacets(products: Product[], filters: ProductFilters): Facet
   if (merken.length > 1) facets.push({ key: "merk", label: "Merk", options: merken });
 
   // Attributen
-  for (const key of ["subcategorie", "glans", "verfsoort", "inhoud"] as const) {
+  for (const key of FACET_KEYS) {
     const counts = new Map<string, number>();
     for (const product of withoutSelf(key)) {
       for (const value of valuesOf(product, key)) {
@@ -182,6 +215,20 @@ export function buildFacets(products: Product[], filters: ProductFilters): Facet
   return facets;
 }
 
+/**
+ * Alle sleutels die een filter in de URL zetten. De "wis alles"-knop liep
+ * hier eerder achteraan: die had een eigen lijstje, en filters die later
+ * bijkwamen bleven na het wissen gewoon aanstaan.
+ */
+export const FILTER_KEYS: string[] = [
+  "merk",
+  ...FACET_KEYS,
+  "prijs",
+  "aanbieding",
+  "mengverf",
+  "voorraad",
+];
+
 /** Aantal actieve filters, voor de "wis filters"-knop. */
 export function activeFilterCount(filters: ProductFilters): number {
   return (
@@ -189,6 +236,10 @@ export function activeFilterCount(filters: ProductFilters): number {
     (filters.subcategorie?.length ?? 0) +
     (filters.glans?.length ?? 0) +
     (filters.verfsoort?.length ?? 0) +
+    (filters.toepassing?.length ?? 0) +
+    (filters.ondergrond?.length ?? 0) +
+    (filters.kwaliteit?.length ?? 0) +
+    (filters.kleur?.length ?? 0) +
     (filters.inhoud?.length ?? 0) +
     (filters.prijsMax ? 1 : 0) +
     (filters.aanbieding ? 1 : 0) +

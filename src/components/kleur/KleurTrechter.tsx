@@ -116,6 +116,7 @@ export function KleurTrechter({
       kluspasUnitPrice: product.kluspasPrice,
       icon: product.art.icon,
       hue: product.art.hue,
+      pickupOnly: gekozenVariant?.pickupOnly ?? product.pickupOnly,
     });
     setToegevoegd((huidig) => [...huidig, product.id]);
   }

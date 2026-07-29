@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Icon } from "@/components/icons";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
-import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
+import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
 import { getCategories, getStores } from "@/lib/tilroy";
 
 const PAYMENT_METHODS = ["iDEAL", "Bancontact", "Creditcard", "Apple Pay", "Klarna"];
@@ -126,6 +126,18 @@ export async function Footer() {
                 <Icon name="mail" className="h-4 w-4 shrink-0" /> {CONTACT_EMAIL}
               </a>
             </li>
+            {WHATSAPP_NUMMER && (
+              <li>
+                <a
+                  href={`https://wa.me/${WHATSAPP_NUMMER}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 transition hover:text-brand-bright"
+                >
+                  <Icon name="chat" className="h-4 w-4 shrink-0" /> Appen met de winkel
+                </a>
+              </li>
+            )}
             {SERVICE_LINKS.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className="transition hover:text-brand-bright">

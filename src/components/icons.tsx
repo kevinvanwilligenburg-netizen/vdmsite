@@ -48,6 +48,15 @@ const PATHS: Record<string, ReactNode> = {
       <path d="m22 6-10 7L2 6" />
     </>
   ),
+  lock: (
+    <>
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </>
+  ),
+  chat: (
+    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.8-.9L3 20.5l1.5-4.4A8.5 8.5 0 0 1 3.6 12a8.4 8.4 0 0 1 8.4-8.5h.5a8.4 8.4 0 0 1 8 8z" />
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="7" />
