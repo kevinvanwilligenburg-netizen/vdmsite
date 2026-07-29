@@ -192,7 +192,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                 </p>
                 <p className="mt-1 text-sm text-ink-soft">
                   {category.slug === "verf"
-                    ? "Kies je kleur online, wij mengen hem gratis in de winkel."
+                    ? "Kies je kleur online; onze verfspecialist mengt hem gratis aan."
                     : "Vertel wat je gaat doen en wij rekenen uit wat je nodig hebt."}
                 </p>
                 <Link

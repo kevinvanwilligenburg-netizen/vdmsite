@@ -11,7 +11,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: "Kleurkiezer – mengverf in elke kleur",
   description:
-    "Kies online je kleur uit de RAL- en merkenwaaiers en bestel mengverf die wij gratis voor je mengen in de winkel. Muurverf en lak in elke kleur.",
+    "Kies online je kleur uit de RAL- en merkenwaaiers. Onze verfspecialist mengt hem gratis en je krijgt hem bezorgd of haalt hem op. Muurverf en lak in elke kleur.",
   alternates: { canonical: "/kleurkiezer" },
 };
 
@@ -32,10 +32,10 @@ export default async function KleurkiezerPage() {
         </h1>
         <p className="mt-3 text-ink-soft">
           Kies uit {totalColors.toLocaleString("nl-NL")} kleuren uit{" "}
-          {collections.length} waaiers. Wij mengen je verf{" "}
-          <strong className="text-ink">gratis</strong> in de winkel en zetten hem
-          klaar bij je bestelling. De kleuren op je scherm zijn een indicatie; in
-          de winkel leggen we de officiële waaier ernaast.
+          {collections.length} waaiers. Onze verfspecialist mengt jouw kleur{" "}
+          <strong className="text-ink">gratis</strong> aan — daarna bezorgen we
+          hem of zet je hem zelf even op. De kleuren op je scherm zijn een
+          indicatie; twijfel je, leg dan de officiële waaier ernaast in de winkel.
         </p>
       </header>
       <MyColors />

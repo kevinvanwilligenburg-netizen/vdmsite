@@ -32,7 +32,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Kan ik verf in elke kleur bestellen?",
     answer:
-      "Ja. Kies je kleur online met de kleurkiezer; wij mengen je muurverf of lak gratis in de winkel. De kleuren op je scherm zijn een indicatie — in de winkel gebruiken we de officiële kleurenwaaier.",
+      "Ja. Kies je kleur online met de kleurkiezer; onze verfspecialist mengt je muurverf of lak gratis aan. Je krijgt hem bezorgd of haalt hem op — je hoeft er dus niet voor langs te komen. De kleuren op je scherm zijn een indicatie; wij mengen op de officiële kleurcode, niet op wat jouw scherm toont.",
   },
   {
     question: "Hoe kan ik betalen?",

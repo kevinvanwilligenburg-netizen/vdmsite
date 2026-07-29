@@ -36,7 +36,7 @@ export function KleurkiezerClient({
               Bestel verf in {[selected.code, selected.name].filter(Boolean).join(" · ")}
             </h2>
             <p className="mt-1 text-sm text-ink-soft">
-              Wij mengen je verf gratis in de winkel en zetten hem klaar bij je
+              Onze verfspecialist mengt je verf gratis aan en zet hem klaar bij je
               bestelling.
             </p>
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">

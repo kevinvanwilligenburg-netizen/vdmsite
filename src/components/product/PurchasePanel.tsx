@@ -246,7 +246,7 @@ export function PurchasePanel({
           <div className="flex items-center justify-between gap-3">
             <p className="inline-flex items-center gap-1.5 text-sm font-bold text-ink">
               <Icon name="palette" className="h-4 w-4 text-brand" /> Jouw kleur{" "}
-              <span className="font-normal text-ink-soft">(gratis gemengd in de winkel)</span>
+              <span className="font-normal text-ink-soft">(gratis gemengd door onze verfspecialist)</span>
             </p>
             <button
               type="button"

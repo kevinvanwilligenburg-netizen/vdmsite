@@ -194,7 +194,7 @@ export default async function ProductPage({ params }: Props) {
       ? [
           {
             q: "Kan ik dit in elke kleur krijgen?",
-            a: "Ja. Kies je kleur met de kleurkiezer op deze pagina — je hebt keuze uit meer dan 18.000 kleuren. Wij mengen de verf gratis in de winkel en kiezen automatisch de juiste mengbasis bij jouw kleur.",
+            a: "Ja. Kies je kleur met de kleurkiezer op deze pagina — je hebt keuze uit meer dan 18.000 kleuren. Onze verfspecialist mengt de verf gratis aan en kiest automatisch de juiste mengbasis bij jouw kleur. Bezorgen of ophalen, wat jij wilt.",
           },
         ]
       : []),
