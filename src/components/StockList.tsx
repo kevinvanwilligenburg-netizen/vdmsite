@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/icons";
+import { Voorraadmelding } from "@/components/product/Voorraadmelding";
 import { useStore } from "@/components/store/StoreProvider";
 import { deliveryExplanation, deliveryPromise } from "@/lib/delivery";
 import { pickupPromise } from "@/lib/pickup";
@@ -22,12 +23,15 @@ export function StockList({
   stores,
   fallbackInStock,
   alleenAfhalen,
+  product,
 }: {
   skus: string[];
   stores: Store[];
   fallbackInStock: boolean;
   /** Reden waarom dit artikel niet verzonden kan worden, als dat zo is. */
   alleenAfhalen?: string;
+  /** Voor de "hou me op de hoogte"-melding bij uitverkocht. */
+  product: { sku: string; slug: string; naam: string };
 }) {
   const { favourite, setFavourite } = useStore();
   const [stock, setStock] = useState<ProductStock | null>(null);
@@ -70,8 +74,16 @@ export function StockList({
   const pickupQty = favourite ? (favouriteRow?.qty ?? -1) : (suggestion?.qty ?? -1);
   const pickup = pickupStore && pickupQty > 0 ? pickupPromise(pickupStore) : null;
 
+  // Nergens meer voorraad, en de hub weet dat zeker: dan is bestellen geen
+  // optie en bieden we een seintje aan zodra het er weer is.
+  const uitverkocht = Boolean(stock?.live) && (stock?.stores ?? []).every((rij) => rij.qty <= 0)
+    && (stock?.webshopQty ?? 0) <= 0;
+
   return (
     <div className="space-y-3">
+      {uitverkocht && (
+        <Voorraadmelding sku={product.sku} slug={product.slug} naam={product.naam} />
+      )}
       {/* Te groot of te zwaar voor een pakket: dan is bezorgen geen optie en
           zeggen we dat hier, niet pas in de checkout. */}
       {alleenAfhalen ? (

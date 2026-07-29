@@ -111,12 +111,24 @@ export function Aankopen({ webshop }: { webshop: Aankoop[] }) {
               </div>
 
               {aankoop.bron === "webshop" && aankoop.referentie && (
-                <Link
-                  href={`/bestelling/${aankoop.referentie}`}
-                  className="mt-2 inline-block text-sm font-bold text-brand hover:underline"
-                >
-                  Bekijk bestelling →
-                </Link>
+                <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold">
+                  <Link
+                    href={`/bestelling/${aankoop.referentie}`}
+                    className="text-brand hover:underline"
+                  >
+                    Bekijk bestelling →
+                  </Link>
+                  {/* Alleen bij een betaalde bestelling; anders wijst de knop
+                      naar een factuur die er nog niet is. */}
+                  {aankoop.betaald && (
+                    <Link
+                      href={`/bestelling/${aankoop.referentie}/factuur`}
+                      className="text-brand hover:underline"
+                    >
+                      Factuur →
+                    </Link>
+                  )}
+                </p>
               )}
             </li>
           ))}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Icon } from "@/components/icons";
@@ -314,6 +315,17 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           </div>
         </dl>
       </section>
+
+      {paid && (
+        <p className="text-center">
+          <Link
+            href={`/bestelling/${order.reference}/factuur`}
+            className="inline-flex items-center gap-2 rounded-lg border-2 border-ink/10 px-4 py-2 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
+          >
+            <Icon name="mail" className="h-4 w-4" /> Bekijk je factuur
+          </Link>
+        </p>
+      )}
 
       <p className="text-center text-sm text-ink-soft">
         Bewaar deze pagina of noteer je bestelnummer: <strong>{order.reference}</strong>

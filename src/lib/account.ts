@@ -231,6 +231,8 @@ export interface Aankoop {
   /** Alleen bij webshoporders: de status en het referentienummer. */
   referentie?: string;
   status?: string;
+  /** Is er betaald? Alleen dan bestaat er een factuur. */
+  betaald?: boolean;
   /** Kluspunten die deze aankoop opleverde, als de bron dat meldt. */
   punten?: number;
 }

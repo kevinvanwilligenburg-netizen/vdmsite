@@ -14,6 +14,7 @@ import {
   type Aankoop,
 } from "@/lib/account";
 import { getOrdersByEmail } from "@/lib/orders";
+import { isPaidStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ export default async function AccountPage() {
     })),
     referentie: order.reference,
     status: STATUS_TEKST[order.paymentStatus] ?? order.paymentStatus,
+    betaald: isPaidStatus(order.paymentStatus),
   }));
 
   const naam = [klant.voornaam, klant.achternaam].filter(Boolean).join(" ");

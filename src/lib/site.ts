@@ -8,6 +8,21 @@ export const CONTACT_PHONE = "+31 85 273 8338";
 export const CONTACT_EMAIL = "klantenservice@devoordeelmarkt.nl";
 
 /**
+ * Bedrijfsgegevens zoals ze op een factuur moeten staan. Een factuur zonder
+ * KvK- en btw-nummer is voor een zakelijke klant onbruikbaar; die kan de btw
+ * dan niet terugvragen.
+ */
+export const BEDRIJF = {
+  naam: "De Voordeelmarkt",
+  adres: "Nijverheidsweg 2",
+  postcode: "7442 CH",
+  plaats: "Nijverdal",
+  land: "Nederland",
+  kvk: "70367922",
+  btw: "NL855528618B01",
+} as const;
+
+/**
  * WhatsApp-nummer van de klantenservice, in internationaal formaat zonder
  * plus of spaties (bv. 31852738338). Staat de variabele niet gezet, dan tonen
  * we de WhatsApp-knop niet: liever geen knop dan een knop naar een nummer
