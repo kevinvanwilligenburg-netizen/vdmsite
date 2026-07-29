@@ -53,10 +53,20 @@ function valuesOf(product: Product, key: string): string[] {
 
 /** Leest filters uit de query-string van een pagina. */
 export function parseFilters(searchParams: Record<string, string | string[] | undefined>): ProductFilters {
+  /**
+   * Meerdere waarden staan als herhaalde parameters in de URL
+   * (`?merk=Histor&merk=Flexa`), niet komma-gescheiden.
+   *
+   * Dat is geen stijlkeuze: filterwaarden bevatten zelf komma's. "Beits,
+   * olie en vernis" en "Lijmen, kitten en vulmiddelen" werden bij het
+   * splitsen in stukken geknipt die nergens op matchten — die twee
+   * menu-items leidden naar een lege pagina terwijl er 169 en 236 artikelen
+   * achter zaten.
+   */
   const list = (key: string): string[] | undefined => {
     const value = searchParams[key];
     if (!value) return undefined;
-    const values = Array.isArray(value) ? value : value.split(",");
+    const values = Array.isArray(value) ? value : [value];
     const cleaned = values.map((entry) => entry.trim()).filter(Boolean);
     return cleaned.length > 0 ? cleaned : undefined;
   };

@@ -59,12 +59,15 @@ export function ProductFiltersPanel({
   const toggleValue = useCallback(
     (key: string, value: string) => {
       update((params) => {
-        const current = (params.get(key) ?? "").split(",").filter(Boolean);
+        // Elke waarde een eigen parameter. Komma's als scheidingsteken
+        // gingen mis bij waarden die er zelf een bevatten, zoals
+        // "Beits, olie en vernis".
+        const current = params.getAll(key).filter(Boolean);
         const next = current.includes(value)
           ? current.filter((entry) => entry !== value)
           : [...current, value];
-        if (next.length > 0) params.set(key, next.join(","));
-        else params.delete(key);
+        params.delete(key);
+        for (const entry of next) params.append(key, entry);
       });
     },
     [update],

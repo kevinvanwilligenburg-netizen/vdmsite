@@ -75,7 +75,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(searchParams)) {
       if (key === "pagina" || value === undefined) continue;
-      params.set(key, Array.isArray(value) ? value.join(",") : value);
+      // Meerdere waarden als herhaalde parameters doorgeven, niet als één
+      // komma-lijst: filterwaarden bevatten zelf komma's.
+      if (Array.isArray(value)) for (const entry of value) params.append(key, entry);
+      else params.set(key, value);
     }
     if (nummer > 1) params.set("pagina", String(nummer));
     const query = params.toString();
