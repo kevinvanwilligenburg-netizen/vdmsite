@@ -175,6 +175,37 @@ interface DashboardKlant {
  * een half account dan een foutmelding waar hij niets mee kan.
  */
 /**
+ * De winkel waar deze klant het liefst komt, of "online".
+ *
+ * Bewust bij het account en niet alleen in de browser: de winkelkiezer in de
+ * kop bewaart zijn keuze lokaal, en die is weg zodra iemand op zijn telefoon
+ * verder gaat. Voor een klant met een account hoort dat mee te reizen — het
+ * bepaalt welke voorraad hij als eerste ziet en welke winkel bij het afrekenen
+ * voorgeselecteerd staat.
+ *
+ * "Online" is een geldige keuze en geen ontbrekend antwoord: er zijn klanten
+ * die nooit in de winkel komen, en die moeten niet elke keer opnieuw de vraag
+ * krijgen.
+ */
+export const ONLINE_KEUZE = "online";
+
+function winkelSleutel(email: string): string {
+  return `account:winkel:${normaliseerEmail(email)}`;
+}
+
+export async function voorkeurWinkel(email: string): Promise<string | null> {
+  if (!isKvEnabled()) return null;
+  return kvGetRaw(winkelSleutel(email));
+}
+
+export async function bewaarVoorkeurWinkel(email: string, keuze: string): Promise<boolean> {
+  if (!isKvEnabled()) return false;
+  // Een jaar bewaren; verandert er iets in het leven van de klant, dan kiest
+  // hij vanzelf opnieuw.
+  return kvSetEx(winkelSleutel(email), keuze, 365 * 24 * 60 * 60);
+}
+
+/**
  * Het Kluspas-nummer van een ingelogde klant, als de winkel er een kent.
  *
  * Alleen om in de bestelling te zetten zodat de winkel kan koppelen; de

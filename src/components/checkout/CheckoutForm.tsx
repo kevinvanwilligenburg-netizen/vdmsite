@@ -49,10 +49,13 @@ interface BezorgOpties {
 export function CheckoutForm({
   stores,
   ingelogdAls,
+  voorkeurWinkel,
 }: {
   stores: StoreOption[];
   /** E-mailadres van de ingelogde klant; korting hangt hieraan. */
   ingelogdAls?: string;
+  /** Winkel uit het account (slug), of "online". */
+  voorkeurWinkel?: string;
 }) {
   const { items, subtotal, hydrated } = useCart();
   const { favourite } = useStore();
@@ -189,13 +192,15 @@ export function CheckoutForm({
     return () => window.clearTimeout(timer);
   }, [email, items, subtotal]);
 
-  // De favoriete winkel van de klant staat voorgeselecteerd.
+  // De favoriete winkel staat voorgeselecteerd. De keuze uit het account gaat
+  // voor die van de winkelkiezer: die eerste reist mee naar een ander
+  // apparaat, de tweede staat alleen in deze browser.
   useEffect(() => {
-    if (favourite && stores.some((store) => store.slug === favourite.slug)) {
-      const match = stores.find((store) => store.slug === favourite.slug);
-      if (match) setStoreId(match.id);
-    }
-  }, [favourite, stores]);
+    const slug = voorkeurWinkel && voorkeurWinkel !== "online" ? voorkeurWinkel : favourite?.slug;
+    if (!slug) return;
+    const match = stores.find((store) => store.slug === slug);
+    if (match) setStoreId(match.id);
+  }, [favourite, stores, voorkeurWinkel]);
 
   // Welke winkels hebben deze hele bestelling liggen? Alleen relevant bij
   // afhalen, dus we vragen het pas als de klant daarvoor kiest.

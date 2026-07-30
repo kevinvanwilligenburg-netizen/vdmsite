@@ -5,15 +5,18 @@ import Link from "next/link";
 import { Aankopen } from "@/components/account/Aankopen";
 import { Inloggen } from "@/components/account/Inloggen";
 import { Kluspas } from "@/components/account/Kluspas";
+import { WinkelKeuze } from "@/components/account/WinkelKeuze";
 import { Uitloggen } from "@/components/account/Uitloggen";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import {
+  SESSIE_COOKIE,
   emailVanSessie,
   haalKlant,
-  SESSIE_COOKIE,
   type Aankoop,
+  voorkeurWinkel,
 } from "@/lib/account";
 import { getOrdersByEmail } from "@/lib/orders";
+import { getStores } from "@/lib/tilroy";
 import { isPaidStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -53,9 +56,11 @@ export default async function AccountPage() {
   // Alleen wat snel is doen we hier: de klantgegevens en onze eigen orders.
   // De winkelhistorie haalt de pagina er zelf bij — daarvoor doorloopt het
   // dashboard een jaar verkopen, en daar wachten we de klant niet op.
-  const [klant, webshoporders] = await Promise.all([
+  const [klant, webshoporders, winkelKeuze, winkels] = await Promise.all([
     haalKlant(email),
     getOrdersByEmail(email),
+    voorkeurWinkel(email),
+    getStores(),
   ]);
 
   const webshopAankopen: Aankoop[] = webshoporders.map((order) => ({
@@ -88,6 +93,17 @@ export default async function AccountPage() {
         </div>
         <Uitloggen />
       </header>
+
+      {/* Eén keer vragen waar de klant meestal komt; daarna nooit meer. */}
+      {!winkelKeuze && (
+        <WinkelKeuze
+          winkels={winkels.map((winkel) => ({
+            slug: winkel.slug,
+            stad: winkel.city,
+            adres: winkel.address,
+          }))}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         <div className="space-y-4">
