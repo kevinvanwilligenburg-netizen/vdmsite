@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { SearchTracker } from "@/components/search/SearchTracker";
 import { activeFilterCount, applyFilters, buildFacets, parseFilters } from "@/lib/facets";
 import { klusIntentie } from "@/lib/klus-intentie";
+import { Mark } from "@/components/Mark";
 import { getCategories, searchProducts } from "@/lib/tilroy";
 
 export const revalidate = 3600;
@@ -127,7 +128,11 @@ export default async function SearchPage({ searchParams }: Props) {
       )}
 
       {results.total === 0 ? (
-        <div className="card p-6">
+        <div className="card overflow-hidden">
+          {/* Een leeg zoekresultaat is een doodlopende pagina. Mark maakt er
+              iets van waar iemand achter staat, in plaats van een kale melding. */}
+          <Mark pose="vragend" hoogte="h-40" className="rounded-none" />
+          <div className="p-6">
           <h2 className="font-black text-ink">Niets gevonden</h2>
           {results.suggestions.length > 0 && (
             <>
@@ -164,6 +169,7 @@ export default async function SearchPage({ searchParams }: Props) {
             </Link>{" "}
             helpt je graag.
           </p>
+          </div>
         </div>
       ) : (
         <>

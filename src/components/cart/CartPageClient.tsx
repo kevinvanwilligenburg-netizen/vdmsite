@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCart } from "@/components/cart/CartProvider";
 import { useKorting } from "@/components/cart/useKorting";
 import { Icon } from "@/components/icons";
+import { Mark } from "@/components/Mark";
 import { ProductArt } from "@/components/ProductArt";
 import { euro } from "@/lib/format";
 
@@ -21,17 +22,19 @@ export function CartPageClient() {
 
   if (items.length === 0) {
     return (
-      <div className="card mx-auto max-w-lg p-10 text-center">
-        <span className="inline-flex text-ink/30" aria-hidden>
-          <Icon name="cart" className="h-16 w-16" strokeWidth={1.5} />
-        </span>
-        <h2 className="mt-4 text-xl font-black text-ink">Je winkelwagen is leeg</h2>
-        <p className="mt-2 text-ink-soft">
-          Ontdek onze topdeals en vul je winkelwagen met voordeel.
-        </p>
-        <Link href="/" className="btn btn-primary mt-6">
-          Verder winkelen
-        </Link>
+      <div className="card mx-auto max-w-lg overflow-hidden text-center">
+        {/* Mark mag ook bij een lege pagina staan; juist daar helpt een
+            gezicht meer dan een grijs karretje. */}
+        <Mark pose="vragend" hoogte="h-48" className="rounded-none" />
+        <div className="p-8">
+          <h2 className="text-xl font-black text-ink">Je winkelwagen is leeg</h2>
+          <p className="mt-2 text-ink-soft">
+            Ontdek onze topdeals en vul je winkelwagen met voordeel.
+          </p>
+          <Link href="/" className="btn btn-primary mt-6">
+            Verder winkelen
+          </Link>
+        </div>
       </div>
     );
   }

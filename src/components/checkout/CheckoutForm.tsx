@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { InlogInline } from "@/components/account/InlogInline";
 import { useCart } from "@/components/cart/CartProvider";
 import { useKorting } from "@/components/cart/useKorting";
 import { Icon } from "@/components/icons";
@@ -756,12 +757,11 @@ export function CheckoutForm({
                   Een account maken kost niets en gaat met je e-mailadres — geen
                   wachtwoord. De korting is meteen verrekend.
                 </p>
-                <Link
-                  href={`/account?verder=${encodeURIComponent("/afrekenen")}`}
-                  className="btn btn-primary mt-2 w-full py-2 text-sm"
-                >
-                  Inloggen of account maken
-                </Link>
+                {/* Inline, niet via een link naar de accountpagina.
+                    Wegklikken van het afrekenen op het moment dat de klant er
+                    bijna is, kost bestellingen — ook met een parameter die hem
+                    netjes terugbrengt. */}
+                <InlogInline startEmail={email} />
               </>
             )}
           </div>
