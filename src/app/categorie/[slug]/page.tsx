@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -10,7 +10,8 @@ import { ProductFiltersPanel } from "@/components/plp/ProductFilters";
 import { ProductCard } from "@/components/ProductCard";
 import { activeFilterCount, applyFilters, buildFacets, parseFilters } from "@/lib/facets";
 import { absoluteUrl } from "@/lib/site";
-import { getCategories, getCategory, getProductsByCategory } from "@/lib/tilroy";
+import { slugify } from "@/lib/product-feed";
+import { getCategories, getCategory, getProducts, getProductsByCategory } from "@/lib/tilroy";
 
 export const revalidate = 3600;
 
@@ -42,7 +43,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CategoryPage({ params, searchParams }: Props) {
   const category = await getCategory(params.slug);
-  if (!category) notFound();
+  if (!category) {
+    // Wanneer de feed van naam-slugs ("lakken") overgaat op groepscodes
+    // ("g1000"), wijzen alle bestaande links — Google, mails, favorieten —
+    // naar rubrieken die niet meer zo heten. De oude naam leeft dan voort als
+    // subgroep bínnen een rubriek; zoek hem daar op en stuur blijvend door.
+    const producten = await getProducts();
+    const oud = params.slug.toLocaleLowerCase("nl");
+    const treffer = producten.find(
+      (product) =>
+        slugify(product.attributes?.subcategorie ?? "") === oud &&
+        product.category !== params.slug,
+    );
+    if (treffer) {
+      const sub = treffer.attributes!.subcategorie!;
+      redirect(
+        `/categorie/${treffer.category}?subcategorie=${encodeURIComponent(sub)}`,
+      );
+    }
+    notFound();
+  }
 
   const alle = await getProductsByCategory(category.slug);
   const filters = parseFilters(searchParams);

@@ -111,8 +111,11 @@ const CATEGORIE_BEELD: { match: RegExp; icon: string; hue: number }[] = [
   { match: /emmer|speciekuip|bouwmaterial/, icon: "bucket", hue: 40 },
 ];
 
-function beeldVoor(slug: string): { icon: string; hue: number } {
-  const treffer = CATEGORIE_BEELD.find((entry) => entry.match.test(slug));
+function beeldVoor(slug: string, naam = ""): { icon: string; hue: number } {
+  // Op slug én naam: zodra de feed groepscodes meestuurt wordt de slug
+  // "g1000" en zegt alleen de naam ("Verf en Beits") nog waar dit over gaat.
+  const bron = `${slug} ${slugify(naam)}`;
+  const treffer = CATEGORIE_BEELD.find((entry) => entry.match.test(bron));
   return treffer ? { icon: treffer.icon, hue: treffer.hue } : { icon: "box", hue: 210 };
 }
 
@@ -208,7 +211,7 @@ export function categorieenUit(products: Product[]): Category[] {
           aantal === 1 ? "artikel" : "artikelen"
         } voor de laagste prijs. Online bestellen, gratis afhalen in de winkel.`,
         count: aantal,
-        ...beeldVoor(slug),
+        ...beeldVoor(slug, weergave),
       } satisfies Category;
     })
     .sort((a, b) => a.name.localeCompare(b.name, "nl"));
@@ -335,7 +338,7 @@ function parseItems(xml: string): FeedItem[] {
   return items;
 }
 
-function slugify(value: string): string {
+export function slugify(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFD")
