@@ -35,6 +35,25 @@ export async function getProductById(id: string): Promise<Product | undefined> {
   return products.find((product) => product.id === id);
 }
 
+/**
+ * Zoek het product bij een sku, ook als die van een variant is.
+ *
+ * De winkelwagen en de checkout praten in sku's, niet in product-id's; om te
+ * weten van welk merk een regel is (bijvoorbeeld voor de franco-afspraak met
+ * Sikkens) moeten we die kant op kunnen zoeken.
+ */
+export async function getProductBySku(sku: string): Promise<Product | undefined> {
+  const gezocht = sku.trim();
+  if (!gezocht) return undefined;
+  const products = await getProducts();
+  return products.find(
+    (product) =>
+      product.sku === gezocht ||
+      product.id === gezocht ||
+      (product.variants ?? []).some((variant) => variant.sku === gezocht),
+  );
+}
+
 export async function getProductsByCategory(categorySlug: string): Promise<Product[]> {
   const products = await getProducts();
   return products.filter((product) => product.category === categorySlug);

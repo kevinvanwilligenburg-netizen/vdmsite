@@ -73,6 +73,33 @@ const ATTRIBUTE_LABELS: Record<FacetKey, string> = {
   inhoud: "Inhoud",
 };
 
+/**
+ * Boven dit aandeel van de resultaten zegt een filteroptie niets meer.
+ * Twee derde van de catalogus staat op kleur "Transparant"; daarop filteren
+ * levert bijna dezelfde lijst op.
+ */
+const MAX_AANDEEL = 0.7;
+
+/**
+ * Waarden die wel in de feed staan maar geen filter zijn.
+ *
+ * Het veld `kleur` telt 147 verschillende waarden. Daarvan is "NoColour" een
+ * placeholder, en tientallen zijn kale kleurcodes zonder naam ("6213", "701",
+ * "H138") die alleen de leverancier iets zeggen. Als keuze in de kolom zijn
+ * die onbruikbaar; een klant zoekt op "wit", niet op "6763".
+ */
+const PLACEHOUDERS = new Set(["nocolour", "no colour", "n.v.t.", "nvt", "onbekend", "-", "div.", "diversen"]);
+const ALLEEN_EEN_CODE = /^[a-z]{0,2}\s?\d{2,5}[a-z]?$/i;
+
+function bruikbareWaarde(key: string, waarde: string): boolean {
+  const schoon = waarde.trim().toLowerCase();
+  if (schoon.length < 2) return false;
+  if (PLACEHOUDERS.has(schoon)) return false;
+  // Codes weren we alleen bij kleur; bij inhoud is "750" juist een maat.
+  if (key === "kleur" && ALLEEN_EEN_CODE.test(schoon)) return false;
+  return true;
+}
+
 /** Waarden van een attribuut; `inhoud` bevat meerdere waarden per product. */
 function valuesOf(product: Product, key: string): string[] {
   const raw = product.attributes?.[key];
@@ -196,13 +223,19 @@ export function buildFacets(products: Product[], filters: ProductFilters): Facet
 
   // Attributen
   for (const key of FACET_KEYS) {
+    const basis = withoutSelf(key);
     const counts = new Map<string, number>();
-    for (const product of withoutSelf(key)) {
+    for (const product of basis) {
       for (const value of valuesOf(product, key)) {
         counts.set(value, (counts.get(value) ?? 0) + 1);
       }
     }
     const options = [...counts.entries()]
+      .filter(([value]) => bruikbareWaarde(key, value))
+      // Een optie die bijna álles omvat filtert niets weg. "Transparant"
+      // staat bij Tilroy op twee derde van de catalogus; als keuze in de
+      // kolom belooft die een verfijning die er niet is.
+      .filter(([, count]) => count < basis.length * MAX_AANDEEL)
       .map(([value, count]) => ({ value, label: value, count }))
       .filter((option) => option.count >= 2)
       .sort((a, b) => b.count - a.count)

@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { combinePromises, deliveryPromise, SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
-import { gratisVanaf, shippingCost, shippingCountry, verzendtarief } from "@/lib/shipping";
-import { getStockForSkus } from "@/lib/tilroy";
+import {
+  franco,
+  gratisVanaf,
+  shippingCost,
+  shippingCountry,
+  tekortVoorGratis,
+  verzendtarief,
+} from "@/lib/shipping";
+import { getProductBySku, getStockForSkus } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +63,16 @@ export async function POST(request: Request) {
       ? combinePromises(promises)
       : deliveryPromise({ webshopQty: 0, otherStoresQty: 1 });
 
-  const verzendkosten = shippingCost(subtotalCents, land);
+  // Sikkens gaat franco de deur uit, ongeacht het bedrag. Welke merken er in
+  // het mandje liggen weet de client niet betrouwbaar, dus zoeken we ze hier
+  // op bij de sku.
+  const merken: (string | undefined)[] = [];
+  for (const regel of regels) {
+    const product = await getProductBySku(regel.sku!);
+    if (product) merken.push(product.brand);
+  }
+  const gratisOngeachtBedrag = franco(merken);
+  const verzendkosten = shippingCost(subtotalCents, land, gratisOngeachtBedrag);
 
   return NextResponse.json({
     standaard: {
@@ -77,7 +93,9 @@ export async function POST(request: Request) {
       kosten: verzendkosten,
       gratisVanaf: gratisVanaf(land),
       tarief: verzendtarief(land),
-      tekort: Math.max(0, gratisVanaf(land) - subtotalCents),
+      tekort: tekortVoorGratis(subtotalCents, land, gratisOngeachtBedrag),
+      // Zodat de checkout kan zeggen wáárom het gratis is.
+      franco: gratisOngeachtBedrag,
     },
   });
 }

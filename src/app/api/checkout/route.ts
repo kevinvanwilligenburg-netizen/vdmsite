@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { isBetaalmethode } from "@/lib/betaalmethoden";
 import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
-import { shippingCost, shippingCountry } from "@/lib/shipping";
+import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import {
   isPlausibleKluspasNumber,
   kluspasUnitPrice,
@@ -244,8 +244,12 @@ export async function POST(request: Request) {
 
   const subtotal = subtotalCents / 100;
   const land = shippingCountry(input.customer?.country);
-  // Afhalen is altijd gratis; bij bezorgen gelden de landtarieven.
-  const verzendkostenCents = fulfilment === "pickup" ? 0 : shippingCost(subtotalCents, land);
+  // Afhalen is altijd gratis; bij bezorgen gelden de landtarieven, tenzij er
+  // een merk in het mandje ligt dat we franco versturen (Sikkens). Dat
+  // bepalen we hier en niet op de client: anders kan iemand het meesturen.
+  const gratisOngeachtBedrag = franco(items.map((item) => item.brand));
+  const verzendkostenCents =
+    fulfilment === "pickup" ? 0 : shippingCost(subtotalCents, land, gratisOngeachtBedrag);
 
   const orderInput: CreateOrderInput = {
     customer: {

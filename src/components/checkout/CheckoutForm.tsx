@@ -41,6 +41,8 @@ interface BezorgOpties {
     gratisVanaf: number;
     tarief: number;
     tekort: number;
+    /** Gratis omdat er een franco merk in het mandje ligt (Sikkens). */
+    franco?: boolean;
   };
 }
 
@@ -803,6 +805,11 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
               <dt className="text-ink-soft">Vandaag bezorgd</dt>
               <dd className="font-semibold text-ink">{euro(opties.sameDay.toeslag ?? 0)}</dd>
             </div>
+          )}
+          {fulfilment === "delivery" && opties?.verzending.franco && (
+            <p className="rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
+              Sikkens bezorgen we altijd gratis, ongeacht het bedrag.
+            </p>
           )}
           {fulfilment === "delivery" && tekortVoorGratis > 0 && (
             <p className="rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark">
