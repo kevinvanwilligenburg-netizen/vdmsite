@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { useCart } from "@/components/cart/CartProvider";
+import { useKorting } from "@/components/cart/useKorting";
 import { Icon } from "@/components/icons";
 import { ProductArt } from "@/components/ProductArt";
 import { euro } from "@/lib/format";
@@ -10,22 +11,9 @@ import { euro } from "@/lib/format";
 export function CartPageClient() {
   const { items, subtotal, hydrated, setQty, removeItem } = useCart();
 
-  /*
-   * Wat de Kluspas op dit mandje scheelt.
-   *
-   * De winkelwagen is waar de klant besluit, en juist daar stond niets over
-   * de pas — het pasnummer kon pas een stap later, bij het afrekenen, en tot
-   * dat moment leek het alsof er geen voordeel was. Nu staat het bedrag er,
-   * ook zonder ingevuld nummer.
-   */
-  const kluspasKorting = items.reduce(
-    (som, item) =>
-      som +
-      (item.kluspasUnitPrice && item.kluspasUnitPrice < item.unitPrice
-        ? (item.unitPrice - item.kluspasUnitPrice) * item.qty
-        : 0),
-    0,
-  );
+  // Wat de korting op dit mandje waard is; de server rekent het uit de
+  // catalogus, niet uit de prijzen die in de winkelwagen zijn blijven staan.
+  const kluspasKorting = useKorting(items);
 
   if (!hydrated) {
     return <p className="py-16 text-center text-ink-soft">Winkelwagen laden…</p>;
@@ -95,14 +83,10 @@ export function CartPageClient() {
                   {[item.color.code, item.color.name].filter(Boolean).join(" ")}
                 </p>
               )}
-              <p className="mt-1 text-sm text-ink-soft">
-                {euro(item.unitPrice)} per stuk
-                {item.kluspasUnitPrice && item.kluspasUnitPrice < item.unitPrice && (
-                  <span className="ml-1.5 whitespace-nowrap font-bold text-brand">
-                    · met pas {euro(item.kluspasUnitPrice)}
-                  </span>
-                )}
-              </p>
+              {/* Bewust geen pasprijs per regel: die zou uit de opgeslagen
+                  winkelwagen komen en dus kunnen verouderen. Het bedrag dat
+                  telt staat onderaan, en dat komt van de server. */}
+              <p className="mt-1 text-sm text-ink-soft">{euro(item.unitPrice)} per stuk</p>
             </div>
             <div className="col-span-2 flex items-center justify-between gap-3 sm:contents">
             <div className="inline-flex items-center rounded-lg border-2 border-ink/10">
@@ -161,15 +145,12 @@ export function CartPageClient() {
           <div className="mt-4 rounded-xl bg-brand-light p-4">
             <p className="flex items-center gap-2 font-black text-ink">
               <Icon name="tag" className="h-5 w-5 shrink-0 text-brand" />
-              Met een Kluspas betaal je {euro(subtotal - kluspasKorting)}
+              Met een account betaal je {euro(subtotal - kluspasKorting)}
             </p>
             <p className="mt-1 text-sm text-ink-soft">
               Dat scheelt <strong className="text-ink">{euro(kluspasKorting)}</strong> op
-              dit mandje. Vul je pasnummer in bij het afrekenen — de winkel controleert
-              je pas bij het verwerken.
-            </p>
-            <p className="mt-1 text-sm text-ink-soft">
-              Nog geen pas? Vraag hem gratis aan in een van onze winkels.
+              dit mandje. Een account maken kost niets en gaat met je e-mailadres —
+              geen wachtwoord.
             </p>
           </div>
         )}

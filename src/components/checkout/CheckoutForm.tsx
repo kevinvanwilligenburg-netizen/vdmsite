@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
+import { useKorting } from "@/components/cart/useKorting";
 import { Icon } from "@/components/icons";
 import { useStore } from "@/components/store/StoreProvider";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
@@ -253,17 +254,10 @@ export function CheckoutForm({
   const verzendkosten = fulfilment === "pickup" ? 0 : (opties?.verzending.kosten ?? 0);
   const toeslag = fulfilment === "delivery" && sameDay ? (opties?.sameDay.toeslag ?? 0) : 0;
 
-  // Wat de korting waard is op dit mandje. Ook zonder account rekenen we hem
-  // uit, want dan is het het bedrag dat je misloopt — en dat is precies wat
-  // iemand over de streep trekt om een account te maken.
-  const kluspasKorting = items.reduce(
-    (som, item) =>
-      som +
-      (item.kluspasUnitPrice && item.kluspasUnitPrice < item.unitPrice
-        ? (item.unitPrice - item.kluspasUnitPrice) * item.qty
-        : 0),
-    0,
-  );
+  // Uit de catalogus, niet uit de winkelwagen: die bewaart een
+  // prijsmomentopname die kan verouderen. Zie /api/korting.
+  const kluspasKorting = useKorting(items);
+
   // Zonder account geen korting: de server rekent hem ook alleen door voor
   // een ingelogde klant.
   const totaal = subtotal - (ingelogdAls ? kluspasKorting : 0) + verzendkosten + toeslag;
