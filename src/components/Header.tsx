@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { CartBadge } from "@/components/cart/CartBadge";
@@ -7,6 +8,7 @@ import { MegaMenu } from "@/components/MegaMenu";
 import { MobileNav } from "@/components/MobileNav";
 import { SearchBox } from "@/components/search/SearchBox";
 import { StorePicker } from "@/components/store/StorePicker";
+import { emailVanSessie, SESSIE_COOKIE } from "@/lib/account";
 import { getMenu, getStores } from "@/lib/tilroy";
 
 const USPS = [
@@ -16,7 +18,12 @@ const USPS = [
 ];
 
 export async function Header() {
-  const [menu, stores] = await Promise.all([getMenu(), getStores()]);
+  const [menu, stores, email] = await Promise.all([
+    getMenu(),
+    getStores(),
+    emailVanSessie(cookies().get(SESSIE_COOKIE)?.value),
+  ]);
+  const ingelogd = Boolean(email);
   const categories = menu;
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
@@ -60,13 +67,24 @@ export async function Header() {
         <SearchBox />
         <div className="ml-auto flex items-center gap-1 sm:gap-3">
           <StorePicker />
+          {/*
+            "Mijn pas" stond hier terwijl de knop naar het account leidt, en
+            hij verdween op een telefoon. Een klant die wil inloggen zoekt naar
+            "inloggen", en wie al is ingelogd wil dat kunnen zien.
+          */}
           <Link
             href="/account"
-            aria-label="Mijn Voordeelmarkt"
-            className="hidden items-center gap-1.5 rounded-lg border-2 border-ink/10 px-3 py-2 text-sm font-bold text-ink transition hover:border-brand hover:text-brand sm:inline-flex"
+            aria-label={ingelogd ? "Mijn account" : "Inloggen"}
+            className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm font-bold transition ${
+              ingelogd
+                ? "border-brand bg-brand-light text-brand"
+                : "border-ink/10 text-ink hover:border-brand hover:text-brand"
+            }`}
           >
-            <Icon name="hand" className="h-5 w-5" />
-            <span className="hidden lg:inline">Mijn pas</span>
+            <Icon name={ingelogd ? "circle-check" : "hand"} className="h-5 w-5" />
+            <span className="hidden lg:inline">
+              {ingelogd ? "Mijn account" : "Inloggen"}
+            </span>
           </Link>
           <CartBadge />
         </div>
