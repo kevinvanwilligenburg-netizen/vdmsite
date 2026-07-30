@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { KleurTrechter } from "@/components/kleur/KleurTrechter";
+import { Waaiers } from "@/components/kleur/Waaiers";
 import { MyColors } from "@/components/MyColors";
 import { getColorCollections, getInitialColors } from "@/lib/colors";
 import { getProducts } from "@/lib/tilroy";
@@ -40,6 +41,10 @@ export default async function KleurkiezerPage() {
       </header>
       <MyColors />
       <KleurTrechter initialColors={colors} producten={products} />
+      {/* De waaiers uitgeschreven: dat we naast RAL ook Sikkens, Flexa,
+          Histor en NCS mengen is het argument om hier te bestellen, en dat
+          zag je niet zolang het in een keuzelijst zat. */}
+      <Waaiers collections={collections} />
     </div>
   );
 }
