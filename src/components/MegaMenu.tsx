@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -259,21 +260,43 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                 </div>
               )}
 
-              <div className="rounded-2xl bg-brand-light p-5">
-                <p className="text-sm font-black uppercase text-ink">
-                  {category.slug === "verf" ? "Verf in elke kleur" : "Weet je het niet zeker?"}
-                </p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  {category.slug === "verf"
-                    ? "Kies je kleur online; onze verfspecialist mengt hem gratis aan."
-                    : "Vertel wat je gaat doen en wij rekenen uit wat je nodig hebt."}
-                </p>
-                <Link
-                  href={category.slug === "verf" ? "/kleurkiezer" : "/klusadvies"}
-                  className="btn btn-primary mt-4 py-2 text-sm"
-                >
-                  {category.slug === "verf" ? "Open de kleurkiezer" : "Naar het klusadvies"}
-                </Link>
+              {/*
+                `self-start` is hier geen detail: zonder die regel rekt dit
+                vak mee met de hoogste kolom van het paneel, en dan staat er
+                onder de knop een half scherm leeg oranje.
+
+                De categorie-slug wordt niet meer op "verf" vergeleken — sinds
+                de indeling van Tilroy komt is er geen categorie die zo heet,
+                maar wel Lakken, Muurverf en Speciaalverven. Nu kijken we of er
+                mengverf in de rubriek zit; dat is precies wanneer de
+                kleurkiezer nut heeft.
+              */}
+              <div className="self-start overflow-hidden rounded-2xl bg-brand-light">
+                <div className="p-5">
+                  <p className="text-sm font-black uppercase text-ink">
+                    {category.mengverf ? "Verf in elke kleur" : "Weet je het niet zeker?"}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-soft">
+                    {category.mengverf
+                      ? "Kies je kleur online; onze verfspecialist mengt hem gratis aan."
+                      : "Vertel wat je gaat doen en Mark rekent uit wat je nodig hebt."}
+                  </p>
+                  <Link
+                    href={category.mengverf ? "/kleurkiezer" : "/klusadvies"}
+                    className="btn btn-primary mt-4 py-2 text-sm"
+                  >
+                    {category.mengverf ? "Open de kleurkiezer" : "Naar het klusadvies"}
+                  </Link>
+                </div>
+                {/* Mark sluit het vak af; de oranje achtergrond van de shoot
+                    loopt door in het vlak, dus er is geen uitsnede nodig. */}
+                <Image
+                  src={category.mengverf ? "/mark/mark-mengen.jpg" : "/mark/mark-vragend.jpg"}
+                  alt=""
+                  width={900}
+                  height={1350}
+                  className="h-40 w-full object-cover object-top"
+                />
               </div>
             </div>
           </div>

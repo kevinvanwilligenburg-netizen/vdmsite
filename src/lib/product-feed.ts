@@ -335,10 +335,20 @@ function buildSpecs(item: FeedItem, group: FeedItem[]): { label: string; value: 
 
   // Alle maten van de groep, niet alleen die van het eerste artikel: na het
   // samenvoegen van maatvarianten dekt "maat_range" de rest niet meer.
-  const maten = [...new Set(group.map((entry) => entry.maat?.trim()).filter(Boolean))];
+  //
+  // "1SIZE" hoort hier niet bij. Dat is Tilroy's manier om te zeggen dát er
+  // geen maat is; als specificatie "Maten: 1SIZE" leest het als een maat die
+  // zo heet.
+  const maten = [
+    ...new Set(
+      group.map((entry) => entry.maat?.trim()).filter((maat) => heeftEchteMaat(maat)),
+    ),
+  ];
   add(
     maten.some((maat) => /\b(ml|l|liter)\b/i.test(maat!)) ? "Inhoud" : "Maten",
-    maten.length > 1 ? maten.join(", ") : (maten[0] ?? item.maat_range),
+    maten.length > 1
+      ? maten.join(", ")
+      : (maten[0] ?? (heeftEchteMaat(item.maat_range) ? item.maat_range : undefined)),
   );
 
   // Verpakkingsaantallen: staan alleen in de titel, terwijl een klant er wel
@@ -843,7 +853,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v21";
+const KV_KEY = "catalog:products:v22";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

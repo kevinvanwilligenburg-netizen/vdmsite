@@ -82,6 +82,8 @@ export interface MenuEntry {
 
 export interface MenuCategory extends Category {
   count: number;
+  /** Zit er mengverf in deze rubriek? Dan heeft de kleurkiezer nut. */
+  mengverf: boolean;
   /** Soorten binnen de categorie ("Lakken", "Muurverf"). */
   soorten: MenuEntry[];
   /** De merken met de meeste artikelen in deze categorie. */
@@ -129,7 +131,13 @@ export async function getMenu(): Promise<MenuCategory[]> {
       .slice(0, 6)
       .map(([label, count]) => ({ label, count, href: `/merk/${brandSlug(label)}` }));
 
-    return { ...category, count: inCategory.length, soorten, merken };
+    return {
+      ...category,
+      count: inCategory.length,
+      mengverf: inCategory.some((product) => product.colorMixable),
+      soorten,
+      merken,
+    };
   });
 }
 
@@ -258,21 +266,36 @@ export async function getCompanions(
 /** Vergelijkbare producten: zelfde categorie, bij voorkeur zelfde merk. */
 export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
   const products = await getProducts();
-  const sameCategory = products.filter(
-    (candidate) =>
-      candidate.id !== product.id &&
-      candidate.category === product.category &&
-      candidate.image &&
-      candidate.inStock !== false,
-  );
-  const sameBrand = sameCategory.filter((candidate) => candidate.brand === product.brand);
-  const picks = [...sameBrand, ...sameCategory];
-  const unique: Product[] = [];
-  for (const candidate of picks) {
-    if (unique.length >= limit) break;
-    if (!unique.some((entry) => entry.id === candidate.id)) unique.push(candidate);
+  const anders = products.filter((candidate) => candidate.id !== product.id);
+  const opVoorraad = (candidate: Product) => candidate.inStock !== false;
+
+  /*
+   * In lagen zoeken, van meest naar minst verwant.
+   *
+   * De eerste versie eiste categorie én foto in één keer. Dat werkte zolang
+   * er tien grote categorieën waren; sinds de indeling van Tilroy wordt
+   * gevolgd zijn de rubrieken kleiner, en van 3.400 producten hebben er ruim
+   * 900 geen foto. Bij een werklamp in "Overig electra" bleef er dan niets
+   * over en verdween het blok helemaal — precies op de pagina's waar een
+   * suggestie het meeste helpt.
+   */
+  const lagen: ((candidate: Product) => boolean)[] = [
+    (c) => c.category === product.category && c.brand === product.brand && !!c.image && opVoorraad(c),
+    (c) => c.category === product.category && !!c.image && opVoorraad(c),
+    (c) => c.brand === product.brand && !!c.image && opVoorraad(c),
+    (c) => c.category === product.category && opVoorraad(c),
+    (c) => c.category === product.category,
+  ];
+
+  const gekozen: Product[] = [];
+  for (const laag of lagen) {
+    if (gekozen.length >= limit) break;
+    for (const candidate of anders.filter(laag)) {
+      if (gekozen.length >= limit) break;
+      if (!gekozen.some((entry) => entry.id === candidate.id)) gekozen.push(candidate);
+    }
   }
-  return unique;
+  return gekozen;
 }
 
 /**
