@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Icon } from "@/components/icons";
@@ -12,8 +12,25 @@ import { Icon } from "@/components/icons";
  * en ons het bewaren ervan. Het Kluspas-nummer is bewust géén inlogmiddel:
  * dat is een oplopend nummer en dus te raden.
  */
+
+/**
+ * Waar de klant na het inloggen heen moet.
+ *
+ * Alleen een pad op onze eigen site. Zou hier een volledige URL of "//ergens"
+ * mogen staan, dan kan iemand een inloglink rondsturen die na het inloggen
+ * naar zijn eigen pagina doorstuurt — een open redirect, en precies het soort
+ * link waar phishing op leunt.
+ */
+function veiligePad(waarde: string | null): string | null {
+  if (!waarde) return null;
+  if (!waarde.startsWith("/") || waarde.startsWith("//")) return null;
+  return waarde;
+}
+
 export function Inloggen() {
   const router = useRouter();
+  const zoek = useSearchParams();
+  const verder = veiligePad(zoek.get("verder"));
   const [stap, setStap] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -52,6 +69,7 @@ export function Inloggen() {
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) setFout(data.error ?? "Die code klopt niet.");
+      else if (verder) router.push(verder);
       else router.refresh();
     } catch {
       setFout("We konden de code niet controleren. Probeer het opnieuw.");

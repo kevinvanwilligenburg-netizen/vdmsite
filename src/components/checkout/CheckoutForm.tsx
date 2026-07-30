@@ -9,7 +9,6 @@ import { useStore } from "@/components/store/StoreProvider";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { betaalmethodenVoor } from "@/lib/betaalmethoden";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
-import { KLUSPAS_DISCOUNT_LABEL } from "@/lib/kluspas";
 import { euro } from "@/lib/format";
 
 interface StoreOption {
@@ -46,7 +45,14 @@ interface BezorgOpties {
   };
 }
 
-export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
+export function CheckoutForm({
+  stores,
+  ingelogdAls,
+}: {
+  stores: StoreOption[];
+  /** E-mailadres van de ingelogde klant; korting hangt hieraan. */
+  ingelogdAls?: string;
+}) {
   const { items, subtotal, hydrated } = useCart();
   const { favourite } = useStore();
   const [fulfilment, setFulfilment] = useState<Fulfilment>("delivery");
@@ -67,8 +73,6 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const [country, setCountry] = useState<"NL" | "BE">("NL");
   const [sameDay, setSameDay] = useState(false);
   const [opties, setOpties] = useState<BezorgOpties | null>(null);
-  const [kluspasNumber, setKluspasNumber] = useState("");
-  const [kluspasOpen, setKluspasOpen] = useState(false);
   const [betaalmethode, setBetaalmethode] = useState("ideal");
 
   // Apple Pay alleen tonen waar het ook echt werkt (Safari op een Apple-
@@ -110,6 +114,38 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   useEffect(() => {
     if (zwareArtikelen.length > 0) setFulfilment("pickup");
   }, [zwareArtikelen.length]);
+
+  /*
+   * Alleen winkels waar de hele bestelling ligt.
+   *
+   * Eerder stonden alle vijf de winkels er, met "2 artikelen liggen hier niet"
+   * eronder — vier rijen die de klant moest lezen om er één te kunnen kiezen,
+   * en drie ervan waren geen keuze. Weten we de voorraad nog niet, dan tonen
+   * we ze allemaal; anders knippert de lijst tijdens het laden.
+   */
+  const afhaalwinkels = useMemo(() => {
+    if (!availability) return stores;
+    const compleet = new Set(
+      availability.filter((entry) => entry.complete).map((entry) => entry.storeId),
+    );
+    return stores.filter((store) => compleet.has(store.slug));
+  }, [availability, stores]);
+
+  // Ligt de bestelling nergens compleet, dan is afhalen geen optie en hoort
+  // die keuze er ook niet te staan.
+  const afhalenKan = afhaalwinkels.length > 0;
+  useEffect(() => {
+    if (!afhalenKan && fulfilment === "pickup" && zwareArtikelen.length === 0) {
+      setFulfilment("delivery");
+    }
+  }, [afhalenKan, fulfilment, zwareArtikelen.length]);
+
+  // De voorgeselecteerde winkel moet er wel bij staan.
+  useEffect(() => {
+    if (afhaalwinkels.length > 0 && !afhaalwinkels.some((store) => store.id === storeId)) {
+      setStoreId(afhaalwinkels[0].id);
+    }
+  }, [afhaalwinkels, storeId]);
 
   // De exacte bezorgdag hangt af van de voorraad per artikel; die bepaalt de
   // server bij het plaatsen van de bestelling. Hier tonen we alleen of de
@@ -217,20 +253,20 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
   const verzendkosten = fulfilment === "pickup" ? 0 : (opties?.verzending.kosten ?? 0);
   const toeslag = fulfilment === "delivery" && sameDay ? (opties?.sameDay.toeslag ?? 0) : 0;
 
-  // Kluspas-korting hier meteen doorrekenen. Deed de checkout dat niet, dan
-  // vulde de klant zijn pasnummer in, veranderde er niets op het scherm, en
-  // stond er pas bij Mollie een lager bedrag. Dat leest als een fout.
-  const kluspasKorting = kluspasNumber.trim()
-    ? items.reduce(
-        (som, item) =>
-          som +
-          (item.kluspasUnitPrice && item.kluspasUnitPrice < item.unitPrice
-            ? (item.unitPrice - item.kluspasUnitPrice) * item.qty
-            : 0),
-        0,
-      )
-    : 0;
-  const totaal = subtotal - kluspasKorting + verzendkosten + toeslag;
+  // Wat de korting waard is op dit mandje. Ook zonder account rekenen we hem
+  // uit, want dan is het het bedrag dat je misloopt — en dat is precies wat
+  // iemand over de streep trekt om een account te maken.
+  const kluspasKorting = items.reduce(
+    (som, item) =>
+      som +
+      (item.kluspasUnitPrice && item.kluspasUnitPrice < item.unitPrice
+        ? (item.unitPrice - item.kluspasUnitPrice) * item.qty
+        : 0),
+    0,
+  );
+  // Zonder account geen korting: de server rekent hem ook alleen door voor
+  // een ingelogde klant.
+  const totaal = subtotal - (ingelogdAls ? kluspasKorting : 0) + verzendkosten + toeslag;
   const tekortVoorGratis = fulfilment === "delivery" ? (opties?.verzending.tekort ?? 0) : 0;
 
   if (!hydrated) {
@@ -271,7 +307,6 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
           ...(fulfilment === "pickup" ? { storeId } : {}),
           ...(fulfilment === "delivery" && sameDay ? { sameDay: true } : {}),
           betaalmethode,
-          ...(kluspasNumber.trim() ? { kluspasNumber: kluspasNumber.trim() } : {}),
           items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
@@ -353,37 +388,50 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                 </span>
               </span>
             </label>
-            <label
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
-                fulfilment === "pickup"
-                  ? "border-brand bg-brand-light"
-                  : "border-ink/10 hover:border-ink/25"
-              }`}
-            >
-              <input
-                type="radio"
-                name="fulfilment"
-                value="pickup"
-                checked={fulfilment === "pickup"}
-                onChange={() => setFulfilment("pickup")}
-                className="mt-1 accent-brand"
-              />
-              <span>
-                <span className="flex items-center gap-2 font-bold text-ink">
-                  <Icon name="store" className="h-5 w-5 text-brand" /> Afhalen in de winkel
-                  <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-black text-green-800">
-                    Gratis
+            {/* Afhalen alleen aanbieden als het ook kan. Ligt de bestelling
+                nergens compleet, dan is een grijze knop met uitleg erbij een
+                keuze die geen keuze is. */}
+            {afhalenKan && (
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
+                  fulfilment === "pickup"
+                    ? "border-brand bg-brand-light"
+                    : "border-ink/10 hover:border-ink/25"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="fulfilment"
+                  value="pickup"
+                  checked={fulfilment === "pickup"}
+                  onChange={() => setFulfilment("pickup")}
+                  className="mt-1 accent-brand"
+                />
+                <span>
+                  <span className="flex items-center gap-2 font-bold text-ink">
+                    <Icon name="store" className="h-5 w-5 text-brand" /> Afhalen in de winkel
+                    <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-black text-green-800">
+                      Gratis
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-sm font-semibold text-green-700">
+                    Binnen 2 uur klaar
+                  </span>
+                  <span className="block text-xs text-ink-soft">
+                    {afhaalwinkels.length === 1
+                      ? `Alles ligt klaar in ${afhaalwinkels[0].city}.`
+                      : `In ${afhaalwinkels.length} winkels ligt je hele bestelling.`}
                   </span>
                 </span>
-                <span className="mt-0.5 block text-sm font-semibold text-green-700">
-                  Binnen 2 uur klaar
-                </span>
-                <span className="block text-xs text-ink-soft">
-                  Kan alleen in een winkel die alles op voorraad heeft.
-                </span>
-              </span>
-            </label>
+              </label>
+            )}
           </div>
+          {!afhalenKan && availability && (
+            <p className="mt-3 text-sm text-ink-soft">
+              Afhalen kan deze keer niet: geen enkele winkel heeft je hele bestelling
+              liggen. We bezorgen hem gratis.
+            </p>
+          )}
         </section>
 
         <section className="card p-6">
@@ -560,19 +608,16 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
               live voor je.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {stores.map((store) => {
+              {afhaalwinkels.map((store) => {
                 const status = availability?.find((entry) => entry.storeId === store.slug);
                 const compleet = status?.complete;
-                const tekort = status && !status.complete;
                 return (
                   <label
                     key={store.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
                       storeId === store.id
                         ? "border-brand bg-brand-light"
-                        : tekort
-                          ? "border-ink/10 opacity-60 hover:border-ink/25"
-                          : "border-ink/10 hover:border-ink/25"
+                        : "border-ink/10 hover:border-ink/25"
                     }`}
                   >
                     <input
@@ -599,13 +644,6 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
                           {store.pickupLabel}
                         </span>
                       )}
-                      {tekort && (
-                        <span className="mt-1 block text-sm font-semibold text-amber-700">
-                          {status.missing.length === 1
-                            ? "1 artikel ligt hier niet"
-                            : `${status.missing.length} artikelen liggen hier niet`}
-                        </span>
-                      )}
                     </span>
                   </label>
                 );
@@ -613,12 +651,6 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             </div>
             {checkingStock && (
               <p className="mt-3 text-sm text-ink-soft">Voorraad per winkel controleren…</p>
-            )}
-            {availability && !availability.some((entry) => entry.complete) && (
-              <p className="mt-3 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
-                Geen enkele winkel heeft je hele bestelling op voorraad. Kies
-                bezorgen, of haal je bestelling in delen op.
-              </p>
             )}
           </section>
         )}
@@ -696,37 +728,45 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             </li>
           ))}
         </ul>
-        {/* Kluspas: 5% korting op het hele mandje */}
-        <div className="mt-4 rounded-lg bg-brand-light p-3">
-          {kluspasOpen || kluspasNumber ? (
-            <>
-              <label htmlFor="kluspas" className="block text-sm font-bold text-ink">
-                Kluspas-nummer
-              </label>
-              <input
-                id="kluspas"
-                inputMode="numeric"
-                value={kluspasNumber}
-                onChange={(event) => setKluspasNumber(event.target.value)}
-                className="input mt-1 bg-white"
-                placeholder="Nummer op je pas"
-              />
-              <p className="mt-1.5 text-xs text-ink-soft">
-                Je krijgt {KLUSPAS_DISCOUNT_LABEL.toLowerCase()} op je hele
-                bestelling. De winkel controleert je pas bij het verwerken.
+        {/*
+          Korting hoort bij het account, niet bij een ingetypt pasnummer.
+          Dat veld was ook nergens tegen bestand: elk plausibel nummer gaf
+          korting, want het echte ledenbestand kent alleen de kassa. Nu bepaalt
+          de server het aan de sessie, en hoeft de klant hier niets in te
+          vullen.
+        */}
+        {kluspasKorting > 0 && (
+          <div className="mt-4 rounded-lg bg-brand-light p-3">
+            {ingelogdAls ? (
+              <p className="flex items-start gap-2 text-sm font-bold text-ink">
+                <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+                <span>
+                  Je korting van {euro(kluspasKorting)} is verrekend.
+                  <span className="block font-normal text-ink-soft">
+                    Als {ingelogdAls}.
+                  </span>
+                </span>
               </p>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setKluspasOpen(true)}
-              className="flex w-full items-center gap-2 text-left text-sm font-bold text-ink"
-            >
-              <Icon name="tag" className="h-4 w-4 shrink-0 text-brand" />
-              Heb je een Kluspas? Bespaar {KLUSPAS_DISCOUNT_LABEL.toLowerCase()}
-            </button>
-          )}
-        </div>
+            ) : (
+              <>
+                <p className="flex items-start gap-2 text-sm font-bold text-ink">
+                  <Icon name="tag" className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                  Met een account betaal je {euro(kluspasKorting)} minder
+                </p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  Een account maken kost niets en gaat met je e-mailadres — geen
+                  wachtwoord. De korting is meteen verrekend.
+                </p>
+                <Link
+                  href={`/account?verder=${encodeURIComponent("/afrekenen")}`}
+                  className="btn btn-primary mt-2 w-full py-2 text-sm"
+                >
+                  Inloggen of account maken
+                </Link>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Bezorgsnelheid: morgen is gratis, vandaag kost een toeslag en kan
             alleen vóór de cutoff met voorraad in ons magazijn. Wat hier staat
@@ -784,10 +824,10 @@ export function CheckoutForm({ stores }: { stores: StoreOption[] }) {
             <dt className="text-ink-soft">Subtotaal</dt>
             <dd className="font-semibold text-ink">{euro(subtotal)}</dd>
           </div>
-          {kluspasKorting > 0 && (
+          {ingelogdAls && kluspasKorting > 0 && (
             <div className="flex justify-between">
               <dt className="font-semibold text-green-700">
-                Kluspas-korting
+                Jouw korting
               </dt>
               <dd className="font-bold text-green-700">− {euro(kluspasKorting)}</dd>
             </div>

@@ -1,14 +1,12 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { emailVanSessie, kluspasNummerVan, SESSIE_COOKIE } from "@/lib/account";
 import { isBetaalmethode } from "@/lib/betaalmethoden";
 import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
-import {
-  isPlausibleKluspasNumber,
-  kluspasUnitPrice,
-  normalizeKluspasNumber,
-} from "@/lib/kluspas";
+import { kluspasUnitPrice } from "@/lib/kluspas";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import { baseUrlFromRequest } from "@/lib/site";
@@ -91,14 +89,23 @@ export async function POST(request: Request) {
     return badRequest("Een bestelling kan maximaal 50 verschillende artikelen bevatten.");
   }
 
-  // Kluspas: een plausibel nummer levert de kortingsprijs uit de feed op. De
-  // echte controle op het ledenbestand doet de kassa; wij zetten het nummer in
-  // de order zodat de winkel het kan koppelen.
-  const kluspasInput = normalizeKluspasNumber(String(input.kluspasNumber ?? ""));
-  if (kluspasInput && !isPlausibleKluspasNumber(kluspasInput)) {
-    return badRequest("Dat Kluspas-nummer herkennen we niet. Laat het veld leeg of controleer het nummer.");
-  }
-  const kluspas = kluspasInput.length > 0;
+  /*
+   * Korting hangt aan het account, niet aan een ingetypt pasnummer.
+   *
+   * Hier stond een veld waar de klant zijn Kluspas-nummer intypte, en elk
+   * plausibel nummer (zes tot twintig cijfers) gaf 5% korting — het echte
+   * ledenbestand kent alleen de kassa, dus er viel niets te controleren.
+   * Bovendien zijn de nummers oplopend, dus raden was triviaal.
+   *
+   * Nu leest de server het e-mailadres uit de sessiecookie. Ingelogd is
+   * korting; dat is ook wat de winkel wil, want een account levert een
+   * klant op die terugkomt.
+   */
+  const sessieEmail = await emailVanSessie(cookies().get(SESSIE_COOKIE)?.value);
+  const kluspas = Boolean(sessieEmail);
+  // Het pasnummer zetten we alleen in de order als de klant er echt een heeft;
+  // de winkel koppelt de bestelling daarmee aan de kaart.
+  const kluspasInput = kluspas ? await kluspasNummerVan(sessieEmail!) : "";
 
   // Prijzen en productgegevens altijd server-side bepalen; de client levert
   // alleen id's en aantallen aan. Bedragen in de order zijn EURO'S (contract).

@@ -174,6 +174,24 @@ interface DashboardKlant {
  * dan krijgt de bezoeker een account met alleen zijn webshopgegevens. Beter
  * een half account dan een foutmelding waar hij niets mee kan.
  */
+/**
+ * Het Kluspas-nummer van een ingelogde klant, als de winkel er een kent.
+ *
+ * Alleen om in de bestelling te zetten zodat de winkel kan koppelen; de
+ * korting hangt aan het account, niet aan dit nummer. Lukt het ophalen niet,
+ * dan gaat de bestelling gewoon door zonder — een haperende dashboardroute
+ * mag een betaling niet tegenhouden.
+ */
+export async function kluspasNummerVan(email: string): Promise<string> {
+  try {
+    const klant = await haalKlant(email);
+    return klant.kluspas ?? "";
+  } catch (error) {
+    console.error("[account] kluspasnummer ophalen mislukt:", error);
+    return "";
+  }
+}
+
 export async function haalKlant(email: string): Promise<Klant> {
   const adres = normaliseerEmail(email);
   const basis: Klant = { email: adres, inTilroy: false };

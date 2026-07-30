@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { emailVanSessie, SESSIE_COOKIE } from "@/lib/account";
 import { pickupPromise } from "@/lib/pickup";
 import { getStores } from "@/lib/tilroy";
 
@@ -15,7 +17,10 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const stores = await getStores();
+  const [stores, email] = await Promise.all([
+    getStores(),
+    emailVanSessie(cookies().get(SESSIE_COOKIE)?.value),
+  ]);
   const storeOptions = stores.map((store) => ({
     id: store.id,
     slug: store.slug,
@@ -35,7 +40,7 @@ export default async function CheckoutPage() {
         ]}
       />
       <h1 className="text-3xl font-black uppercase italic text-ink">Afrekenen</h1>
-      <CheckoutForm stores={storeOptions} />
+      <CheckoutForm stores={storeOptions} ingelogdAls={email ?? undefined} />
     </div>
   );
 }
