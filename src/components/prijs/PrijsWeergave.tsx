@@ -2,6 +2,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
+import {
+  PRIJS_COOKIE,
+  PRIJS_COOKIE_MAX_AGE,
+  type PrijsModus,
+} from "@/lib/prijs";
+
 /**
  * Prijzen inclusief of exclusief btw.
  *
@@ -15,10 +21,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
  * bezoeker eerst een tel lang de consumentenprijs staan. Dat is precies het
  * soort flikkering waar iemand aan gaat twijfelen of hij het goede bedrag ziet.
  */
-export const PRIJS_COOKIE = "vdm-prijs";
-const MAX_AGE = 365 * 24 * 60 * 60;
-
-export type PrijsModus = "incl" | "excl";
+export type { PrijsModus };
 
 const Context = createContext<{ modus: PrijsModus; zet: (modus: PrijsModus) => void }>({
   modus: "incl",
@@ -46,7 +49,7 @@ export function PrijsProvider({
     document.cookie = [
       `${PRIJS_COOKIE}=${nieuw}`,
       "Path=/",
-      `Max-Age=${MAX_AGE}`,
+      `Max-Age=${PRIJS_COOKIE_MAX_AGE}`,
       "SameSite=Lax",
       location.protocol === "https:" ? "Secure" : "",
     ]

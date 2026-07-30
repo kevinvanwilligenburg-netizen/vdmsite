@@ -4,7 +4,7 @@ import { Icon } from "@/components/icons";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
-import { getCategories, getStores } from "@/lib/tilroy";
+import { getBrands, getNavCategories, getStores } from "@/lib/tilroy";
 
 const PAYMENT_METHODS = ["iDEAL", "Bancontact", "Creditcard", "Apple Pay", "Klarna"];
 
@@ -18,10 +18,14 @@ const SERVICE_LINKS = [
 ];
 
 export async function Footer() {
-  const [categories, stores] = await Promise.all([getCategories(), getStores()]);
+  const [categories, brands, stores] = await Promise.all([
+    getNavCategories(10),
+    getBrands(10),
+    getStores(),
+  ]);
   return (
     <footer className="mt-14 bg-ink text-white sm:mt-16">
-      <div className="container-page grid gap-10 py-10 sm:grid-cols-2 sm:py-12 lg:grid-cols-4">
+      <div className="container-page grid gap-10 py-10 sm:grid-cols-2 sm:py-12 lg:grid-cols-3 xl:grid-cols-5">
         <div>
           <p className="mb-3 text-lg font-black uppercase">
             De <span className="text-brand-bright">Voordeelmarkt</span>
@@ -71,18 +75,44 @@ export async function Footer() {
             </li>
             <li>
               <Link
-                href="/merken"
-                className="text-white/80 transition hover:text-brand-bright"
-              >
-                Alle merken
-              </Link>
-            </li>
-            <li>
-              <Link
                 href="/klusadvies"
                 className="text-white/80 transition hover:text-brand-bright"
               >
                 Klusadvies
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/categorieen"
+                className="font-semibold text-brand-bright transition hover:text-white"
+              >
+                Alle categorieën →
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Merken">
+          <p className="mb-3 font-bold uppercase tracking-wide text-brand-bright">
+            Merken
+          </p>
+          <ul className="space-y-2 text-sm">
+            {brands.map((brand) => (
+              <li key={brand.slug}>
+                <Link
+                  href={`/merk/${brand.slug}`}
+                  className="text-white/80 transition hover:text-brand-bright"
+                >
+                  {brand.name}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link
+                href="/merken"
+                className="font-semibold text-brand-bright transition hover:text-white"
+              >
+                Alle merken →
               </Link>
             </li>
           </ul>

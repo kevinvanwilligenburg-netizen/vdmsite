@@ -85,6 +85,12 @@ export interface Category {
   description: string;
   icon: string;
   hue: number;
+  /**
+   * Aantal artikelen in de rubriek. Navigatie gebruikt dit om te bepalen wat
+   * er getoond wordt: de kassa-indeling kent leveranciersbakjes van één of
+   * twee artikelen ("Anza", "Fitex non paint") die geen rubriek zijn.
+   */
+  count: number;
 }
 
 export interface Store {

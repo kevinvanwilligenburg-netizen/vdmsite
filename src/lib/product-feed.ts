@@ -205,6 +205,7 @@ export function categorieenUit(products: Product[]): Category[] {
         description: `${weergave} bij De Voordeelmarkt: ${aantal} ${
           aantal === 1 ? "artikel" : "artikelen"
         } voor de laagste prijs. Online bestellen, gratis afhalen in de winkel.`,
+        count: aantal,
         ...beeldVoor(slug),
       } satisfies Category;
     })

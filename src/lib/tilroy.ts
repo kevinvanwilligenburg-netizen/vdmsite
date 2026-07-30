@@ -67,6 +67,48 @@ export async function getCategories(): Promise<Category[]> {
   return categorieenUit(products);
 }
 
+/**
+ * Ondergrens voor een rubriek in de navigatie.
+ *
+ * De kassa-indeling kent bakjes die per leverancier zijn aangemaakt en geen
+ * assortimentsgroep zijn: "Anza" (3 artikelen), "Fitex non paint" (1),
+ * "Alabastine toebehoren" (7), "Postnl" (1). Op naam uitsluiten werkt één keer
+ * en verloopt daarna — er komt volgend jaar een nieuwe leverancier bij en
+ * niemand houdt zo'n lijst bij. Een ondergrens vangt ze structureel.
+ *
+ * Gemeten op de hele catalogus (6.132 artikelen): 33 rubrieken vallen onder de
+ * acht, samen 89 artikelen. Anderhalf procent van het assortiment, en geen
+ * ervan is een groep waar een klant op zou zoeken.
+ */
+const MIN_ARTIKELEN_IN_NAVIGATIE = 8;
+
+/**
+ * Rubrieken die groot genoeg zijn maar toch geen rubriek: een leveranciersnaam
+ * in het categorieveld. "Euromat" heeft 32 artikelen en haalt de ondergrens
+ * dus ruim, maar een klant zoekt op dekzeil of gereedschap, niet op de naam
+ * van onze inkooprelatie. De artikelen blijven gewoon in de webshop staan en
+ * onder hun merk vindbaar — er staat alleen geen wegwijzer meer naartoe.
+ */
+const GEEN_RUBRIEK = new Set(["euromat", "partij-verf", "partijhandel"]);
+
+/**
+ * De rubrieken die in menu en footer horen: groot genoeg om een rubriek te
+ * zijn, en de grootste eerst. `getCategories()` blijft compleet — een klant
+ * die op /categorie/anza belandt krijgt gewoon zijn pagina, we zetten er
+ * alleen geen wegwijzer meer naartoe.
+ */
+export async function getNavCategories(limit = 12): Promise<Category[]> {
+  const categories = await getCategories();
+  const groot = categories.filter(
+    (category) =>
+      category.count >= MIN_ARTIKELEN_IN_NAVIGATIE && !GEEN_RUBRIEK.has(category.slug),
+  );
+  // Valt alles onder de grens (demo-catalogus, lege feed), dan liever de
+  // volledige lijst dan een leeg menu.
+  const bron = groot.length > 0 ? groot : categories;
+  return [...bron].sort((a, b) => b.count - a.count).slice(0, limit);
+}
+
 export async function getCategory(slug: string): Promise<Category | undefined> {
   const categories = await getCategories();
   return categories.find((category) => category.slug === slug);
@@ -81,7 +123,6 @@ export interface MenuEntry {
 }
 
 export interface MenuCategory extends Category {
-  count: number;
   /** Zit er mengverf in deze rubriek? Dan heeft de kleurkiezer nut. */
   mengverf: boolean;
   /** Soorten binnen de categorie ("Lakken", "Muurverf"). */
@@ -110,8 +151,9 @@ export async function getMenu(): Promise<MenuCategory[]> {
     for (const product of inCategory) {
       const soort = product.attributes?.subcategorie;
       if (soort) soortCounts.set(soort, (soortCounts.get(soort) ?? 0) + 1);
-      if (product.brand && product.brand !== "De Voordeelmarkt") {
-        merkCounts.set(product.brand, (merkCounts.get(product.brand) ?? 0) + 1);
+      if (isEchtMerk(product.brand)) {
+        const naam = merknaam(product.brand!);
+        merkCounts.set(naam, (merkCounts.get(naam) ?? 0) + 1);
       }
     }
 
@@ -378,6 +420,68 @@ export async function getUpsellProducts(limit = 6): Promise<Product[]> {
 
 /* ── Merken (eigen landingspagina's, goed vindbaar in zoekmachines) ─ */
 
+/**
+ * Wat in het merkveld van de kassa staat maar geen merk is.
+ *
+ * Tilroy gebruikt dat veld ook als restbak: 139 artikelen staan onder
+ * "Overige" en 44 onder "Merk". Een merkpagina daarvoor is een pagina zonder
+ * onderwerp — slecht voor de klant en slecht voor Google, die zoiets als
+ * dunne inhoud ziet.
+ */
+const GEEN_MERK = new Set([
+  "overige",
+  "overig",
+  "merk",
+  "diversen",
+  "partijhandel",
+  "mengpasta",
+  "de voordeelmarkt",
+  "verzendkosten",
+  "administratie",
+]);
+
+/**
+ * De schrijfwijze uit de kassa is niet consequent: "Hg", "RASCH", "DULUX",
+ * "DEN BRAVEN" en "Hofftech germany" staan er door elkaar. Naast elkaar in de
+ * footer ziet dat er slordig uit, en op een merkpagina staat de merknaam in de
+ * titel — dan wil je hem goed hebben.
+ */
+const MERKNAAM: Record<string, string> = {
+  hg: "HG",
+  rasch: "Rasch",
+  dulux: "Dulux",
+  multiblade: "MultiBlade",
+  "den braven": "Den Braven",
+  "wdh behang": "WDH Behang",
+  "hofftech germany": "Hofftech Germany",
+  "led's light": "Led's Light",
+  ppg: "PPG",
+  osb: "OSB",
+};
+
+/** Merknaam zoals hij getoond hoort te worden. */
+export function merknaam(raw: string): string {
+  const schoon = raw.trim().replace(/\s+/g, " ");
+  const sleutel = schoon.toLowerCase();
+  if (MERKNAAM[sleutel]) return MERKNAAM[sleutel];
+  // Volledig hoofdletters of volledig kleine letters is bijna altijd de kassa
+  // en niet het merk; gemengde schrijfwijzen laten we staan ("Led's light"
+  // vangt de lijst hierboven af).
+  if (schoon === schoon.toUpperCase() || schoon === schoon.toLowerCase()) {
+    return schoon
+      .split(" ")
+      .map((woord) => woord.charAt(0).toUpperCase() + woord.slice(1).toLowerCase())
+      .join(" ");
+  }
+  return schoon;
+}
+
+/** Is dit een echt merk, of een restbak uit het kassasysteem? */
+export function isEchtMerk(raw: string | undefined): boolean {
+  const schoon = (raw ?? "").trim().toLowerCase();
+  return schoon.length > 0 && !GEEN_MERK.has(schoon);
+}
+
 function brandSlug(name: string): string {
   return name
     .toLowerCase()
@@ -412,12 +516,12 @@ export async function getBrands(
 
   const byBrand = new Map<string, { name: string; items: Product[] }>();
   for (const product of bron) {
-    if (!product.brand || product.brand === "De Voordeelmarkt") continue;
-    const slug = brandSlug(product.brand);
+    if (!isEchtMerk(product.brand)) continue;
+    const slug = brandSlug(product.brand!);
     if (!slug) continue;
     const entry = byBrand.get(slug);
     if (entry) entry.items.push(product);
-    else byBrand.set(slug, { name: product.brand, items: [product] });
+    else byBrand.set(slug, { name: merknaam(product.brand!), items: [product] });
   }
   return [...byBrand.entries()]
     .map(([slug, entry]) => ({
@@ -436,7 +540,9 @@ export async function getBrands(
 
 export async function getBrand(slug: string): Promise<BrandPage | null> {
   const products = await getProducts();
-  const items = products.filter((product) => brandSlug(product.brand) === slug);
+  const items = products.filter(
+    (product) => isEchtMerk(product.brand) && brandSlug(product.brand) === slug,
+  );
   if (items.length === 0) return null;
   const sorted = [...items].sort((a, b) => {
     const aScore = (a.image ? 2 : 0) + (a.inStock !== false ? 1 : 0);
@@ -445,7 +551,7 @@ export async function getBrand(slug: string): Promise<BrandPage | null> {
   });
   return {
     slug,
-    name: items[0].brand,
+    name: merknaam(items[0].brand),
     count: items.length,
     fromPrice: Math.min(...items.map((item) => item.price)),
     products: sorted,

@@ -88,6 +88,13 @@ export async function Header() {
               {ingelogd ? "Mijn account" : "Inloggen"}
             </span>
           </Link>
+          {/*
+            Zakelijke schakelaar: een aannemer rekent in prijzen exclusief btw
+            en wil niet elk bedrag zelf hoeven delen door 1,21. Hij staat naast
+            het account omdat dat de hoek is waar je je eigen instellingen
+            zoekt. Op smalle schermen valt hij weg — daar zit hij in het menu.
+          */}
+          <PrijsSchakelaar className="hidden md:inline-flex" />
           <CartBadge />
         </div>
       </div>

@@ -13,6 +13,7 @@ export const demoCategories: Category[] = [
       "Muurverf, lak, grondverf en beits voor de laagste prijs. Mengverf maken we gratis in de winkel op elke gewenste RAL-kleur.",
     icon: "roller",
     hue: 25,
+    count: 12,
   },
   {
     slug: "verfbenodigdheden",
@@ -21,6 +22,7 @@ export const demoCategories: Category[] = [
       "Kwasten, rollers, afplaktape en al het andere schildersgereedschap voor een strak eindresultaat.",
     icon: "brush",
     hue: 45,
+    count: 12,
   },
   {
     slug: "gereedschap",
@@ -29,6 +31,7 @@ export const demoCategories: Category[] = [
       "Elektrisch en handgereedschap voor de laagste prijs. Van accuboormachines tot complete gereedschapskoffers.",
     icon: "wrench",
     hue: 215,
+    count: 12,
   },
   {
     slug: "elektra",
@@ -37,6 +40,7 @@ export const demoCategories: Category[] = [
       "LED-lampen, verlengsnoeren en elektramateriaal. Energiezuinig en voordelig het hele huis verlicht.",
     icon: "bulb",
     hue: 265,
+    count: 12,
   },
   {
     slug: "tuin-en-buiten",
@@ -45,6 +49,7 @@ export const demoCategories: Category[] = [
       "Alles voor tuin, terras en balkon. Tuingereedschap en buitenartikelen voor een voordeelprijs.",
     icon: "leaf",
     hue: 130,
+    count: 12,
   },
   {
     slug: "reinigen-en-huishouden",
@@ -53,6 +58,7 @@ export const demoCategories: Category[] = [
       "Schoonmaakproducten en handige huishoudartikelen. Elke dag lage prijzen op alles voor in huis.",
     icon: "spray",
     hue: 190,
+    count: 12,
   },
 ];
 
