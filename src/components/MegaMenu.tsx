@@ -39,9 +39,22 @@ const ALLES = "__alles__";
  */
 
 export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
-  const inBalk = HOOFDRUBRIEKEN.map((slug) =>
+  /*
+   * De vaste rubrieken, met een vangnet.
+   *
+   * De slugs komen uit Tilroy en die kan van indeling wisselen — bij de
+   * overgang naar de hoofdgroepen veranderden ze van naam naar groepscode.
+   * Zonder vangnet was de balk dan leeg geweest zonder foutmelding. Vinden we
+   * er te weinig, dan vallen we terug op de grootste rubrieken; een menu met
+   * de verkeerde volgorde is te overzien, een leeg menu niet.
+   */
+  const gekozen = HOOFDRUBRIEKEN.map((slug) =>
     categories.find((category) => category.slug === slug),
   ).filter((category): category is MenuCategory => Boolean(category));
+  const inBalk =
+    gekozen.length >= 4
+      ? gekozen
+      : [...categories].sort((a, b) => b.count - a.count).slice(0, 6);
   const [open, setOpen] = useState<string | null>(null);
   const sluitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navRef = useRef<HTMLElement>(null);

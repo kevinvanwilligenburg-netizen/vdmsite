@@ -114,9 +114,46 @@ function beeldVoor(slug: string): { icon: string; hue: number } {
   return treffer ? { icon: treffer.icon, hue: treffer.hue } : { icon: "box", hue: 210 };
 }
 
-function categorySlugFor(rawCategory: string): string {
-  const sub = subcategoryOf(rawCategory);
+/**
+ * Hoofdgroepen die geen assortiment zijn.
+ *
+ * Tilroy gebruikt de categorieboom ook voor administratie. "Kasmutaties"
+ * bevat kasopnames ("Kas Uit: Koopavond Eten"), en er is een groep die
+ * letterlijk `default` heet. Die horen niet in een webshop.
+ */
+const HOOFDGROEPEN_NIET_ONLINE = new Set([
+  "kasmutaties",
+  "verzendkosten",
+  "postnl",
+  "facilitair / overig",
+  "default",
+]);
+
+/**
+ * De categorie van een artikel: de hoofdgroep van Tilroy.
+ *
+ * ⚠️ Groeperen op códe, labelen op naam. Dezelfde groep staat in Tilroy in
+ * meerdere schrijfwijzen — "Verf en Beits" (1.701×), "Verf en beits" (189×)
+ * en "VERF EN BEITS" (1×) zijn alle drie code 1000. Op naam matchen levert
+ * drie categorieën op waar er één hoort te zijn.
+ *
+ * Zolang de feed de codes nog niet meestuurt vallen we terug op de naam; dan
+ * werkt de site door zoals hij deed.
+ */
+function categorySlugFor(item: FeedItem): string {
+  const code = (item.categorie_hoofd_code ?? "").trim();
+  if (code) return `g${code}`;
+  const hoofd = (item.categorie_hoofd ?? "").trim();
+  if (hoofd) return slugify(hoofd);
+  const sub = subcategoryOf(item.categories);
   return sub ? slugify(sub) : "overig";
+}
+
+/** Hoort dit artikel in een winkelbare hoofdgroep? */
+function hoofdgroepOnline(item: FeedItem): boolean {
+  const hoofd = (item.categorie_hoofd ?? "").trim().toLowerCase();
+  if (!hoofd) return true;
+  return !HOOFDGROEPEN_NIET_ONLINE.has(hoofd);
 }
 
 /**
@@ -129,17 +166,29 @@ function categorySlugFor(rawCategory: string): string {
  * komt.
  */
 export function categorieenUit(products: Product[]): Category[] {
-  const perSlug = new Map<string, { naam: string; aantal: number }>();
+  // Per categorie tellen hoe vaak elke schrijfwijze voorkomt. Tilroy kent
+  // dezelfde groep onder "Verf en Beits", "Verf en beits" én "VERF EN BEITS";
+  // op de code is dat één categorie, maar het label moet ergens vandaan komen
+  // en dan is de meest gebruikte schrijfwijze de veiligste keuze.
+  const perSlug = new Map<string, { namen: Map<string, number>; aantal: number }>();
   for (const product of products) {
-    const naam = product.attributes?.subcategorie?.trim();
+    // Hoofdgroep als die er is; anders de subcategorie, zodat de site blijft
+    // werken op een feed van vóór de tweeniveau-wijziging.
+    const naam =
+      product.attributes?.hoofdgroep?.trim() || product.attributes?.subcategorie?.trim();
     if (!naam) continue;
     const bestaand = perSlug.get(product.category);
-    if (bestaand) bestaand.aantal++;
-    else perSlug.set(product.category, { naam, aantal: 1 });
+    if (bestaand) {
+      bestaand.aantal++;
+      bestaand.namen.set(naam, (bestaand.namen.get(naam) ?? 0) + 1);
+    } else {
+      perSlug.set(product.category, { namen: new Map([[naam, 1]]), aantal: 1 });
+    }
   }
 
   return [...perSlug.entries()]
-    .map(([slug, { naam, aantal }]) => {
+    .map(([slug, { namen, aantal }]) => {
+      const naam = [...namen.entries()].sort((a, b) => b[1] - a[1])[0][0];
       const weergave = CATEGORIE_NAAM[slug] ?? naam;
       return {
         slug,
@@ -193,6 +242,7 @@ const SUBCATEGORIEEN_NIET_ONLINE = new Set([
 const PASTA_IN_DE_NAAM = /\b(mengpasta|kleurpasta|colorpaste|colorant)\b/i;
 
 function hoortOnline(item: FeedItem): boolean {
+  if (!hoofdgroepOnline(item)) return false;
   const merk = (item.brand ?? "").trim().toLowerCase();
   if (MERKEN_NIET_ONLINE.has(merk)) return false;
   if (PASTA_IN_DE_NAAM.test(item.title ?? "")) return false;
@@ -535,7 +585,13 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
     if (trimmed) attributes[key] = trimmed;
   };
 
-  add("subcategorie", subcategoryOf(leader.categories));
+  // Twee niveaus van Tilroy: de hoofdgroep is de categorie, de subgroep is
+  // het "Soort"-filter binnen die categorie.
+  add("hoofdgroep", (leader.categorie_hoofd ?? "").trim() || undefined);
+  add(
+    "subcategorie",
+    (leader.categorie_sub ?? "").trim() || subcategoryOf(leader.categories),
+  );
   add("glans", leader.glans);
   add("verfsoort", leader.verfsoort);
   add("toepassing", leader.toepassing);
@@ -670,7 +726,7 @@ function buildProduct(group: FeedItem[]): Product | null {
     // weergavenaam; een artikel zonder merk wordt dus niet per ongeluk verborgen.
     brand: leader.brand || "De Voordeelmarkt",
     sku: leader.id,
-    category: categorySlugFor(leader.categories ?? ""),
+    category: categorySlugFor(leader),
     shortDescription: isBaseFamily
       ? `${name} in elke gewenste kleur — wij mengen gratis in de juiste basis.`
       : leader.description && leader.description !== name
@@ -853,7 +909,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v22";
+const KV_KEY = "catalog:products:v23";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
