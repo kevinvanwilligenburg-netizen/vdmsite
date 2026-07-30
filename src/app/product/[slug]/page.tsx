@@ -12,7 +12,7 @@ import { StockList } from "@/components/StockList";
 import { getInitialColors } from "@/lib/colors";
 import { haalSeoTekst } from "@/lib/seo-tekst";
 import { euro } from "@/lib/format";
-import { verzendtarief } from "@/lib/shipping";
+import { GRATIS_VANAF_TEKST, verzendtarief } from "@/lib/shipping";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { aggregateRatingJsonLd, getTrustpilotRating } from "@/lib/trustpilot";
 import {
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = [
     (seo?.kort ?? product.shortDescription).slice(0, 110),
     `Nu ${prijs}${product.compareAtPrice ? ` (van ${euro(product.compareAtPrice)})` : ""}.`,
-    "Gratis bezorgd vanaf € 59, afhalen is altijd gratis.",
+    `Gratis bezorgd vanaf ${GRATIS_VANAF_TEKST}, afhalen is altijd gratis.`,
   ].join(" ");
   return {
     title,
@@ -102,7 +102,7 @@ export default async function ProductPage({ params }: Props) {
 
   // Verzendkosten en 14 dagen retour gelden voor het hele assortiment. Het
   // tarief moet hier kloppen met wat de klant afrekent: een "0" terwijl er
-  // onder € 59 wordt gerekend leest Google als een onjuiste prijsopgave.
+  // onder de gratis-grens wordt gerekend leest Google als een onjuiste prijsopgave.
   const offerTerms = {
     availability: "https://schema.org/InStock",
     url: absoluteUrl(`/product/${product.slug}`),
@@ -195,7 +195,7 @@ export default async function ProductPage({ params }: Props) {
         product.compareAtPrice
           ? ` in plaats van de adviesprijs van ${euro(product.compareAtPrice)}`
           : ""
-      }. Bezorgen is gratis vanaf € 59; afhalen in de winkel is dat altijd.`,
+      }. Bezorgen is gratis vanaf ${GRATIS_VANAF_TEKST}; afhalen in de winkel is dat altijd.`,
     },
     {
       q: "Hoe snel heb ik dit in huis?",

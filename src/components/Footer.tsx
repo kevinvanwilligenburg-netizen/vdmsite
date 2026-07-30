@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
+import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { getCategories, getStores } from "@/lib/tilroy";
 
 const PAYMENT_METHODS = ["iDEAL", "Bancontact", "Creditcard", "Apple Pay", "Klarna"];
@@ -26,7 +27,7 @@ export async function Footer() {
             De <span className="text-brand-bright">Voordeelmarkt</span>
           </p>
           <p className="text-sm leading-relaxed text-white/70">
-            De beste verf voor de laagste prijs. Vanaf € 59 bezorgen we gratis,
+            De beste verf voor de laagste prijs. Vanaf {GRATIS_VANAF_TEKST} bezorgen we gratis,
             en afhalen in de winkel is dat altijd. Verf mengen we gratis in elke
             kleur.
           </p>

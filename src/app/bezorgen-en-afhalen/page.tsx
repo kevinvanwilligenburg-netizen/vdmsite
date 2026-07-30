@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GRATIS_VANAF_TEKST, tariefTekst } from "@/lib/shipping";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -8,9 +9,9 @@ import { getStores } from "@/lib/tilroy";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Bezorgen & afhalen – gratis vanaf € 59",
+  title: `Bezorgen & afhalen – gratis vanaf ${GRATIS_VANAF_TEKST}`,
   description:
-    "Vanaf € 59 bezorgen we gratis. Bestel je vóór 09:00, dan kun je kiezen voor bezorging vandaag nog voor € 1,25. Afhalen is altijd gratis in onze 5 winkels.",
+    `Vanaf ${GRATIS_VANAF_TEKST} bezorgen we gratis. Bestel je vóór 09:00, dan kun je kiezen voor bezorging vandaag nog voor € 1,25. Afhalen is altijd gratis in onze 5 winkels.`,
   alternates: { canonical: "/bezorgen-en-afhalen" },
 };
 
@@ -26,7 +27,7 @@ export default async function ShippingPage() {
           Bezorgen &amp; afhalen
         </h1>
         <p className="mt-3 text-ink-soft">
-          Afhalen is altijd gratis, bezorgen vanaf € 59. Jij kiest wat het beste
+          Afhalen is altijd gratis, bezorgen vanaf {GRATIS_VANAF_TEKST}. Jij kiest wat het beste
           uitkomt.
         </p>
       </header>
@@ -34,7 +35,7 @@ export default async function ShippingPage() {
       <section className="card overflow-hidden">
         <div className="flex items-center gap-3 bg-brand p-5 text-white">
           <Icon name="truck" className="h-7 w-7 shrink-0" aria-hidden />
-          <h2 className="text-lg font-black">Bezorgen — gratis vanaf € 59</h2>
+          <h2 className="text-lg font-black">Bezorgen — gratis vanaf {GRATIS_VANAF_TEKST}</h2>
         </div>
         <div className="space-y-3 p-6 text-ink-soft">
           <p className="text-lg font-bold text-ink">
@@ -59,7 +60,7 @@ export default async function ShippingPage() {
                   Nederland
                 </th>
                 <td className="py-2 text-right">
-                  Gratis vanaf € 59, daaronder € 4,95
+                  Gratis vanaf {GRATIS_VANAF_TEKST}, daaronder {tariefTekst("NL")}
                 </td>
               </tr>
               <tr className="border-t border-ink/10">
@@ -67,7 +68,7 @@ export default async function ShippingPage() {
                   België
                 </th>
                 <td className="py-2 text-right">
-                  Gratis vanaf € 59, daaronder € 7,95
+                  Gratis vanaf {GRATIS_VANAF_TEKST}, daaronder {tariefTekst("BE")}
                 </td>
               </tr>
               <tr className="border-t border-ink/10">

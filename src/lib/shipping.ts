@@ -69,3 +69,25 @@ export function gratisVanaf(land: ShippingCountry = "NL"): number {
 export function verzendtarief(land: ShippingCountry = "NL"): number {
   return TARIEVEN[land].kosten;
 }
+
+/*
+ * Dezelfde bedragen als tekst, voor in de teksten op de site.
+ *
+ * De drempel stond op dertien plekken uitgeschreven: in de USP-balk, de
+ * voetnoot, de productpagina, de algemene voorwaarden, llms.txt en de
+ * bezorgpagina. De berekening zat wél op één plek, dus er ging niets stuk —
+ * maar bij de volgende tariefwijziging klopt de site twaalf keer niet meer,
+ * en dat merk je pas als een klant erover belt. De Klus=r-site had dit in het
+ * echt: de winkelwagen toonde € 50 terwijl de checkout op € 59 zat.
+ */
+function bedrag(centen: number): string {
+  return `€ ${(centen / 100).toFixed(2).replace(".", ",").replace(",00", "")}`;
+}
+
+/** "€ 59" — de grens voor gratis bezorgen. */
+export const GRATIS_VANAF_TEKST = bedrag(TARIEVEN.NL.gratisVanaf);
+
+/** "€ 4,95" of "€ 7,95" — wat bezorgen kost onder die grens. */
+export function tariefTekst(land: ShippingCountry = "NL"): string {
+  return bedrag(TARIEVEN[land].kosten);
+}

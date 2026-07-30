@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GRATIS_VANAF_TEKST, tariefTekst } from "@/lib/shipping";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -44,7 +45,7 @@ const SECTIONS: { title: string; paragraphs: string[] }[] = [
   {
     title: "Artikel 5 – Bezorgen",
     paragraphs: [
-      "Bezorgen is gratis vanaf € 59; daaronder rekenen we € 4,95 binnen Nederland en € 7,95 naar België. Artikelen uit onze webshopvoorraad in Nijverdal gaan met DHL en zijn de volgende dag in huis. Bestel je vóór 09:00 uur, dan kun je bij het afrekenen kiezen voor bezorging dezelfde dag tegen een toeslag van € 1,25. Artikelen die alleen in een van onze andere winkels liggen, worden door die winkel met PostNL verstuurd en zijn binnen één werkdag bezorgd; bezorging dezelfde dag is daarbij niet mogelijk. Op de productpagina staat welke levertijd geldt.",
+      `Bezorgen is gratis vanaf ${GRATIS_VANAF_TEKST}; daaronder rekenen we ${tariefTekst("NL")} binnen Nederland en ${tariefTekst("BE")} naar België. Artikelen uit onze webshopvoorraad in Nijverdal gaan met DHL en zijn de volgende dag in huis. Bestel je vóór 09:00 uur, dan kun je bij het afrekenen kiezen voor bezorging dezelfde dag tegen een toeslag van € 1,25. Artikelen die alleen in een van onze andere winkels liggen, worden door die winkel met PostNL verstuurd en zijn binnen één werkdag bezorgd; bezorging dezelfde dag is daarbij niet mogelijk. Op de productpagina staat welke levertijd geldt.`,
       "Genoemde bezorgmomenten zijn een streven, geen fatale termijn. Lukt bezorging onverhoopt niet op tijd, dan laten we dat zo snel mogelijk weten. Duurt het langer dan 30 dagen, dan mag je de overeenkomst kosteloos ontbinden.",
       "Het risico van beschadiging of verlies gaat over op jou zodra jij (of iemand die jij aanwijst) het pakket in ontvangst neemt.",
     ],

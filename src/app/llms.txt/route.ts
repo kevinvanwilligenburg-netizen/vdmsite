@@ -1,4 +1,5 @@
 import { absoluteUrl, CONTACT_EMAIL, CONTACT_PHONE, SITE_NAME } from "@/lib/site";
+import { GRATIS_VANAF_TEKST, tariefTekst } from "@/lib/shipping";
 import { getCategories, getStores } from "@/lib/tilroy";
 
 export const revalidate = 86400;
@@ -23,7 +24,7 @@ export async function GET() {
 
 ## Bestellen en bezorgen
 
-- Bezorging is gratis vanaf € 59. Daaronder kost bezorging € 4,95 binnen Nederland en € 7,95 naar België.
+- Bezorging is gratis vanaf ${GRATIS_VANAF_TEKST}. Daaronder kost bezorging ${tariefTekst("NL")} binnen Nederland en ${tariefTekst("BE")} naar België.
 - Artikelen uit de webshopvoorraad (vestiging Nijverdal) gaan met DHL en zijn de volgende dag bezorgd. Wie vóór 09:00 uur bestelt, kan bij het afrekenen kiezen voor bezorging dezelfde dag tegen een toeslag van € 1,25.
 - Artikelen die alleen in een van de andere winkels liggen, worden door die winkel met PostNL verstuurd en zijn binnen één werkdag bezorgd.
 - Op elke productpagina staat welke levertijd voor dat artikel geldt.

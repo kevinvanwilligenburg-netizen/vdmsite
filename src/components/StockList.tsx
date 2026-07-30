@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { Voorraadmelding } from "@/components/product/Voorraadmelding";
 import { useStore } from "@/components/store/StoreProvider";
 import { deliveryExplanation, deliveryPromise } from "@/lib/delivery";
+import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { pickupPromise } from "@/lib/pickup";
 import type { ProductStock } from "@/lib/tilroy";
 import type { Store } from "@/lib/types";
@@ -119,7 +120,7 @@ export function StockList({
             <p className="mt-0.5 text-sm text-ink-soft">
               {delivery
                 ? deliveryExplanation(delivery)
-                : "Gratis bezorgd vanaf € 59, of gratis afhalen in de winkel."}
+                : `Gratis bezorgd vanaf ${GRATIS_VANAF_TEKST}, of gratis afhalen in de winkel.`}
             </p>
           </div>
         </div>

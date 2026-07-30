@@ -9,12 +9,13 @@ import { MobileNav } from "@/components/MobileNav";
 import { SearchBox } from "@/components/search/SearchBox";
 import { StorePicker } from "@/components/store/StorePicker";
 import { emailVanSessie, SESSIE_COOKIE } from "@/lib/account";
+import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { getMenu, getStores } from "@/lib/tilroy";
 
 const USPS = [
   "Vóór 09:00 besteld? Vandaag bezorgd mogelijk",
   "Verf gemengd in elke kleur",
-  "Gratis bezorgd vanaf € 59 · altijd gratis afhalen",
+  `Gratis bezorgd vanaf ${GRATIS_VANAF_TEKST} · altijd gratis afhalen`,
 ];
 
 export async function Header() {
