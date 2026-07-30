@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
+import { PrijsSchakelaar } from "@/components/prijs/PrijsWeergave";
 import { CONTACT_EMAIL, CONTACT_PHONE, SITE_NAME } from "@/lib/site";
 import { getStores } from "@/lib/tilroy";
 
@@ -16,26 +17,33 @@ export const metadata: Metadata = {
   alternates: { canonical: "/zakelijk" },
 };
 
+/**
+ * De voorwaarden van de Profpas, overgenomen van devoordeelmarkt.nl/nl/profpas.
+ *
+ * ⚠️ Niets hier verzinnen. Staat er op die pagina iets anders, dan is die
+ * pagina leidend — een webshop die andere kortingen belooft dan de folder is
+ * een discussie aan de balie.
+ */
 const VOORDELEN = [
   {
     icon: "tag",
-    title: "Scherpe prijzen, ook op grote aantallen",
-    text: "Vaste lage prijzen en staffels op verf en materialen. Vraag een offerte voor je project.",
-  },
-  {
-    icon: "palette",
-    title: "Verf mengen terwijl je wacht",
-    text: "Elke kleur uit meer dan 140 waaiers, gratis gemengd. Ook grotere partijen in dezelfde kleur.",
-  },
-  {
-    icon: "store",
-    title: "Snel afhalen, vijf vestigingen",
-    text: "Vandaag besteld, binnen twee uur klaar in de winkel die het op voorraad heeft.",
+    title: "Altijd 5% korting",
+    text: "Op het hele assortiment, direct verrekend bij het afrekenen. Uitgezonderd Sikkens; vraag daar naar de voorwaarden.",
   },
   {
     icon: "truck",
-    title: "Op de klus bezorgd",
-    text: "Gratis bezorging in heel Nederland — vóór 10:00 besteld uit onze webshopvoorraad is dezelfde dag in huis.",
+    title: "Altijd gratis bezorgd",
+    text: "Al je online bestellingen worden gratis thuis of op je werkadres bezorgd, ongeacht het bedrag.",
+  },
+  {
+    icon: "store",
+    title: "Op rekening kopen",
+    text: "Bestellen en later betalen is mogelijk. Vraag naar de voorwaarden.",
+  },
+  {
+    icon: "palette",
+    title: "Bonus achteraf",
+    text: "Boven € 10.000 per jaar krijg je 5% bonus terug, uitgekeerd in het eerste kwartaal daarna. Vanaf € 15.000 komt daar 2,5% bij.",
   },
 ];
 
@@ -62,20 +70,20 @@ export default async function BusinessPage() {
 
       <section className="overflow-hidden rounded-2xl bg-ink p-8 text-white sm:p-12">
         <p className="inline-block rounded-md bg-brand px-3 py-1.5 text-sm font-black uppercase">
-          Voor professionals
+          Profpas
         </p>
         <h1 className="mt-4 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">
-          Professioneel inkopen bij De Voordeelmarkt
+          Met de Profpas koop je scherper in
         </h1>
         <p className="mt-4 max-w-2xl text-lg font-semibold text-white/80">
-          Schilder, klusbedrijf of vastgoedbeheerder? Je koopt bij ons tegen
-          scherpe prijzen in, laat verf gratis mengen in elke kleur en haalt je
-          spullen op wanneer het jou uitkomt — in vijf winkels in Oost- en
-          Noordoost-Nederland.
+          Schilder, klusser of zzp'er? Met de Profpas krijg je altijd 5%
+          korting op het hele assortiment, wordt elke online bestelling gratis
+          bezorgd en kun je op rekening kopen. Verf mengen we gratis in elke
+          kleur, terwijl je wacht.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
-          <a href={`mailto:${CONTACT_EMAIL}?subject=Zakelijk%20account`} className="btn btn-primary">
-            Vraag een zakelijk account aan
+          <a href={`mailto:${CONTACT_EMAIL}?subject=Aanvraag%20Profpas`} className="btn btn-primary">
+            Profpas aanvragen
           </a>
           <a
             href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, "")}`}
@@ -96,6 +104,27 @@ export default async function BusinessPage() {
             <p className="mt-1 text-sm text-ink-soft">{voordeel.text}</p>
           </div>
         ))}
+      </section>
+
+      {/* Twee dingen die vaak gevraagd worden en op de oude site apart
+          stonden: de omzetting vanaf een Kluspas, en de btw-weergave. */}
+      <section className="card flex flex-wrap items-start justify-between gap-4 p-6">
+        <div className="max-w-xl">
+          <h2 className="font-black text-ink">Al een Kluspas?</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Die zetten we eenmalig gratis om naar een Profpas. Stuur een verzoek
+            naar{" "}
+            <a href="mailto:verkoop@devoordeelmarkt.nl" className="font-bold text-brand hover:underline">
+              verkoop@devoordeelmarkt.nl
+            </a>
+            .
+          </p>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-ink">Prijzen tonen</p>
+          <p className="mb-2 text-xs text-ink-soft">Reken je liever zonder btw?</p>
+          <PrijsSchakelaar />
+        </div>
       </section>
 
       <section className="card p-6 sm:p-8">

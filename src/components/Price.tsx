@@ -1,3 +1,7 @@
+"use client";
+
+import { usePrijsModus } from "@/components/prijs/PrijsWeergave";
+import { BTW_TARIEF } from "@/lib/factuur";
 import { euro } from "@/lib/format";
 
 /**
@@ -21,6 +25,13 @@ export function Price({
   from?: boolean;
   size?: "sm" | "md" | "lg";
 }) {
+  // Zakelijke bezoekers rekenen exclusief btw. De bedragen in de catalogus
+  // zijn inclusief — dat is wat er wordt afgerekend — dus rekenen we terug,
+  // net als op de factuur.
+  const { modus } = usePrijsModus();
+  const toon = (centen: number) =>
+    euro(modus === "excl" ? Math.round(centen / (1 + BTW_TARIEF)) : centen);
+
   const groot =
     size === "lg" ? "text-3xl sm:text-4xl" : size === "sm" ? "text-lg" : "text-2xl";
   const klein = size === "lg" ? "text-sm" : "text-xs";
@@ -34,7 +45,7 @@ export function Price({
       {metKluspas ? (
         <>
           <span className={`${groot} font-black tracking-tight text-brand`}>
-            {euro(kluspasPrice!)}
+            {toon(kluspasPrice!)}
           </span>
           <span
             className={`rounded bg-brand px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ${
@@ -44,24 +55,28 @@ export function Price({
             Kluspas
           </span>
           <span className={`w-full ${klein} text-ink-soft`}>
-            Zonder pas <strong className="font-bold text-ink">{euro(price)}</strong>
+            Zonder pas <strong className="font-bold text-ink">{toon(price)}</strong>
             {compareAtPrice && compareAtPrice > price && (
-              <s className="ml-1.5 font-medium text-ink-soft/70">{euro(compareAtPrice)}</s>
+              <s className="ml-1.5 font-medium text-ink-soft/70">{toon(compareAtPrice)}</s>
             )}
           </span>
         </>
       ) : (
         <>
           <span className={`${groot} font-black tracking-tight text-brand`}>
-            {euro(price)}
+            {toon(price)}
           </span>
           {compareAtPrice && compareAtPrice > price && (
-            <s className="text-sm font-medium text-ink-soft/70">{euro(compareAtPrice)}</s>
+            <s className="text-sm font-medium text-ink-soft/70">{toon(compareAtPrice)}</s>
           )}
         </>
       )}
 
-      {size === "lg" && <span className="w-full text-xs text-ink-soft">incl. btw</span>}
+      {size === "lg" && (
+        <span className="w-full text-xs text-ink-soft">
+          {modus === "excl" ? "excl. btw" : "incl. btw"}
+        </span>
+      )}
     </div>
   );
 }

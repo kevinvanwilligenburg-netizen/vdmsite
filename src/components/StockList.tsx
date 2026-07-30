@@ -85,58 +85,60 @@ export function StockList({
       {uitverkocht && (
         <Voorraadmelding sku={product.sku} slug={product.slug} naam={product.naam} />
       )}
-      {/* Te groot of te zwaar voor een pakket: dan is bezorgen geen optie en
-          zeggen we dat hier, niet pas in de checkout. */}
-      {alleenAfhalen ? (
-        <div className="card flex items-start gap-3 p-4">
-          <Icon name="store" className="mt-0.5 h-6 w-6 shrink-0 text-brand" />
-          <div>
-            <p className="font-black text-ink">Alleen afhalen in de winkel</p>
-            <p className="text-sm text-ink-soft">{alleenAfhalen}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="card flex items-start gap-3 p-4">
-          <Icon
-            name="truck"
-            className={`mt-0.5 h-6 w-6 shrink-0 ${
-              delivery && delivery.type !== "unavailable" ? "text-green-700" : "text-ink-soft"
-            }`}
-          />
-          <div>
-            <p
-              className={`font-black ${
-                delivery && delivery.type !== "unavailable" ? "text-green-700" : "text-ink"
-              }`}
-            >
-              {delivery
-                ? delivery.label
-                : failed
-                  ? fallbackInStock
-                    ? "Leverbaar"
-                    : "Levertijd onbekend"
-                  : "Levertijd ophalen…"}
-            </p>
-            <p className="mt-0.5 text-sm text-ink-soft">
-              {delivery
-                ? deliveryExplanation(delivery)
-                : `Gratis bezorgd vanaf ${GRATIS_VANAF_TEKST}, of gratis afhalen in de winkel.`}
-            </p>
-          </div>
-        </div>
-      )}
+      {/*
+        Bezorgen en afhalen naast elkaar, als twee keuzes.
 
-      {/* Afhalen in jouw winkel */}
-      <div className="card flex items-start gap-3 p-4">
-        <Icon
-          name="store"
-          className={`mt-0.5 h-6 w-6 shrink-0 ${pickup ? "text-green-700" : "text-ink-soft"}`}
-        />
-        <div className="min-w-0 flex-1">
+        Hier stonden drie blokken onder elkaar — levertijd, afhaalwinkel en
+        voorraad per winkel — die samen een half scherm kostten voor informatie
+        waar de klant één beslissing uit haalt. Twee kolommen zeggen hetzelfde
+        in de helft van de ruimte, en maken zichtbaar dát het een keuze is.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {/* Bezorgen */}
+        <div className="card p-4">
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-ink-soft">
+            <Icon name="truck" className="h-4 w-4" />
+            Laten bezorgen
+          </p>
+          {alleenAfhalen ? (
+            <>
+              <p className="mt-1.5 font-black text-ink">Kan niet met de post mee</p>
+              <p className="mt-0.5 text-sm text-ink-soft">{alleenAfhalen}</p>
+            </>
+          ) : (
+            <>
+              <p
+                className={`mt-1.5 font-black ${
+                  delivery && delivery.type !== "unavailable" ? "text-green-700" : "text-ink"
+                }`}
+              >
+                {delivery
+                  ? delivery.label
+                  : failed
+                    ? fallbackInStock
+                      ? "Leverbaar"
+                      : "Levertijd onbekend"
+                    : "Levertijd ophalen…"}
+              </p>
+              <p className="mt-0.5 text-sm text-ink-soft">
+                {delivery
+                  ? deliveryExplanation(delivery)
+                  : `Gratis vanaf ${GRATIS_VANAF_TEKST}.`}
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Afhalen */}
+        <div className="card p-4">
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-ink-soft">
+            <Icon name="store" className="h-4 w-4" />
+            Gratis afhalen
+          </p>
           {pickup && pickupStore ? (
             <>
-              <p className="font-black text-green-700">
-                Gratis afhalen in {pickupStore.city} — {pickup.label.toLowerCase()}
+              <p className="mt-1.5 font-black text-green-700">
+                {pickupStore.city} — {pickup.label.toLowerCase()}
               </p>
               <p className="mt-0.5 text-sm text-ink-soft">{pickup.detail}</p>
               {!favourite && (
@@ -151,11 +153,11 @@ export function StockList({
             </>
           ) : favourite && favouriteRow && favouriteRow.qty === 0 ? (
             <>
-              <p className="font-black text-ink">Niet op voorraad in {favourite.city}</p>
+              <p className="mt-1.5 font-black text-ink">Niet in {favourite.city}</p>
               <p className="mt-0.5 text-sm text-ink-soft">
                 {suggestion
-                  ? `Wel op voorraad in ${rows.find((row) => row.storeId === suggestion.storeId)?.city}. Kies die winkel hieronder, of laat het bezorgen.`
-                  : "Dit artikel ligt nu in geen enkele winkel. Bezorgen kan wel zodra het weer binnen is."}
+                  ? `Wel in ${rows.find((row) => row.storeId === suggestion.storeId)?.city}.`
+                  : "Nu in geen enkele winkel."}
               </p>
               {suggestion && (
                 <button
@@ -169,11 +171,11 @@ export function StockList({
             </>
           ) : (
             <>
-              <p className="font-black text-ink">Gratis afhalen in de winkel</p>
+              <p className="mt-1.5 font-black text-ink">In de winkel</p>
               <p className="mt-0.5 text-sm text-ink-soft">
                 {stock
-                  ? "Dit artikel ligt nu in geen enkele winkel op voorraad."
-                  : "Binnen 2 uur klaar in een winkel waar dit artikel op voorraad ligt."}
+                  ? "Ligt nu in geen enkele winkel."
+                  : "Binnen 2 uur klaar waar het op voorraad ligt."}
               </p>
             </>
           )}

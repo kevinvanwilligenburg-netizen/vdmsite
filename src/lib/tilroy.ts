@@ -188,7 +188,11 @@ function companionRulesFor(product: Product): CompanionRule[] {
   const isSpuitbus = /spuitbus|spuitlak|spray/.test(haystack);
   const isVerf = product.colorMixable || isMuurverf || isLak || isBeits || isSpuitbus;
 
-  if (!isVerf) return [];
+  if (!isVerf) {
+    // Geen verf: kijk of er een van de regels hierboven past.
+    const naam = product.name;
+    return NIET_VERF_REGELS.find((entry) => entry.herkent.test(naam))?.regels ?? [];
+  }
 
   const rules: CompanionRule[] = [];
   if (isMuurverf) {
@@ -224,6 +228,58 @@ function companionRulesFor(product: Product): CompanionRule[] {
   }
   return rules;
 }
+
+/**
+ * Wat er buiten de verf bij hoort.
+ *
+ * Het blok "hier heb je dit ook bij nodig" kende alleen verfregels, dus bleef
+ * het leeg op elke andere pagina — bij een werklamp, een schroef of een
+ * rookmelder stond er niets. Deze regels zijn geen gokwerk op basis van
+ * verkoopdata die we niet hebben; het is wat er in de winkel ook naast ligt.
+ */
+const NIET_VERF_REGELS: { herkent: RegExp; regels: CompanionRule[] }[] = [
+  {
+    herkent: /werklamp|bouwlamp|zaklamp|koplamp|lamp\b/i,
+    regels: [
+      { needles: ["batterij"], reason: "Zodat hij het meteen doet" },
+      { needles: ["verlengkabel", "haspel"], reason: "Stroom tot waar je werkt" },
+    ],
+  },
+  {
+    herkent: /rookmelder|koolmonoxide|melder/i,
+    regels: [{ needles: ["batterij"], reason: "Vervangen bij het ophangen" }],
+  },
+  {
+    herkent: /schroef|bout|plug|anker/i,
+    regels: [
+      { needles: ["boor", "steenboor", "houtboor"], reason: "Het juiste gat vooraf" },
+      { needles: ["bit", "schroefbit"], reason: "Past op je schroevendraaier" },
+    ],
+  },
+  {
+    herkent: /kit\b|kitten|siliconen|acrylaat/i,
+    regels: [
+      { needles: ["kitpistool"], reason: "Zonder pistool krijg je het er niet uit" },
+      { needles: ["kitstrip", "afwerkset", "voegspaan"], reason: "Voor een strakke naad" },
+    ],
+  },
+  {
+    herkent: /behang|vlies|glasweefsel/i,
+    regels: [
+      { needles: ["behanglijm", "behangplaksel"], reason: "Hoort erbij" },
+      { needles: ["behangkwast", "behangborstel", "naadroller"], reason: "Strak aandrukken" },
+      { needles: ["afbreekmes", "stanleymes"], reason: "Netjes bijsnijden" },
+    ],
+  },
+  {
+    herkent: /laminaat|vinyl|ondervloer/i,
+    regels: [
+      { needles: ["ondervloer"], reason: "Onder de vloer, tegen geluid" },
+      { needles: ["plint"], reason: "De rand netjes afwerken" },
+      { needles: ["legset", "kliktang"], reason: "Handig bij het leggen" },
+    ],
+  },
+];
 
 export interface CompanionProduct {
   product: Product;

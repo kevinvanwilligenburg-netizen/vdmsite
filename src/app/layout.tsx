@@ -10,6 +10,7 @@ import { ConsentProvider } from "@/components/consent/ConsentProvider";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { GoogleTagManager } from "@/components/consent/GoogleTagManager";
 import { Footer } from "@/components/Footer";
+import { PRIJS_COOKIE, PrijsProvider, type PrijsModus } from "@/components/prijs/PrijsWeergave";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { StoreProvider } from "@/components/store/StoreProvider";
@@ -136,6 +137,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }));
 
   const consentCookie = cookies().get(CONSENT_COOKIE)?.value;
+  // Inclusief of exclusief btw; server-side gelezen zodat de prijzen meteen
+  // goed staan en niet eerst omslaan.
+  const prijsModus: PrijsModus =
+    cookies().get(PRIJS_COOKIE)?.value === "excl" ? "excl" : "incl";
 
   return (
     <html lang="nl" className={robotoCondensed.variable}>
@@ -155,6 +160,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Direct naar de inhoud
         </a>
         <ConsentProvider>
+        <PrijsProvider start={prijsModus}>
         <StoreProvider stores={storeOptions}>
           <CartProvider>
             <Header />
@@ -169,6 +175,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           </CartProvider>
         </StoreProvider>
         <CookieBanner />
+        </PrijsProvider>
         </ConsentProvider>
       </body>
     </html>

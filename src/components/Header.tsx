@@ -7,6 +7,7 @@ import { Logo, Tagline } from "@/components/Logo";
 import { MegaMenu } from "@/components/MegaMenu";
 import { MobileNav } from "@/components/MobileNav";
 import { SearchBox } from "@/components/search/SearchBox";
+import { PrijsSchakelaar } from "@/components/prijs/PrijsWeergave";
 import { StorePicker } from "@/components/store/StorePicker";
 import { emailVanSessie, SESSIE_COOKIE } from "@/lib/account";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
