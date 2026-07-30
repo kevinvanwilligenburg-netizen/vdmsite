@@ -141,7 +141,10 @@ const HOOFDGROEPEN_NIET_ONLINE = new Set([
  * werkt de site door zoals hij deed.
  */
 function categorySlugFor(item: FeedItem): string {
-  const code = (item.categorie_hoofd_code ?? "").trim();
+  // De codes zijn in de steekproef ronde getallen (1000, 3000, 6000), maar er
+  // zijn er meer gezien dan er paden zijn. Geen aanname over de vorm dus:
+  // slugify vangt op wat er ook in staat.
+  const code = slugify((item.categorie_hoofd_code ?? "").trim());
   if (code) return `g${code}`;
   const hoofd = (item.categorie_hoofd ?? "").trim();
   if (hoofd) return slugify(hoofd);
@@ -188,7 +191,13 @@ export function categorieenUit(products: Product[]): Category[] {
 
   return [...perSlug.entries()]
     .map(([slug, { namen, aantal }]) => {
-      const naam = [...namen.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      // Meest voorkomende schrijfwijze; bij gelijkstand alfabetisch, niet op
+      // volgorde van binnenkomst. De feed hoeft niet elke crawl in dezelfde
+      // volgorde te staan, en dan zou het categorielabel per nacht kunnen
+      // wisselen tussen "Verf en Beits" en "Verf en beits".
+      const naam = [...namen.entries()].sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "nl"),
+      )[0][0];
       const weergave = CATEGORIE_NAAM[slug] ?? naam;
       return {
         slug,
