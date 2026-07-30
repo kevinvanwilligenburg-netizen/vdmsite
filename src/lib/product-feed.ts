@@ -70,10 +70,7 @@ const CATEGORY_EXACT: Record<string, string> = {
   "fitex non paint": "verfbenodigdheden",
   // Restpartijen die van alles bevatten; die laten we onder Overig staan.
   euromat: "overig",
-  "business point": "overig",
   "fitex diversen": "overig",
-  "intern gebruik": "overig",
-  postnl: "overig",
 };
 
 const CATEGORY_MAP: { slug: string; match: string[] }[] = [
@@ -88,8 +85,6 @@ const CATEGORY_MAP: { slug: string; match: string[] }[] = [
       "vernis",
       "verdunningsmiddelen",
       "partij verf",
-      "mengpasta",
-      "verfmengmachine",
       "rambo inter",
       "deur/gevel",
     ],
@@ -224,6 +219,53 @@ export const feedCategories: Category[] = [
     hue: 210,
   },
 ];
+
+/**
+ * Wat in de winkel wél in het kassasysteem staat maar niet in de webshop hoort.
+ *
+ * De feed is de artikelenlijst van Tilroy, en daar staat meer in dan wat een
+ * klant kan kopen: de mengpasta's waarmee de machine verf aankleurt, de
+ * postzegels van het PostNL-punt, een testartikel van de administratie. Die
+ * horen niet in een categorie, niet in het zoekresultaat en niet op een eigen
+ * pagina — ze hoorden er überhaupt niet te zijn.
+ *
+ * Ik had de mengpasta's eerst netjes onder "Verf" gehangen omdat ze in de
+ * categorie "Verfmengmachine" staan. Dat is precies de verkeerde vraag: niet
+ * "waar past dit?" maar "koopt een klant dit?".
+ */
+const MERKEN_NIET_ONLINE = new Set([
+  // De kleurpasta's van de mengmachine; die verkopen we niet los.
+  "mengpasta",
+  // Alles wat Tilroy op onze eigen naam zet is baliewerk: postzegels,
+  // postpakketten, enveloppen. Geen van deze artikelen heeft een prijs in de
+  // feed, wat het beeld bevestigt.
+  "de voordeelmarkt",
+  "administratie",
+]);
+
+const SUBCATEGORIEEN_NIET_ONLINE = new Set([
+  "verfmengmachine",
+  "mengpasta verkoop",
+  "intern gebruik",
+  "business point",
+  "postnl",
+]);
+
+/**
+ * Mengpasta die níet onder merk "Mengpasta" of in de mengmachine-categorie
+ * staat. Zeven Sikkens Acomix-colorpastes staan gewoon onder "Lakken" met
+ * merk Sikkens, en Drenth-kleurpasta's onder Verfmengmachine. Op merk of
+ * categorie alleen glippen die erdoor.
+ */
+const PASTA_IN_DE_NAAM = /\b(mengpasta|kleurpasta|colorpaste|colorant)\b/i;
+
+function hoortOnline(item: FeedItem): boolean {
+  const merk = (item.brand ?? "").trim().toLowerCase();
+  if (MERKEN_NIET_ONLINE.has(merk)) return false;
+  if (PASTA_IN_DE_NAAM.test(item.title ?? "")) return false;
+  const sub = ((item.categories ?? "").split(">").pop() ?? "").trim().toLowerCase();
+  return !SUBCATEGORIEEN_NIET_ONLINE.has(sub);
+}
 
 function categorySlugFor(rawCategory: string): string {
   const sub = (rawCategory.split(">").pop() ?? rawCategory).trim().toLowerCase();
@@ -684,6 +726,8 @@ function buildProduct(group: FeedItem[]): Product | null {
     id: groupId,
     slug: `${slugify(name)}-${groupId}`,
     name,
+    // De uitsluiting hierboven kijkt naar het merk uit de feed, niet naar deze
+    // weergavenaam; een artikel zonder merk wordt dus niet per ongeluk verborgen.
     brand: leader.brand || "De Voordeelmarkt",
     sku: leader.id,
     category: categorySlugFor(leader.categories ?? ""),
@@ -846,6 +890,7 @@ async function fetchFeed(): Promise<Product[]> {
 
   const groups = new Map<string, FeedItem[]>();
   for (const item of items) {
+    if (!hoortOnline(item)) continue;
     const key = groupKeyFor(item);
     const list = groups.get(key);
     if (list) list.push(item);
@@ -868,7 +913,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v18";
+const KV_KEY = "catalog:products:v19";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
