@@ -11,27 +11,33 @@
  * en laten de winkel het laatste woord.
  */
 
-export const KLUSPAS_DISCOUNT_LABEL = "5% Kluspas-korting";
+/**
+ * Wat we over de korting zeggen als we geen bedrag kunnen noemen.
+ *
+ * Bewust geen "5%": dat klopt voor de meeste artikelen, maar niet voor de
+ * ruim 500 waar 30% of 50% op zit. Waar we het bedrag wél weten (winkelwagen,
+ * checkout) noemen we dat in euro's, want dat is altijd waar.
+ */
+export const KLUSPAS_DISCOUNT_LABEL = "Ledenkorting";
 
 /**
  * Ondergrens voor een geloofwaardige paskorting: minstens deze fractie van de
  * verkoopprijs moet overblijven.
  *
- * ⚠️ Dit is een noodrem op de feed, geen commerciële keuze. Bij een telling
- * op 29 juli 2026 stonden 523 van de 6.132 feedregels op exact 50% korting —
- * Histor Dekkende Muurverf Voorstrijk van € 13,20 naar € 6,60, bij een
- * adviesprijs van € 34,50. Precies de helft, tot op de cent, over
- * verschillende merken en prijsklassen: dat patroon hoort bij een rekenfout,
- * niet bij een actie. De overige 5.578 regels staan netjes op 5%, tien
- * Parador-regels op 30%.
+ * ⚠️ Dit is een noodrem tegen een invoerfout, geen commerciële grens.
  *
- * Zolang die prijzen zo binnenkomen tonen én rekenen we ze niet: de klant
- * betaalt dan gewoon de normale prijs. Liever tijdelijk geen pasvoordeel dan
- * 523 artikelen met verlies verkopen. Klopt de 50% wél, of komt er een echte
- * actie met meer korting, zet deze grens dan lager — hij staat expres op één
- * plek.
+ * Op 29 juli 2026 stond deze waarde op 0,9, omdat 504 van de 6.132 feedregels
+ * op exact 30% of 50% korting stonden en dat patroon op een rekenfout leek.
+ * Kevin heeft op 30 juli bevestigd dat die kortingen kloppen — het zijn echte
+ * acties. De grens staat nu zo laag dat alleen een echte blunder wordt
+ * tegengehouden: een verschoven komma (€ 170,42 die als € 17,04 binnenkomt)
+ * of een pasprijs van nul.
+ *
+ * Zet hem niet weer omhoog "voor de zekerheid": dan verdwijnt bij 504
+ * artikelen het pasvoordeel van het scherm zonder dat iemand een foutmelding
+ * ziet.
  */
-const MIN_KLUSPAS_FRACTIE = 0.9;
+const MIN_KLUSPAS_FRACTIE = 0.25;
 
 const CARD_PATTERN = /^[0-9]{6,20}$/;
 
