@@ -87,7 +87,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
   return (
     <nav
       ref={navRef}
-      aria-label="Assortiment"
+      aria-label="Hoofdmenu"
       className="relative hidden bg-ink text-white lg:block"
       onMouseLeave={sluitStraks}
       onBlur={(event) => {

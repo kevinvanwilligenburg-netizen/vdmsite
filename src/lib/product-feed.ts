@@ -64,6 +64,14 @@ const PAGE_SIZE = 500;
  * achter de toonbank maar niet voor een klant.
  */
 const CATEGORIE_NAAM: Record<string, string> = {
+  // Hoofdgroepen (slug = g + Tilroy-groepscode, sinds de sync van 2026-07-30).
+  // Alleen waar de kassanaam niet toonbaar is: "Ijzerwaren" mist de Nederlandse
+  // IJ, 6000 heet in de meest voorkomende schrijfwijze "LIJMEN EN KITTEN", en
+  // 22000 is in Tilroy afgekapt op "Hobby en vrijetijdsartike".
+  g9000: "IJzerwaren",
+  g6000: "Lijmen en kitten",
+  g22000: "Hobby & vrije tijd",
+  g17000: "Deuren & kozijnen",
   "schildersger-en-schuurpapier": "Schildersgereedschap & schuurpapier",
   "acc-elektrisch-gereedschap": "Accessoires elektrisch gereedschap",
   "ijzerwaren-hang-en-sluitwerk": "IJzerwaren, hang- en sluitwerk",
@@ -93,7 +101,8 @@ const CATEGORIE_NAAM: Record<string, string> = {
  * plaats van een leeg vakje.
  */
 const CATEGORIE_BEELD: { match: RegExp; icon: string; hue: number }[] = [
-  { match: /muurverf|alkydverf|partij-verf|speciaalverven/, icon: "roller", hue: 25 },
+  { match: /verfbenodigd/, icon: "brush", hue: 45 },
+  { match: /muurverf|alkydverf|partij-verf|speciaalverven|\bverf\b/, icon: "roller", hue: 25 },
   { match: /lakken/, icon: "can", hue: 30 },
   { match: /beits|vernis|wax|olie/, icon: "brush", hue: 35 },
   { match: /verdunning/, icon: "spray", hue: 200 },
@@ -105,7 +114,9 @@ const CATEGORIE_BEELD: { match: RegExp; icon: string; hue: number }[] = [
   { match: /licht|lamp|verlichting|electra|elektra|kabel|contactdoos|batterij/, icon: "bulb", hue: 265 },
   { match: /huishoud|reinig|schoonmaak|stickers|horren/, icon: "spray", hue: 190 },
   { match: /auto|aanhang|fiets|camping|tuin/, icon: "leaf", hue: 130 },
-  { match: /laminaat|plint|ondervloer|karpet|matten/, icon: "level", hue: 30 },
+  { match: /laminaat|plint|ondervloer|vloeren|karpet|matten/, icon: "level", hue: 30 },
+  { match: /hobby|vrijetijd|vrije-tijd/, icon: "tape", hue: 300 },
+  { match: /deuren|kozijn/, icon: "level", hue: 220 },
   { match: /werkkleding/, icon: "hanger", hue: 210 },
   { match: /brandbeveiliging/, icon: "bulb", hue: 0 },
   { match: /emmer|speciekuip|bouwmaterial/, icon: "bucket", hue: 40 },

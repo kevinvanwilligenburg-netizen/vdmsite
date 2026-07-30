@@ -84,13 +84,30 @@ export async function getCategories(): Promise<Category[]> {
 const MIN_ARTIKELEN_IN_NAVIGATIE = 8;
 
 /**
- * Rubrieken die groot genoeg zijn maar toch geen rubriek: een leveranciersnaam
- * in het categorieveld. "Euromat" heeft 32 artikelen en haalt de ondergrens
- * dus ruim, maar een klant zoekt op dekzeil of gereedschap, niet op de naam
- * van onze inkooprelatie. De artikelen blijven gewoon in de webshop staan en
- * onder hun merk vindbaar — er staat alleen geen wegwijzer meer naartoe.
+ * Rubrieken die groot genoeg zijn maar toch geen rubriek. Op naam, want de
+ * slug is sinds de hoofdgroepen een code (g13) en codes onthouden niemand:
+ *
+ * - "Euromat" (37) is een leveranciersnaam; een klant zoekt op dekzeil.
+ * - "Diversen" (8) en "Toebehoren" (13) zeggen niets over wat erin ligt.
+ * - "Verf" (code 1, 34 artikelen) is een oud restgroepje NAAST de echte
+ *   groep "Verf en Beits" (code 1000, 1.891); twee keer verf in het menu is
+ *   verwarring zonder winst.
+ *
+ * De artikelen blijven in de webshop staan en op /categorieen vindbaar — er
+ * staat alleen geen wegwijzer in menu en footer naartoe.
  */
-const GEEN_RUBRIEK = new Set(["euromat", "partij-verf", "partijhandel"]);
+const GEEN_RUBRIEK = new Set([
+  "euromat",
+  "partij-verf",
+  "partijhandel",
+  "diversen",
+  "toebehoren",
+  "verf",
+]);
+
+function rubriekNaamSleutel(category: Category): string {
+  return category.name.trim().toLocaleLowerCase("nl");
+}
 
 /**
  * De rubrieken die in menu en footer horen: groot genoeg om een rubriek te
@@ -102,12 +119,22 @@ export async function getNavCategories(limit = 12): Promise<Category[]> {
   const categories = await getCategories();
   const groot = categories.filter(
     (category) =>
-      category.count >= MIN_ARTIKELEN_IN_NAVIGATIE && !GEEN_RUBRIEK.has(category.slug),
+      category.count >= MIN_ARTIKELEN_IN_NAVIGATIE &&
+      !GEEN_RUBRIEK.has(category.slug) &&
+      !GEEN_RUBRIEK.has(rubriekNaamSleutel(category)),
   );
   // Valt alles onder de grens (demo-catalogus, lege feed), dan liever de
   // volledige lijst dan een leeg menu.
   const bron = groot.length > 0 ? groot : categories;
-  return [...bron].sort((a, b) => b.count - a.count).slice(0, limit);
+  // Tilroy kent "Gereedschap" twee keer (code 5 én 8000). Twee gelijknamige
+  // knoppen in het menu zijn een raadsel voor de klant; de grootste wint, de
+  // kleine blijft via /categorieen bereikbaar.
+  const opNaam = new Map<string, Category>();
+  for (const category of [...bron].sort((a, b) => b.count - a.count)) {
+    const sleutel = rubriekNaamSleutel(category);
+    if (!opNaam.has(sleutel)) opNaam.set(sleutel, category);
+  }
+  return [...opNaam.values()].slice(0, limit);
 }
 
 export async function getCategory(slug: string): Promise<Category | undefined> {
