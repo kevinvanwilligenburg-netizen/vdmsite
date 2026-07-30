@@ -647,7 +647,12 @@ function buildProduct(group: FeedItem[]): Product | null {
   });
 
   const variants: ProductVariant[] = sorted
-    .filter((item) => item.maat)
+    // Alleen echte maten. Tilroy zet bij artikelen zonder maat "1SIZE" of een
+    // streepje neer; die kwamen als keuzeknop op de pagina en daarna in de
+    // winkelwagen te staan — een regel met een kaal "–" eronder, waar de klant
+    // niets van begrijpt. Blijft er zo niets over, dan valt de prijs terug op
+    // die van het hoofdartikel.
+    .filter((item) => heeftEchteMaat(item.maat))
     .map((item) => {
       const base = parseBase(item.mengbasis);
       // Staat dezelfde maat er meerdere keren in, dan verschillen die
@@ -913,7 +918,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v19";
+const KV_KEY = "catalog:products:v20";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

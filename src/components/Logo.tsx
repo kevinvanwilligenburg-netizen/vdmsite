@@ -22,7 +22,7 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
         <polygon
           points="6,101 294,89 294,170 6,170"
           clipPath="url(#vdm-logo-clip)"
-          fill="#F5821F"
+          fill="#FF8200"
         />
         <rect
           x="4"
@@ -44,7 +44,7 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
           textLength="252"
           lengthAdjust="spacingAndGlyphs"
         >
-          DE <tspan fill="#F5821F">VOORDEEL</tspan>
+          DE <tspan fill="#FF8200">VOORDEEL</tspan>
         </text>
         <text
           x="24"

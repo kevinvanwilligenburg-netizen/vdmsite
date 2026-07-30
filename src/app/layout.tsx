@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Mulish } from "next/font/google";
+import { Roboto_Condensed } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AddedToCart } from "@/components/cart/AddedToCart";
@@ -27,10 +27,17 @@ import {
 
 import "./globals.css";
 
-const mulish = Mulish({
+/**
+ * Roboto Condensed staat als lopende tekst in de huisstijlgids. Muller Black
+ * is daar het letterype voor koppen, maar dat is commercieel en zit niet bij
+ * Google Fonts; zolang we de webfont-licentie niet hebben, zetten we de koppen
+ * in dezelfde familie op het zwaarste gewicht.
+ */
+const robotoCondensed = Roboto_Condensed({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-mulish",
+  weight: ["400", "700", "900"],
+  variable: "--font-vdm",
 });
 
 export const metadata: Metadata = {
@@ -75,7 +82,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#F5821F",
+  themeColor: "#FF8200",
 };
 
 function organizationJsonLd(rating: ReturnType<typeof aggregateRatingJsonLd>) {
@@ -123,7 +130,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }));
 
   return (
-    <html lang="nl" className={mulish.variable}>
+    <html lang="nl" className={robotoCondensed.variable}>
       <body>
         <JsonLd data={organizationJsonLd(rating)} />
         <JsonLd data={websiteJsonLd} />

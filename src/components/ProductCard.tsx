@@ -37,8 +37,11 @@ export function ProductCard({ product }: { product: Product }) {
           image={product.image}
           label={product.name}
         />
+        {/* Rood, niet oranje: in de huisstijlgids is PMS 2347 het actiekleur
+            ("GRATIS", "2 halen 1 betalen"). Een kortingsvlag in hetzelfde
+            oranje als de rest van de pagina valt niet op. */}
         {hasDiscount && (
-          <span className="absolute left-3 top-3 rounded-md bg-brand px-2 py-1 text-sm font-black text-white shadow">
+          <span className="absolute left-3 top-3 rounded-md bg-brand-actie px-2 py-1 text-sm font-black text-white shadow">
             −{discountPct(product.price, product.compareAtPrice!)}%
           </span>
         )}
