@@ -1,5 +1,5 @@
 import { demoCategories, demoProducts, demoStockFor } from "@/lib/catalog";
-import { feedCategories, loadFeedProducts } from "@/lib/product-feed";
+import { categorieenUit, loadFeedProducts } from "@/lib/product-feed";
 import { scoreProducts, suggestTerms } from "@/lib/search";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import { demoStores } from "@/lib/stores";
@@ -62,9 +62,9 @@ export async function getProductsByCategory(categorySlug: string): Promise<Produ
 export async function getCategories(): Promise<Category[]> {
   const products = await loadFeedProducts();
   if (products.length === 0) return demoCategories;
-  // Toon alleen categorieën waar ook echt artikelen in zitten.
-  const used = new Set(products.map((product) => product.category));
-  return feedCategories.filter((category) => used.has(category.slug));
+  // De categorieën komen uit de producten, dus per definitie alleen de
+  // rubrieken waar ook echt iets in zit.
+  return categorieenUit(products);
 }
 
 export async function getCategory(slug: string): Promise<Category | undefined> {

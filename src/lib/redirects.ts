@@ -13,8 +13,28 @@ import { getProducts } from "@/lib/tilroy";
  * met een permanente redirect (308), die Google net als een 301 verwerkt.
  */
 
+/**
+ * De categorieën van de webshop volgen sinds 30 juli 2026 de indeling van
+ * Tilroy in plaats van tien zelfbedachte bakken. Deze tien slugs hebben
+ * bestaan; ze wijzen naar de rubriek die er het dichtst bij komt, zodat
+ * gedeelde links en al geïndexeerde pagina's blijven werken.
+ */
+const OUDE_CATEGORIEEN: Record<string, string> = {
+  "/categorie/verf": "/categorie/lakken",
+  "/categorie/verfbenodigdheden": "/categorie/schildersger-en-schuurpapier",
+  "/categorie/lijm-en-kit": "/categorie/lijmen-kitten-en-vulmiddelen",
+  "/categorie/bevestiging": "/categorie/bevestigingsmaterialen",
+  "/categorie/gereedschap": "/categorie/handgereedschap",
+  "/categorie/vloeren": "/categorie/laminaat",
+  "/categorie/elektra": "/categorie/lichtbronnen-en-zaklampen",
+  "/categorie/huishouden": "/categorie/huishoudelijk",
+  "/categorie/auto-en-tuin": "/categorie/auto-accessoires",
+  "/categorie/overig": "/",
+};
+
 /** Vaste paden van de huidige site → nieuwe pagina. */
 const STATIC_REDIRECTS: Record<string, string> = {
+  ...OUDE_CATEGORIEEN,
   "/nl": "/",
   "/nl/home": "/",
   "/nl/winkels": "/winkels",

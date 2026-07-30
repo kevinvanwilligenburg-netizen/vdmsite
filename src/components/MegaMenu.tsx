@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/icons";
+import { HOOFDRUBRIEKEN } from "@/lib/rubrieken";
 import type { MenuCategory } from "@/lib/tilroy";
 
 /**
@@ -29,17 +30,15 @@ import type { MenuCategory } from "@/lib/tilroy";
 /** Sleutel voor het paneel met alle categorieën; geen categorie-slug. */
 const ALLES = "__alles__";
 
-/** Rubrieken die vast in de balk staan, in deze volgorde. */
-const VASTE_RUBRIEKEN = [
-  "verf",
-  "verfbenodigdheden",
-  "lijm-en-kit",
-  "bevestiging",
-  "gereedschap",
-];
+/**
+ * Welke rubrieken vast in de balk staan, komt uit de catalogus
+ * (HOOFDRUBRIEKEN). Sinds de indeling van Tilroy wordt gevolgd zijn er 58
+ * categorieën; die passen niet op één regel, dus staat de rest achter
+ * "Alle categorieën".
+ */
 
 export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
-  const inBalk = VASTE_RUBRIEKEN.map((slug) =>
+  const inBalk = HOOFDRUBRIEKEN.map((slug) =>
     categories.find((category) => category.slug === slug),
   ).filter((category): category is MenuCategory => Boolean(category));
   const [open, setOpen] = useState<string | null>(null);

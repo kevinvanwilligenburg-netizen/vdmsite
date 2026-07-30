@@ -40,185 +40,118 @@ const PAGE_SIZE = 500;
 
 /* ── Categorie-indeling ────────────────────────────────────────── */
 
-// De feed levert "Verf > <subcategorie>". Die subcategorieën bundelen we tot
-// een winkelbare indeling; alles wat niet genoemd is valt onder "overig".
-//
-// ⚠️ Vergelijk nieuwe regels altijd met de échte lijst subcategorieën uit de
-// feed (72 stuks) en tel het resultaat na. Hier stond eerder
-// "bevestigingsmateriaal" terwijl de feed "Bevestigingsmaterialen" zegt —
-// enkelvoud tegen meervoud, en `includes` matcht dat niet. Daardoor stonden
-// 1.519 artikelen (een kwart van de catalogus) onder "Overig assortiment" in
-// plaats van onder Bevestiging, zónder dat er iets kapot leek.
+/*
+ * De indeling komt van Tilroy zelf: de subcategorie uit `categories`
+ * ("Verf > Muurverf" → Muurverf) is de categorie in de webshop.
+ *
+ * Hier stond eerst een eigen indeling die 72 Tilroy-subcategorieën in tien
+ * zelfbedachte bakken vouwde. Dat ging twee keer mis op een manier die
+ * niemand zag: "bevestigingsmateriaal" matchte niet op
+ * "Bevestigingsmaterialen" (1.519 artikelen in de verkeerde bak), en de
+ * mengpasta's van de mengmachine belandden onder Verf omdat ze nu eenmaal in
+ * de categorie "Verfmengmachine" staan. Elke regel die je zelf verzint is een
+ * regel die kan afwijken van de winkel.
+ *
+ * Nu volgen we de bron. Dat betekent 58 categorieën in plaats van 10, en dat
+ * schoonmaakazijn onder Verdunningsmiddelen staat en niet onder Verf — precies
+ * waar de winkel hem ook heeft staan.
+ */
 
 /**
- * Subcategorieën waarvan de naam niet zegt waar ze horen. Exacte match op de
- * kleine letters, vóór de trefwoorden hieronder.
+ * Weergavenamen. Tilroy schrijft kassabon-afkortingen; die zijn prima voor
+ * achter de toonbank maar niet voor een klant.
  */
-const CATEGORY_EXACT: Record<string, string> = {
-  // In de feed zit hier behanglijm, behangplaksel en een behangtafel.
-  gereedschap: "verfbenodigdheden",
-  // Roerhoutjes en draagtasjes voor bij de kassa.
-  facilitair: "verfbenodigdheden",
-  // Afdekzeil — dat gebruik je bij het schilderen.
-  "overige bouwmaterialen": "verfbenodigdheden",
-  "alabastine toebehoren": "lijm-en-kit",
-  // Rookmelders en koolmonoxidemelders.
-  brandbeveiliging: "elektra",
-  "interbosch wielen en diversen": "elektra", // batterijen
-  horren: "huishouden",
-  stickers: "huishouden", // raamfolie
-  "fitex non paint": "verfbenodigdheden",
-  // Restpartijen die van alles bevatten; die laten we onder Overig staan.
-  euromat: "overig",
-  "fitex diversen": "overig",
+const CATEGORIE_NAAM: Record<string, string> = {
+  "schildersger-en-schuurpapier": "Schildersgereedschap & schuurpapier",
+  "acc-elektrisch-gereedschap": "Accessoires elektrisch gereedschap",
+  "ijzerwaren-hang-en-sluitwerk": "IJzerwaren, hang- en sluitwerk",
+  "overig-electra": "Overige elektra",
+  "auto-accessoires": "Auto-accessoires",
+  "lijmen-kitten-en-vulmiddelen": "Lijm, kit & vulmiddelen",
+  "beits-olie-en-vernis": "Beits, olie & vernis",
+  "verlengkabels-en-tafelcontactdozen": "Verlengkabels & contactdozen",
+  "lichtbronnen-en-zaklampen": "Lichtbronnen & zaklampen",
+  "bouwemmers-en-speciekuipen": "Bouwemmers & speciekuipen",
+  "rambo-inter-olie-vloer-wax": "Rambo olie, vloer & wax",
+  "interbosch-aanhangw-en-auto": "Aanhanger & auto",
+  "hand-tuingereedschap": "Tuingereedschap",
+  "fiets-onderhoud-en-accessoires": "Fiets & accessoires",
+  "cb-meester-deur-gevel-kozijn": "Deur, gevel & kozijn",
+  "karpetten-en-matten": "Karpetten & matten",
+  "buiten-en-tuinverlichting": "Buiten- & tuinverlichting",
+  "licht-en-lampjes": "Licht & lampjes",
+  huishoudelijk: "Huishouden",
+  stickers: "Raamfolie & stickers",
+  facilitair: "Winkelbenodigdheden",
 };
 
-const CATEGORY_MAP: { slug: string; match: string[] }[] = [
-  {
-    slug: "verf",
-    match: [
-      "muurverf",
-      "lakken",
-      "alkydverf",
-      "speciaalverven",
-      "beits",
-      "vernis",
-      "verdunningsmiddelen",
-      "partij verf",
-      "rambo inter",
-      "deur/gevel",
-    ],
-  },
-  {
-    slug: "verfbenodigdheden",
-    match: [
-      "schildersger",
-      "voorbewerken",
-      "behang",
-      "anza",
-      "zelfklevende artikelen",
-      "werkkleding",
-      "bouwemmers",
-      "speciekuipen",
-    ],
-  },
-  { slug: "lijm-en-kit", match: ["lijmen, kitten", "vulmiddelen", "plamuur"] },
-  {
-    slug: "bevestiging",
-    // "bevestiging" en niet "bevestigingsmateriaal": de feed schrijft
-    // "Bevestigingsmaterialen", en materiaal/materialen matcht niet op elkaar.
-    match: ["bevestiging", "ijzerwaren", "hang en sluitwerk"],
-  },
-  { slug: "vloeren", match: ["laminaat", "plinten", "ondervloer", "karpetten"] },
-  {
-    slug: "gereedschap",
-    match: ["gereedschap", "acc. elektrisch", "kruiwagens"],
-  },
-  {
-    slug: "elektra",
-    match: [
-      "lichtbronnen",
-      "zaklampen",
-      "verlengkabels",
-      "tafelcontactdozen",
-      "elektra",
-      "electra",
-      "verlichting",
-      "licht en lampjes",
-      "batterijen",
-      "installatiemateriaal",
-    ],
-  },
-  { slug: "huishouden", match: ["huishoudelijk", "reinig", "schoonmaak"] },
-  { slug: "auto-en-tuin", match: ["auto", "tuin", "camping", "fiets"] },
+/**
+ * Een pictogram en een tint per categorie. Sleutelwoord in de slug bepaalt de
+ * keuze, zodat een nieuwe categorie uit Tilroy vanzelf iets passends krijgt in
+ * plaats van een leeg vakje.
+ */
+const CATEGORIE_BEELD: { match: RegExp; icon: string; hue: number }[] = [
+  { match: /muurverf|alkydverf|partij-verf|speciaalverven/, icon: "roller", hue: 25 },
+  { match: /lakken/, icon: "can", hue: 30 },
+  { match: /beits|vernis|wax|olie/, icon: "brush", hue: 35 },
+  { match: /verdunning/, icon: "spray", hue: 200 },
+  { match: /schilderdersger|schildersger|schuurpapier|anza|voorbewerken/, icon: "brush", hue: 45 },
+  { match: /behang|glasweefsel/, icon: "tape", hue: 260 },
+  { match: /lijm|kit|vulmiddel|plamuur/, icon: "can", hue: 200 },
+  { match: /bevestiging|ijzerwaren|sluitwerk/, icon: "screw", hue: 220 },
+  { match: /gereedschap|kruiwagen|werkbank/, icon: "wrench", hue: 215 },
+  { match: /licht|lamp|verlichting|electra|elektra|kabel|contactdoos|batterij/, icon: "bulb", hue: 265 },
+  { match: /huishoud|reinig|schoonmaak|stickers|horren/, icon: "spray", hue: 190 },
+  { match: /auto|aanhang|fiets|camping|tuin/, icon: "leaf", hue: 130 },
+  { match: /laminaat|plint|ondervloer|karpet|matten/, icon: "level", hue: 30 },
+  { match: /werkkleding/, icon: "hanger", hue: 210 },
+  { match: /brandbeveiliging/, icon: "bulb", hue: 0 },
+  { match: /emmer|speciekuip|bouwmaterial/, icon: "bucket", hue: 40 },
 ];
 
-export const feedCategories: Category[] = [
-  {
-    slug: "verf",
-    name: "Verf",
-    description:
-      "Muurverf, lak, beits en speciaalverf voor de laagste prijs. Mengverf maken we gratis in elke gewenste kleur.",
-    icon: "roller",
-    hue: 25,
-  },
-  {
-    slug: "verfbenodigdheden",
-    name: "Verfbenodigdheden",
-    menuLabel: "Benodigdheden",
-    description:
-      "Kwasten, rollers, schuurpapier, afplaktape en behang: alles om je verfklus strak af te werken.",
-    icon: "brush",
-    hue: 45,
-  },
-  {
-    slug: "lijm-en-kit",
-    name: "Lijm, kit & vulmiddelen",
-    menuLabel: "Lijm & kit",
-    description:
-      "Kitten, lijmen, plamuur en vulmiddelen voor elke reparatie en afwerking in en om het huis.",
-    icon: "can",
-    hue: 200,
-  },
-  {
-    slug: "bevestiging",
-    name: "Bevestiging & ijzerwaren",
-    menuLabel: "Bevestiging",
-    description:
-      "Schroeven, pluggen, beslag en hang- en sluitwerk. Alles om het stevig vast te zetten.",
-    icon: "screw",
-    hue: 220,
-  },
-  {
-    slug: "gereedschap",
-    name: "Gereedschap",
-    description:
-      "Hand- en elektrisch gereedschap met bijbehorende accessoires, voor elke klus in huis.",
-    icon: "wrench",
-    hue: 215,
-  },
-  {
-    slug: "vloeren",
-    name: "Vloeren & plinten",
-    menuLabel: "Vloeren",
-    description:
-      "Laminaat, vinyl, ondervloeren en bijpassende plinten. Alles voor een vloer die af is.",
-    icon: "level",
-    hue: 30,
-  },
-  {
-    slug: "elektra",
-    name: "Elektra & Verlichting",
-    menuLabel: "Elektra",
-    description:
-      "Lichtbronnen, zaklampen, verlengkabels en contactdozen: voordelig licht en stroom waar je het nodig hebt.",
-    icon: "bulb",
-    hue: 265,
-  },
-  {
-    slug: "huishouden",
-    name: "Huishouden & Reinigen",
-    menuLabel: "Huishouden",
-    description: "Handige huishoudartikelen en schoonmaakmiddelen voor elke dag.",
-    icon: "spray",
-    hue: 190,
-  },
-  {
-    slug: "auto-en-tuin",
-    name: "Auto & Tuin",
-    description: "Accessoires voor auto, aanhanger, tuin en terras.",
-    icon: "leaf",
-    hue: 130,
-  },
-  {
-    slug: "overig",
-    name: "Overig assortiment",
-    menuLabel: "Overig",
-    description: "Alle overige artikelen uit onze winkels.",
-    icon: "box",
-    hue: 210,
-  },
-];
+function beeldVoor(slug: string): { icon: string; hue: number } {
+  const treffer = CATEGORIE_BEELD.find((entry) => entry.match.test(slug));
+  return treffer ? { icon: treffer.icon, hue: treffer.hue } : { icon: "box", hue: 210 };
+}
+
+function categorySlugFor(rawCategory: string): string {
+  const sub = subcategoryOf(rawCategory);
+  return sub ? slugify(sub) : "overig";
+}
+
+/**
+ * De categorieën die er zijn, afgeleid uit de producten zelf.
+ *
+ * Bewust geen vaste lijst meer: verandert de indeling in Tilroy, dan
+ * verandert de webshop mee zonder dat iemand hier iets bijwerkt. De
+ * weergavenaam komt uit het product (`attributes.subcategorie`), zodat die de
+ * schrijfwijze van de bron volgt en ook klopt als de catalogus uit de cache
+ * komt.
+ */
+export function categorieenUit(products: Product[]): Category[] {
+  const perSlug = new Map<string, { naam: string; aantal: number }>();
+  for (const product of products) {
+    const naam = product.attributes?.subcategorie?.trim();
+    if (!naam) continue;
+    const bestaand = perSlug.get(product.category);
+    if (bestaand) bestaand.aantal++;
+    else perSlug.set(product.category, { naam, aantal: 1 });
+  }
+
+  return [...perSlug.entries()]
+    .map(([slug, { naam, aantal }]) => {
+      const weergave = CATEGORIE_NAAM[slug] ?? naam;
+      return {
+        slug,
+        name: weergave,
+        description: `${weergave} bij De Voordeelmarkt: ${aantal} ${
+          aantal === 1 ? "artikel" : "artikelen"
+        } voor de laagste prijs. Online bestellen, gratis afhalen in de winkel.`,
+        ...beeldVoor(slug),
+      } satisfies Category;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "nl"));
+}
 
 /**
  * Wat in de winkel wél in het kassasysteem staat maar niet in de webshop hoort.
@@ -267,15 +200,7 @@ function hoortOnline(item: FeedItem): boolean {
   return !SUBCATEGORIEEN_NIET_ONLINE.has(sub);
 }
 
-function categorySlugFor(rawCategory: string): string {
-  const sub = (rawCategory.split(">").pop() ?? rawCategory).trim().toLowerCase();
-  const exact = CATEGORY_EXACT[sub];
-  if (exact) return exact;
-  for (const entry of CATEGORY_MAP) {
-    if (entry.match.some((needle) => sub.includes(needle))) return entry.slug;
-  }
-  return "overig";
-}
+
 
 /**
  * De subcategorie uit de feed ("Verf > Lakken" → "Lakken").
@@ -918,7 +843,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v20";
+const KV_KEY = "catalog:products:v21";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
