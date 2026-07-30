@@ -171,7 +171,36 @@ export async function resolvePaintColor(key: string): Promise<PaintColor | undef
   return colors.find((color) => color.key === value);
 }
 
+/**
+ * Kleuren die als eerste in de kiezer horen te staan.
+ *
+ * De RAL-waaier loopt op nummer, en dan begint hij bij de gelen (1000-serie)
+ * en eindigt bij wit en zwart (9000-serie). Wit is verreweg de meestverkochte
+ * kleur, en die stond dus onderaan: je moest langs alle gelen, oranjes en
+ * roden scrollen voordat je bij zuiver wit kwam.
+ *
+ * Deze lijst zet de kleuren vooraan waar de meeste mensen voor komen. De rest
+ * van de waaier blijft er gewoon achter staan, in de eigen volgorde.
+ */
+const VEELGEKOZEN = [
+  "9010", // Zuiver wit
+  "9016", // Verkeerswit
+  "9003", // Signaalwit
+  "9001", // Crèmewit
+  "1013", // Parelwit
+  "7016", // Antracietgrijs
+  "7021", // Zwartgrijs
+  "9005", // Gitzwart
+  "7035", // Lichtgrijs
+  "6009", // Dennengroen
+];
+
 /** Startset voor de kiezer: de RAL-waaier (compact genoeg voor de eerste render). */
 export async function getInitialColors(): Promise<PaintColor[]> {
-  return ralPaintColors();
+  const alle = ralPaintColors();
+  const voorop = VEELGEKOZEN.map((code) =>
+    alle.find((kleur) => kleur.key === `ral:${code}`),
+  ).filter((kleur): kleur is PaintColor => Boolean(kleur));
+  const rest = alle.filter((kleur) => !voorop.some((eerste) => eerste.key === kleur.key));
+  return [...voorop, ...rest];
 }

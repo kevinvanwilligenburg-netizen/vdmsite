@@ -250,8 +250,29 @@ const SUBCATEGORIEEN_NIET_ONLINE = new Set([
  */
 const PASTA_IN_DE_NAAM = /\b(mengpasta|kleurpasta|colorpaste|colorant)\b/i;
 
+/**
+ * De verzonnen witte Sikkens-artikelen.
+ *
+ * Voor elke Sikkens-lak staat er in Tilroy een apart artikel "… Wit". Dat is
+ * geen los product: het is de kassaregel voor iemand die de gewone verf in
+ * 100% wit meeneemt. Online zou het een tweede, bijna identieke pagina naast
+ * de mengbare verf zetten, en de klant laten kiezen tussen twee dingen die
+ * hetzelfde zijn.
+ *
+ * De grens is `mengverf`: de verzonnen witten staan op "Nee", terwijl er twee
+ * échte mengbare artikelen zijn met "wit" in de naam (Alpha Primer wit,
+ * Alphaloxan Flex /Wit) die gewoon moeten blijven staan. Alleen op de naam
+ * filteren zou die twee ook wegnemen.
+ */
+function isVerzonnenWit(item: FeedItem): boolean {
+  if ((item.brand ?? "").trim().toLowerCase() !== "sikkens") return false;
+  if ((item.mengverf ?? "").trim() === "Ja") return false;
+  return /\bwit\s*$/i.test(item.title ?? "");
+}
+
 function hoortOnline(item: FeedItem): boolean {
   if (!hoofdgroepOnline(item)) return false;
+  if (isVerzonnenWit(item)) return false;
   const merk = (item.brand ?? "").trim().toLowerCase();
   if (MERKEN_NIET_ONLINE.has(merk)) return false;
   if (PASTA_IN_DE_NAAM.test(item.title ?? "")) return false;
@@ -918,7 +939,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v24";
+const KV_KEY = "catalog:products:v25";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

@@ -149,8 +149,18 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <ConsentMode cookieWaarde={consentCookie} />
       </head>
       <body>
-        {/* Na ConsentMode in de head: de standen staan dan al op denied. */}
-        <GoogleTagManager />
+        {/*
+          Tag Manager staat UIT op verzoek van Kevin (30 juli 2026): het script
+          botste met een ander script op de huidige site. De container bestaat
+          wel (GTM-MSHWXMG5) en NEXT_PUBLIC_GTM_ID staat in Vercel, dus dit
+          weer aanzetten is één regel terugzetten — de Consent Mode eronder
+          blijft gewoon staan en zet de standen alvast goed.
+
+          Zoek eerst uit wélk script botste voordat je 'm terugzet; anders
+          komt hetzelfde probleem terug op het moment dat er echt gemeten
+          wordt.
+        */}
+        {/* <GoogleTagManager /> */}
         <JsonLd data={organizationJsonLd(rating)} />
         <JsonLd data={websiteJsonLd} />
         <a

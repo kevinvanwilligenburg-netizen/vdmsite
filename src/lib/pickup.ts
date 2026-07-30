@@ -100,13 +100,23 @@ export function pickupPromise(store: Store, now: Date = new Date()): PickupPromi
   const wanneer = isTomorrow ? "morgen" : DAY_NAMES[opening.dayIndex].toLowerCase();
   const klaarOm = formatMinutes(opening.opens + PICKUP_READY_HOURS * 60);
 
+  /*
+   * Eén tijd noemen, niet twee.
+   *
+   * Hier stond in de kop "morgen klaar, rond 10:00" en er direct onder "we
+   * zetten je bestelling morgen vanaf 08:00 klaar". Allebei waar — om 08:00
+   * gaat de winkel open en dán beginnen we — maar de klant leest twee
+   * beloftes die elkaar tegenspreken en weet niet wanneer hij moet komen.
+   * De openingstijd staat er nu als toelichting, niet als tweede belofte.
+   */
+  const openTijd = formatMinutes(opening.opens);
   return {
     today: false,
     label: `${wanneer.charAt(0).toUpperCase() + wanneer.slice(1)} klaar, rond ${klaarOm}`,
     detail:
       today && nowMinutes >= today.closes
-        ? `De winkel in ${store.city} is voor vandaag gesloten. We zetten je bestelling ${wanneer} vanaf ${formatMinutes(opening.opens)} klaar.`
-        : `We zetten je bestelling ${wanneer} klaar, binnen ${PICKUP_READY_HOURS} uur na openingstijd (${formatMinutes(opening.opens)}).`,
+        ? `De winkel in ${store.city} is voor vandaag gesloten. Hij gaat ${wanneer} om ${openTijd} open, en je bestelling staat rond ${klaarOm} voor je klaar.`
+        : `De winkel in ${store.city} gaat ${wanneer} om ${openTijd} open; binnen ${PICKUP_READY_HOURS} uur daarna staat je bestelling klaar.`,
   };
 }
 
