@@ -29,6 +29,8 @@ const GEEN_MERK = new Set([
   "administratie",
   "geen",
   "onbekend",
+  "no brand",
+  "nobrand",
 ]);
 
 /**
