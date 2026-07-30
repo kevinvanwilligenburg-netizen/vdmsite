@@ -6,6 +6,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
 import { Companions } from "@/components/product/Companions";
+import { VloerRekenhulp } from "@/components/product/VloerRekenhulp";
+import { pakInhoudVan } from "@/lib/vloer";
 import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
 import { StockList } from "@/components/StockList";
@@ -94,6 +96,12 @@ export default async function ProductPage({ params }: Props) {
     // Alleen ophalen, nooit maken: een paginabezoek wacht niet op het model.
     haalSeoTekst(product),
   ]);
+
+  // Vloeren worden per pak van een paar vierkante meter verkocht. Weten we hoe
+  // groot dat pak is, dan kan de klant zijn kamer invullen in plaats van zelf
+  // te delen en af te ronden. Weten we het niet — een legset, losse planken —
+  // dan tonen we geen rekenhulp; een verkeerd aantal pakken is erger dan geen.
+  const perPak = pakInhoudVan(product, product.variants?.[0]?.name);
 
   // Een eigen tekst gaat voor de terugvalzin uit de feed, die op duizenden
   // artikelen hetzelfde is.
@@ -268,6 +276,7 @@ export default async function ProductPage({ params }: Props) {
           <div id="koopblok" className="scroll-mt-32">
             <PurchasePanel product={product} colors={colors} />
           </div>
+          {perPak && <VloerRekenhulp perPak={perPak} />}
           <StockList
             skus={skusFor(product)}
             stores={stores}
@@ -275,6 +284,7 @@ export default async function ProductPage({ params }: Props) {
             alleenAfhalen={product.pickupOnly}
             product={{ sku: product.sku, slug: product.slug, naam: product.name }}
           />
+          <Companions items={companions} variant="kolom" />
         </div>
       </div>
 
@@ -302,8 +312,6 @@ export default async function ProductPage({ params }: Props) {
           </div>
         )}
       </section>
-
-      <Companions items={companions} />
 
       <section aria-labelledby="product-faq-titel" className="max-w-3xl">
         <h2

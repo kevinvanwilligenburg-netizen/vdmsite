@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { KleurTrechter } from "@/components/kleur/KleurTrechter";
@@ -40,7 +41,18 @@ export default async function KleurkiezerPage() {
         </p>
       </header>
       <MyColors />
-      <KleurTrechter initialColors={colors} producten={products} />
+      {/* De trechter leest ?waaier= uit de URL, en dat mag de rest van de
+          pagina niet dynamisch maken: de kop, de tekst en de waaierlijst
+          eronder blijven zo gewoon statisch gerenderd (belangrijk voor SEO). */}
+      {/* Vast anker, zodat een klik op een waaier onderaan de pagina ook
+          echt bij de kiezer uitkomt. */}
+      <div id="kleuren" className="scroll-mt-24">
+        <Suspense
+          fallback={<div className="h-96 animate-pulse rounded-xl bg-black/5" aria-hidden />}
+        >
+          <KleurTrechter initialColors={colors} producten={products} />
+        </Suspense>
+      </div>
       {/* De waaiers uitgeschreven: dat we naast RAL ook Sikkens, Flexa,
           Histor en NCS mengen is het argument om hier te bestellen, en dat
           zag je niet zolang het in een keuzelijst zat. */}

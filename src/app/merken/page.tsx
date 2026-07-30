@@ -5,8 +5,9 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductArt } from "@/components/ProductArt";
 import { euro } from "@/lib/format";
+import { isVerfmerk, verfmerken, verfrubrieken } from "@/lib/merkpagina";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
-import { getBrands, type BrandSummary } from "@/lib/tilroy";
+import { getBrands, getCategories, getProducts, type BrandSummary } from "@/lib/tilroy";
 
 export const revalidate = 3600;
 
@@ -23,7 +24,16 @@ export const metadata: Metadata = {
  * Verf staat bovenaan en apart: dat is waar De Voordeelmarkt om bekendstaat,
  * en klanten zoeken vaak eerst op merk ("hebben jullie Sikkens?"). De rest
  * van het assortiment volgt daaronder.
+ *
+ * Welke merken verfmerken zijn wordt uit de artikelen afgeleid (zie
+ * lib/merkpagina.ts) en niet uit één rubrieknaam. Die stond hier eerst wél,
+ * en toen die rubriek verdween viel de bovenste helft van de pagina stilletjes
+ * weg.
  */
+
+/** Onder dit aantal is een rubriek geen wegwijzer waard. */
+const MIN_ARTIKELEN_VOOR_RUBRIEKLINK = 8;
+
 function BrandGrid({ brands }: { brands: BrandSummary[] }) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
@@ -59,13 +69,29 @@ function BrandGrid({ brands }: { brands: BrandSummary[] }) {
 }
 
 export default async function MerkenPage() {
-  const [verfMerken, alleMerken] = await Promise.all([
-    getBrands(24, { categorySlug: "verf" }),
-    getBrands(80),
+  // Ruim boven het aantal merken dat de catalogus kent (nu 56 met drie of meer
+  // artikelen). Deze pagina hoort ze állemaal te tonen, en de zin hieronder
+  // noemt het aantal — een limiet die stilletjes afkapt maakt die zin onwaar.
+  const [alleMerken, producten, categorieen] = await Promise.all([
+    getBrands(200),
+    getProducts(),
+    getCategories(),
   ]);
 
-  const verfSlugs = new Set(verfMerken.map((brand) => brand.slug));
-  const overige = alleMerken.filter((brand) => !verfSlugs.has(brand.slug));
+  const verf = verfmerken(producten);
+  const verfMerken = alleMerken.filter((brand) => isVerfmerk(verf, brand.name));
+  const overige = alleMerken.filter((brand) => !isVerfmerk(verf, brand.name));
+
+  // De verfrubrieken als wegwijzer onder de kop. Dit verving de knop "Alle
+  // verf", die naar /categorie/verf wees — een pagina die sinds de overgang
+  // naar de indeling van Tilroy een 404 gaf.
+  const rubrieken = verfrubrieken(producten);
+  const verfCategorieen = categorieen
+    .filter(
+      (categorie) =>
+        rubrieken.has(categorie.slug) && categorie.count >= MIN_ARTIKELEN_VOOR_RUBRIEKLINK,
+    )
+    .sort((a, b) => b.count - a.count);
 
   return (
     <div className="space-y-10">
@@ -74,26 +100,37 @@ export default async function MerkenPage() {
       <header className="max-w-3xl">
         <h1 className="text-3xl font-black uppercase text-ink sm:text-4xl">Onze merken</h1>
         <p className="mt-3 text-ink-soft">
-          Wij voeren de merken waar schilders en klussers al jaren op vertrouwen — van
-          Histor en Sikkens tot ons eigen scherp geprijsde Fitex. Alles uit voorraad,
-          gratis te bezorgen of af te halen in een van onze winkels.
+          Van Sikkens, Histor en Flexa tot ons eigen Fitex: {alleMerken.length} merken
+          staan online, waarvan {verfMerken.length} met verf. Per merk zie je hoeveel
+          artikelen er zijn en vanaf welke prijs.
         </p>
       </header>
 
       {verfMerken.length > 0 && (
         <section aria-labelledby="verfmerken">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 id="verfmerken" className="text-2xl font-black uppercase text-ink">
-                Verfmerken
-              </h2>
-              <p className="mt-1 text-ink-soft">
-                Muurverf, lak, beits en speciaalverf. Mengen doen we gratis, in elke kleur.
-              </p>
-            </div>
-            <Link href="/categorie/verf" className="btn btn-dark px-4 py-2 text-sm">
-              Alle verf →
-            </Link>
+          <div className="mb-4">
+            <h2 id="verfmerken" className="text-2xl font-black uppercase text-ink">
+              Verfmerken
+            </h2>
+            <p className="mt-1 text-ink-soft">
+              Muurverf, lak, beits en speciaalverf. Mengen doen we gratis, in elke kleur.
+            </p>
+            {verfCategorieen.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {verfCategorieen.map((categorie) => (
+                  <Link
+                    key={categorie.slug}
+                    href={`/categorie/${categorie.slug}`}
+                    className="inline-flex items-center gap-2 rounded-full border-2 border-ink/10 py-1.5 pl-3 pr-2 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
+                  >
+                    {categorie.name}
+                    <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs font-semibold text-ink-soft">
+                      {categorie.count}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
           <BrandGrid brands={verfMerken} />
         </section>

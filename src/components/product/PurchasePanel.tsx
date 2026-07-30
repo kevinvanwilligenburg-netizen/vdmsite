@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
-import { ColorPicker } from "@/components/ColorPicker";
 import { Icon } from "@/components/icons";
+import { KleurVenster } from "@/components/kleur/KleurVenster";
+import { kleurLabel } from "@/components/kleur/waaier";
 import { Price } from "@/components/Price";
 import { PaintCalculator } from "@/components/product/PaintCalculator";
 import {
@@ -37,7 +38,7 @@ export function PurchasePanel({
   const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [color, setColor] = useState<PaintColor | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(Boolean(product.colorMixable));
+  const [vensterOpen, setVensterOpen] = useState(false);
 
   // ?kleur= uit de kleurkiezer pas na hydration lezen, zodat de pagina
   // volledig statisch gerenderd kan blijven (belangrijk voor SEO).
@@ -52,7 +53,6 @@ export function PurchasePanel({
       colors.find((candidate) => candidate.key === `ral:${preselect}`);
     if (local) {
       setColor(local);
-      setPickerOpen(false);
       return;
     }
 
@@ -62,10 +62,7 @@ export function PurchasePanel({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const found = data?.colors?.[0];
-        if (active && found) {
-          setColor(found);
-          setPickerOpen(false);
-        }
+        if (active && found) setColor(found);
       })
       .catch(() => undefined);
     return () => {
@@ -118,7 +115,7 @@ export function PurchasePanel({
   function handleAdd() {
     if (product.colorMixable && !color) {
       setError("Kies eerst een kleur voor deze mengverf.");
-      setPickerOpen(true);
+      setVensterOpen(true);
       return;
     }
     setError(null);
@@ -254,60 +251,70 @@ export function PurchasePanel({
 
       {product.colorMixable && (
         <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-black/5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="inline-flex items-center gap-1.5 text-sm font-bold text-ink">
-              <Icon name="palette" className="h-4 w-4 text-brand" /> Jouw kleur{" "}
-              <span className="font-normal text-ink-soft">(gratis gemengd door onze verfspecialist)</span>
-            </p>
-            <button
-              type="button"
-              onClick={() => setPickerOpen((open) => !open)}
-              className="text-sm font-bold text-brand hover:underline"
-            >
-              {pickerOpen ? "Verberg kleuren" : color ? "Wijzig kleur" : "Kies kleur"}
-            </button>
-          </div>
-          {color && (
+          <p className="inline-flex items-center gap-1.5 text-sm font-bold text-ink">
+            <Icon name="palette" className="h-4 w-4 text-brand" /> Jouw kleur{" "}
+            <span className="font-normal text-ink-soft">(gratis gemengd door onze verfspecialist)</span>
+          </p>
+
+          {color ? (
             <div className="mt-3 flex items-center gap-3">
               <span
-                className="h-9 w-9 shrink-0 rounded-md ring-1 ring-black/10"
+                className="h-11 w-11 shrink-0 rounded-lg ring-1 ring-black/10"
                 style={{ backgroundColor: color.hex }}
                 aria-hidden
               />
-              <div>
-                <p className="text-sm font-semibold text-ink">
-                  {[color.code, color.name].filter(Boolean).join(" · ")}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-ink">
+                  {kleurLabel(color).titel}
                 </p>
-                {activeBase && (
-                  <p className="text-xs text-ink-soft">
-                    Wordt gemengd in de{" "}
-                    <strong className="font-semibold text-ink">
-                      {PAINT_BASES[activeBase].label.toLowerCase()}
-                    </strong>{" "}
-                    — dat kiezen wij voor je.
-                  </p>
-                )}
+                <p className="truncate text-xs text-ink-soft">{kleurLabel(color).onder}</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setVensterOpen(true)}
+                className="shrink-0 rounded-lg border-2 border-ink/10 px-3 py-2 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
+              >
+                Wijzig
+              </button>
             </div>
+          ) : (
+            /* Eén duidelijke ingang naar het venster. De hele waaier hier
+               uitklappen duwde de bestelknop van het scherm. */
+            <button
+              type="button"
+              onClick={() => setVensterOpen(true)}
+              className="mt-3 flex w-full items-center justify-between gap-3 rounded-lg border-2 border-brand bg-white px-4 py-3 text-left font-bold text-brand transition hover:bg-brand-light"
+            >
+              Kies je kleur
+              <Icon name="palette" className="h-5 w-5 shrink-0" />
+            </button>
+          )}
+
+          {color && activeBase && (
+            <p className="mt-2 text-xs text-ink-soft">
+              Wordt gemengd in de{" "}
+              <strong className="font-semibold text-ink">
+                {PAINT_BASES[activeBase].label.toLowerCase()}
+              </strong>{" "}
+              — dat kiezen wij voor je.
+            </p>
           )}
           {!color && basesInPlay && (
-            <p className="mt-3 text-xs text-ink-soft">
+            <p className="mt-2 text-xs text-ink-soft">
               De juiste mengbasis kiezen wij automatisch bij jouw kleur.
             </p>
           )}
-          {pickerOpen && (
-            <div className="mt-4">
-              <ColorPicker
-                initialColors={colors}
-                value={color?.key ?? null}
-                compact
-                onChange={(next) => {
-                  setColor(next);
-                  setError(null);
-                }}
-              />
-            </div>
-          )}
+
+          <KleurVenster
+            open={vensterOpen}
+            onClose={() => setVensterOpen(false)}
+            initialColors={colors}
+            huidige={color}
+            onKies={(next) => {
+              setColor(next);
+              setError(null);
+            }}
+          />
         </div>
       )}
 

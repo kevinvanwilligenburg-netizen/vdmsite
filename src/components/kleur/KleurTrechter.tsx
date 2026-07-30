@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Icon } from "@/components/icons";
 import { ProductArt } from "@/components/ProductArt";
+import { kleurLabel } from "@/components/kleur/waaier";
 import { euro } from "@/lib/format";
 import { KLEURKLUSSEN, verfVoorKlus, type Kleurklus } from "@/lib/kleurklussen";
 import { baseForColor, PAINT_BASES, pickVariant, sizesOf } from "@/lib/paint-bases";
@@ -41,6 +43,10 @@ export function KleurTrechter({
   producten: Product[];
 }) {
   const { addItem } = useCart();
+  // De waaierlijst onderaan deze pagina linkt naar ?waaier=<id>. Die waarde
+  // komt dus van buiten; de kiezer controleert hem tegen de echte lijst
+  // voordat hij hem gebruikt.
+  const gevraagdeWaaier = useSearchParams().get("waaier");
   const [stap, setStap] = useState<Stap>(1);
   const [kleur, setKleur] = useState<PaintColor | null>(null);
   const [klus, setKlus] = useState<Kleurklus | null>(null);
@@ -121,7 +127,8 @@ export function KleurTrechter({
     setToegevoegd((huidig) => [...huidig, product.id]);
   }
 
-  const kleurNaam = kleur ? [kleur.code, kleur.name].filter(Boolean).join(" · ") : "";
+  const etiket = kleur ? kleurLabel(kleur) : null;
+  const kleurNaam = etiket?.titel ?? "";
 
   return (
     <div className="space-y-6">
@@ -174,6 +181,9 @@ export function KleurTrechter({
                 aria-hidden
               />
               {kleurNaam}
+              {etiket?.onder && (
+                <span className="text-xs font-normal text-ink-soft">{etiket.onder}</span>
+              )}
               {basis && (
                 <span className="text-xs font-normal text-ink-soft">
                   ({PAINT_BASES[basis].label.toLowerCase()})
@@ -199,9 +209,13 @@ export function KleurTrechter({
       {/* ── Stap 1: kleur ───────────────────────────────────────── */}
       {stap === 1 && (
         <section>
-          <h2 className="mb-3 text-xl font-black uppercase text-ink">Kies je kleur</h2>
+          <h2 className="text-xl font-black uppercase text-ink">Kies je kleur</h2>
+          <p className="mb-3 mt-1 text-ink-soft">
+            Wij mengen je verf exact op deze kleur aan, gratis.
+          </p>
           <ColorPicker
             initialColors={initialColors}
+            waaier={gevraagdeWaaier}
             value={kleur?.key ?? null}
             onChange={(gekozen) => {
               setKleur(gekozen);

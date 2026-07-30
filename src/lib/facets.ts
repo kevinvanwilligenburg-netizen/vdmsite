@@ -1,3 +1,4 @@
+import { isEchtMerk, merknaam } from "@/lib/merken";
 import type { Product } from "@/lib/types";
 
 /**
@@ -33,6 +34,12 @@ export interface ProductFilters {
   ondergrond?: string[];
   kwaliteit?: string[];
   kleur?: string[];
+  /** Uit de productnaam gelezen kenmerken; zie src/lib/soorten.ts en vloer.ts. */
+  soort?: string[];
+  materiaal?: string[];
+  dessin?: string[];
+  houtsoort?: string[];
+  tint?: string[];
   inhoud?: string[];
   prijsMax?: number;
   aanbieding?: boolean;
@@ -51,25 +58,38 @@ export interface ProductFilters {
  */
 const FACET_KEYS = [
   "subcategorie",
+  "soort",
   "kleur",
   "glans",
   "verfsoort",
   "toepassing",
   "ondergrond",
+  "materiaal",
+  "dessin",
   "kwaliteit",
+  "houtsoort",
+  "tint",
   "inhoud",
 ] as const;
 
 type FacetKey = (typeof FACET_KEYS)[number];
 
 const ATTRIBUTE_LABELS: Record<FacetKey, string> = {
-  subcategorie: "Soort",
+  // "Rubriek" en niet "Soort": binnen een categorie is dit facet onzichtbaar
+  // (iedereen deelt dezelfde waarde), maar op de zoekpagina staan ze naast
+  // elkaar en dan zijn twee kolommen "Soort" niet uit te leggen.
+  subcategorie: "Rubriek",
+  soort: "Soort",
   kleur: "Kleur",
   glans: "Glansgraad",
   verfsoort: "Verfsoort",
   toepassing: "Toepassing",
   ondergrond: "Ondergrond",
+  materiaal: "Materiaal",
+  dessin: "Dessin",
   kwaliteit: "Kwaliteit",
+  houtsoort: "Houtsoort",
+  tint: "Tint",
   inhoud: "Inhoud",
 };
 
@@ -88,7 +108,23 @@ const MAX_AANDEEL = 0.7;
  * "H138") die alleen de leverancier iets zeggen. Als keuze in de kolom zijn
  * die onbruikbaar; een klant zoekt op "wit", niet op "6763".
  */
-const PLACEHOUDERS = new Set(["nocolour", "no colour", "n.v.t.", "nvt", "onbekend", "-", "div.", "diversen"]);
+/**
+ * "Transparant" staat erbij omdat het de kassastandaard is, geen eigenschap:
+ * twee derde van de hele catalogus heeft die waarde, inclusief "Histor
+ * Muurverf Wit". Een filteroptie die blanke lak belooft en witte muurverf
+ * levert is erger dan geen optie.
+ */
+const PLACEHOUDERS = new Set([
+  "nocolour",
+  "no colour",
+  "n.v.t.",
+  "nvt",
+  "onbekend",
+  "-",
+  "div.",
+  "diversen",
+  "transparant",
+]);
 const ALLEEN_EEN_CODE = /^[a-z]{0,2}\s?\d{2,5}[a-z]?$/i;
 
 function bruikbareWaarde(key: string, waarde: string): boolean {
@@ -133,12 +169,17 @@ export function parseFilters(searchParams: Record<string, string | string[] | un
   return {
     merk: list("merk"),
     subcategorie: list("subcategorie"),
+    soort: list("soort"),
     glans: list("glans"),
     verfsoort: list("verfsoort"),
     toepassing: list("toepassing"),
     ondergrond: list("ondergrond"),
+    materiaal: list("materiaal"),
+    dessin: list("dessin"),
     kwaliteit: list("kwaliteit"),
     kleur: list("kleur"),
+    houtsoort: list("houtsoort"),
+    tint: list("tint"),
     inhoud: list("inhoud"),
     prijsMax: Number.isFinite(prijsMax) && prijsMax > 0 ? prijsMax : undefined,
     aanbieding: searchParams.aanbieding === "1",
@@ -150,8 +191,24 @@ export function parseFilters(searchParams: Record<string, string | string[] | un
   };
 }
 
+/**
+ * Vergelijken gebeurt hoofdletterongevoelig. Tilroy kent dezelfde waarde in
+ * meerdere schrijfwijzen ("Lijmen, kitten en vulmiddelen" in drie varianten);
+ * de filterkolom voegt die samen tot één optie, dus het matchen moet dezelfde
+ * samenvoeging hanteren — anders vindt een klik op de samengevoegde optie
+ * maar een deel van de artikelen.
+ */
+function zelfde(a: string, b: string): boolean {
+  return a.localeCompare(b, "nl", { sensitivity: "base" }) === 0;
+}
+
 function matches(product: Product, filters: ProductFilters): boolean {
-  if (filters.merk && !filters.merk.includes(product.brand)) return false;
+  if (
+    filters.merk &&
+    !filters.merk.some((wanted) => zelfde(wanted, merknaam(product.brand ?? "")))
+  ) {
+    return false;
+  }
   if (filters.aanbieding && !(product.compareAtPrice && product.compareAtPrice > product.price)) {
     return false;
   }
@@ -163,7 +220,7 @@ function matches(product: Product, filters: ProductFilters): boolean {
     const wanted = filters[key];
     if (!wanted || wanted.length === 0) continue;
     const has = valuesOf(product, key);
-    if (!wanted.some((value) => has.includes(value))) return false;
+    if (!wanted.some((value) => has.some((eigen) => zelfde(eigen, value)))) return false;
   }
   return true;
 }
@@ -208,11 +265,14 @@ export function buildFacets(products: Product[], filters: ProductFilters): Facet
     return products.filter((product) => matches(product, rest));
   };
 
-  // Merken
+  // Merken. Restbakken ("Overige", "Merk") zijn geen keuze, en de nette
+  // schrijfwijze voorkomt dat "Hofftech germany" en "DEN BRAVEN" tussen de
+  // echte merknamen staan.
   const merkCounts = new Map<string, number>();
   for (const product of withoutSelf("merk")) {
-    if (!product.brand || product.brand === "De Voordeelmarkt") continue;
-    merkCounts.set(product.brand, (merkCounts.get(product.brand) ?? 0) + 1);
+    if (!isEchtMerk(product.brand) || product.brand === "De Voordeelmarkt") continue;
+    const naam = merknaam(product.brand);
+    merkCounts.set(naam, (merkCounts.get(naam) ?? 0) + 1);
   }
   const merken = [...merkCounts.entries()]
     .map(([value, count]) => ({ value, label: value, count }))
@@ -230,13 +290,31 @@ export function buildFacets(products: Product[], filters: ProductFilters): Facet
         counts.set(value, (counts.get(value) ?? 0) + 1);
       }
     }
-    const options = [...counts.entries()]
-      .filter(([value]) => bruikbareWaarde(key, value))
-      // Een optie die bijna álles omvat filtert niets weg. "Transparant"
-      // staat bij Tilroy op twee derde van de catalogus; als keuze in de
-      // kolom belooft die een verfijning die er niet is.
-      .filter(([, count]) => count < basis.length * MAX_AANDEEL)
-      .map(([value, count]) => ({ value, label: value, count }))
+    // Schrijfwijzen samenvoegen: "Lijmen, kitten en vulmiddelen" staat in de
+    // kassa in drie varianten en die stonden hier als drie opties naast
+    // elkaar. Tellen op de genormaliseerde vorm; het label is de meest
+    // voorkomende schrijfwijze (bij gelijkstand alfabetisch, zodat het label
+    // niet per nacht kan wisselen met de feedvolgorde).
+    const samengevoegd = new Map<string, Map<string, number>>();
+    for (const [value, count] of counts) {
+      const sleutel = value.toLocaleLowerCase("nl");
+      const spellingen = samengevoegd.get(sleutel) ?? new Map<string, number>();
+      spellingen.set(value, (spellingen.get(value) ?? 0) + count);
+      samengevoegd.set(sleutel, spellingen);
+    }
+    const options = [...samengevoegd.values()]
+      .map((spellingen) => {
+        const label = [...spellingen.entries()].sort(
+          (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "nl"),
+        )[0][0];
+        const count = [...spellingen.values()].reduce((som, deel) => som + deel, 0);
+        return { value: label, label, count };
+      })
+      .filter((option) => bruikbareWaarde(key, option.value))
+      // Een optie die bijna álles omvat filtert niets weg. "Hout" staat bij
+      // lakken op 97% van de artikelen; als keuze in de kolom belooft die een
+      // verfijning die er niet is.
+      .filter((option) => option.count < basis.length * MAX_AANDEEL)
       .filter((option) => option.count >= 2)
       .sort((a, b) => b.count - a.count)
       .slice(0, key === "inhoud" ? 12 : 8);
@@ -299,12 +377,17 @@ export function activeFilterCount(filters: ProductFilters): number {
   return (
     (filters.merk?.length ?? 0) +
     (filters.subcategorie?.length ?? 0) +
+    (filters.soort?.length ?? 0) +
     (filters.glans?.length ?? 0) +
     (filters.verfsoort?.length ?? 0) +
     (filters.toepassing?.length ?? 0) +
     (filters.ondergrond?.length ?? 0) +
+    (filters.materiaal?.length ?? 0) +
+    (filters.dessin?.length ?? 0) +
     (filters.kwaliteit?.length ?? 0) +
     (filters.kleur?.length ?? 0) +
+    (filters.houtsoort?.length ?? 0) +
+    (filters.tint?.length ?? 0) +
     (filters.inhoud?.length ?? 0) +
     (filters.prijsMax ? 1 : 0) +
     (filters.aanbieding ? 1 : 0) +

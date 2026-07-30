@@ -1,193 +1,396 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { Icon } from "@/components/icons";
+import {
+  ALLE_WAAIERS,
+  bestaandeWaaier,
+  kleurLabel,
+  waaierNaam,
+  type Waaier,
+} from "@/components/kleur/waaier";
 import type { PaintColor } from "@/lib/types";
 
-interface Collection {
-  id: string;
-  name: string;
-  count: number;
-}
+const STANDAARD_WAAIER = "ral";
+const KAARTJES_PER_KEER = 240;
 
-function textColorFor(hex: string): string {
-  const value = hex.replace("#", "");
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
+/** Zwart of wit vinkje op een staal, afhankelijk van hoe donker de kleur is. */
+function vinkjeOp(hex: string): string {
+  const waarde = (hex ?? "").replace("#", "");
+  if (waarde.length < 6) return "#141414";
+  const r = parseInt(waarde.slice(0, 2), 16);
+  const g = parseInt(waarde.slice(2, 4), 16);
+  const b = parseInt(waarde.slice(4, 6), 16);
+  if ([r, g, b].some((deel) => Number.isNaN(deel))) return "#141414";
   return (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#141414" : "#FFFFFF";
 }
 
 /**
- * Kleurkiezer met server-side zoeken: de bron telt tienduizenden kleuren, dus
- * we halen per zoekterm/collectie een beperkte set op via /api/kleuren.
- * De meegegeven `initialColors` (de RAL-waaier) is meteen zichtbaar.
+ * Hoeveel kaartjes er naast elkaar staan. Nodig om met ↑ en ↓ een rij te
+ * kunnen springen: het aantal kolommen hangt van de schermbreedte af, dus we
+ * meten het aan de kaartjes zelf in plaats van het te gokken.
+ */
+function kolommenIn(houder: HTMLElement | null): number {
+  const kaartjes = houder?.querySelectorAll<HTMLElement>("[data-kaart]");
+  if (!kaartjes || kaartjes.length === 0) return 1;
+  const bovenkant = kaartjes[0].offsetTop;
+  let kolommen = 0;
+  for (const kaart of Array.from(kaartjes)) {
+    if (kaart.offsetTop !== bovenkant) break;
+    kolommen++;
+  }
+  return Math.max(kolommen, 1);
+}
+
+/**
+ * De kleurkiezer: zoeken, een waaier kiezen, en dan een kaartje aanklikken.
+ *
+ * De bron telt tienduizenden kleuren, dus die gaan nooit in één keer naar de
+ * browser: per waaier of zoekterm halen we een beperkte set op bij
+ * /api/kleuren. De meegegeven `initialColors` (de RAL-waaier) staat er meteen,
+ * zodat er bij het openen niets hoeft te laden.
+ *
+ * Toetsenbord: de waaierrij en het kleurenraster hebben elk één tabstop en
+ * werken verder met de pijltjes. Anders staan er honderden waaiers en
+ * kleuren tussen het zoekveld en de knop eronder.
  */
 export function ColorPicker({
   initialColors,
   value,
   onChange,
-  compact = false,
+  waaier: gevraagdeWaaier,
+  fill = false,
 }: {
   initialColors: PaintColor[];
   value?: string | null;
   onChange: (color: PaintColor) => void;
-  compact?: boolean;
+  /** Waaier die vooraf gekozen moet zijn. Komt van buiten, dus wordt gecontroleerd. */
+  waaier?: string | null;
+  /** In een venster de beschikbare hoogte vullen; anders een vaste maximumhoogte. */
+  fill?: boolean;
 }) {
+  const veldId = useId();
   const [query, setQuery] = useState("");
-  const [collection, setCollection] = useState("ral");
-  const [collections, setCollections] = useState<Collection[]>([]);
+  const [waaier, setWaaier] = useState(STANDAARD_WAAIER);
+  const [waaiers, setWaaiers] = useState<Waaier[]>([]);
   const [colors, setColors] = useState<PaintColor[]>(initialColors);
   const [total, setTotal] = useState(initialColors.length);
   const [loading, setLoading] = useState(false);
-  const requestRef = useRef(0);
+  const [waaierFocus, setWaaierFocus] = useState(0);
+  const [kleurFocus, setKleurFocus] = useState(0);
 
-  // Collectielijst één keer ophalen.
+  const laatsteVraag = useRef(0);
+  const waaierRij = useRef<HTMLDivElement | null>(null);
+  const kleurRaster = useRef<HTMLDivElement | null>(null);
+  // Zodra iemand zelf een waaier aanklikt, mag de waaier uit de URL het niet
+  // meer overnemen.
+  const zelfGekozen = useRef(false);
+
+  // De waaierlijst één keer ophalen; die is klein genoeg om in zijn geheel op
+  // te halen (namen en aantallen, geen kleuren).
   useEffect(() => {
-    let active = true;
+    let actief = true;
     fetch("/api/kleuren?meta=1")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (active && data?.collections) setCollections(data.collections);
+        if (actief && Array.isArray(data?.collections)) setWaaiers(data.collections);
       })
       .catch(() => undefined);
     return () => {
-      active = false;
+      actief = false;
     };
   }, []);
 
-  // Kleuren ophalen bij wijziging van zoekterm of collectie (met debounce).
+  // De gevraagde waaier pas overnemen als we de lijst hebben: hij komt uit de
+  // URL en mag dus niet zomaar geloofd worden.
   useEffect(() => {
-    const isDefault = query.trim() === "" && collection === "ral";
-    if (isDefault) {
+    if (zelfGekozen.current || waaiers.length === 0) return;
+    const gecontroleerd = bestaandeWaaier(gevraagdeWaaier, waaiers);
+    if (gecontroleerd) setWaaier(gecontroleerd);
+  }, [gevraagdeWaaier, waaiers]);
+
+  // Kleuren ophalen bij een andere zoekterm of waaier.
+  useEffect(() => {
+    const term = query.trim();
+    if (term === "" && waaier === STANDAARD_WAAIER) {
       setColors(initialColors);
       setTotal(initialColors.length);
       setLoading(false);
       return;
     }
 
-    const id = ++requestRef.current;
+    const vraag = ++laatsteVraag.current;
     setLoading(true);
-    const timer = window.setTimeout(() => {
-      const params = new URLSearchParams();
-      if (query.trim()) params.set("q", query.trim());
-      params.set("collection", collection);
-      fetch(`/api/kleuren?${params.toString()}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (id !== requestRef.current) return;
-          setColors(data?.colors ?? []);
-          setTotal(data?.total ?? 0);
-        })
-        .catch(() => {
-          if (id === requestRef.current) setColors([]);
-        })
-        .finally(() => {
-          if (id === requestRef.current) setLoading(false);
-        });
-    }, 250);
+    // Typen krijgt een adempauze; op een waaier klikken hoort direct te reageren.
+    const timer = window.setTimeout(
+      () => {
+        const params = new URLSearchParams();
+        if (term) params.set("q", term);
+        params.set("collection", waaier);
+        params.set("limit", String(KAARTJES_PER_KEER));
+        fetch(`/api/kleuren?${params.toString()}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (vraag !== laatsteVraag.current) return;
+            setColors(Array.isArray(data?.colors) ? data.colors : []);
+            setTotal(typeof data?.total === "number" ? data.total : 0);
+          })
+          .catch(() => {
+            if (vraag === laatsteVraag.current) {
+              setColors([]);
+              setTotal(0);
+            }
+          })
+          .finally(() => {
+            if (vraag === laatsteVraag.current) setLoading(false);
+          });
+      },
+      term ? 250 : 0,
+    );
 
     return () => window.clearTimeout(timer);
-  }, [query, collection, initialColors]);
+  }, [query, waaier, initialColors]);
 
-  const selected = useMemo(
-    () => colors.find((color) => color.key === value),
-    [colors, value],
+  const totaalAantal = useMemo(
+    () => waaiers.reduce((som, entry) => som + entry.count, 0),
+    [waaiers],
   );
 
+  // Wie "sikkens" typt zoekt een waaier: dan filtert de rij mee. Levert dat
+  // niets op, dan blijft de hele rij staan — een lege rij helpt niemand.
+  const waaierKnoppen = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    let zichtbaar = waaiers;
+    if (term) {
+      const gevonden = waaiers.filter((entry) =>
+        waaierNaam(entry).toLowerCase().includes(term),
+      );
+      if (gevonden.length > 0) {
+        const actief = waaiers.find((entry) => entry.id === waaier);
+        zichtbaar =
+          actief && !gevonden.some((entry) => entry.id === actief.id)
+            ? [actief, ...gevonden]
+            : gevonden;
+      }
+    }
+    return [
+      { id: ALLE_WAAIERS, name: "Alle waaiers", count: totaalAantal },
+      ...zichtbaar,
+    ];
+  }, [waaiers, query, waaier, totaalAantal]);
+
+  // De actieve waaier in beeld schuiven; met honderden waaiers staat hij
+  // anders buiten het zichtbare stuk van de rij.
+  useEffect(() => {
+    const houder = waaierRij.current;
+    const knop = houder?.querySelector<HTMLElement>('[data-actief="ja"]');
+    if (!houder || !knop) return;
+    const doel = knop.offsetLeft - houder.clientWidth / 2 + knop.clientWidth / 2;
+    houder.scrollTo({ left: Math.max(0, doel), behavior: "smooth" });
+  }, [waaier, waaierKnoppen]);
+
+  // Nieuwe resultaten: de tabstop terug naar het eerste kaartje.
+  useEffect(() => {
+    setKleurFocus(0);
+  }, [colors]);
+
+  function kiesWaaier(id: string) {
+    zelfGekozen.current = true;
+    setWaaier(id);
+  }
+
+  function verplaatsIn(
+    houder: HTMLElement | null,
+    selector: string,
+    naar: number,
+    aantal: number,
+    zet: (index: number) => void,
+  ) {
+    const begrensd = Math.max(0, Math.min(naar, aantal - 1));
+    zet(begrensd);
+    houder?.querySelectorAll<HTMLElement>(selector)[begrensd]?.focus();
+  }
+
+  function opWaaierToets(event: React.KeyboardEvent<HTMLDivElement>) {
+    const aantal = waaierKnoppen.length;
+    const stap =
+      event.key === "ArrowRight"
+        ? waaierFocus + 1
+        : event.key === "ArrowLeft"
+          ? waaierFocus - 1
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? aantal - 1
+              : null;
+    if (stap === null) return;
+    event.preventDefault();
+    verplaatsIn(waaierRij.current, "[data-waaier]", stap, aantal, setWaaierFocus);
+  }
+
+  function opKleurToets(event: React.KeyboardEvent<HTMLDivElement>) {
+    const aantal = colors.length;
+    if (aantal === 0) return;
+    const kolommen = kolommenIn(kleurRaster.current);
+    const stap =
+      event.key === "ArrowRight"
+        ? kleurFocus + 1
+        : event.key === "ArrowLeft"
+          ? kleurFocus - 1
+          : event.key === "ArrowDown"
+            ? kleurFocus + kolommen
+            : event.key === "ArrowUp"
+              ? kleurFocus - kolommen
+              : event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? aantal - 1
+                  : null;
+    if (stap === null) return;
+    event.preventDefault();
+    verplaatsIn(kleurRaster.current, "[data-kaart]", stap, aantal, setKleurFocus);
+  }
+
+  const aanHetLaden = loading && colors.length === 0;
+
   return (
-    <div className="w-full min-w-0 space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="sm:max-w-xs sm:flex-1">
-          <label className="sr-only" htmlFor="kleur-zoek">
-            Zoek een kleur
-          </label>
-          <input
-            id="kleur-zoek"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Zoek op kleurnummer of naam"
-            className="input"
-          />
-        </div>
-        <div className="sm:max-w-xs sm:flex-1">
-          <label className="sr-only" htmlFor="kleur-collectie">
-            Kies een kleurenwaaier
-          </label>
-          <select
-            id="kleur-collectie"
-            value={collection}
-            onChange={(event) => setCollection(event.target.value)}
-            className="input"
-          >
-            <option value="alle">Alle waaiers</option>
-            {collections.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.name} ({entry.count})
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className={`flex w-full min-w-0 flex-col gap-3 ${fill ? "h-full min-h-0" : ""}`}>
+      <div className="relative">
+        <label className="sr-only" htmlFor={`${veldId}-zoek`}>
+          Zoek een kleur op naam, code of waaier
+        </label>
+        <Icon
+          name="search"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft"
+        />
+        <input
+          id={`${veldId}-zoek`}
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Zoek op kleurnaam, code of waaier"
+          className="input pl-9"
+        />
+      </div>
+
+      {/* Waaiers als rij knoppen. Radiogroep, want het is één keuze uit een
+          reeks — en zo werken de pijltjes zoals een schermlezer aankondigt. */}
+      <div
+        ref={waaierRij}
+        role="radiogroup"
+        aria-label="Kleurwaaier"
+        onKeyDown={opWaaierToets}
+        className="relative -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+      >
+        {waaiers.length === 0
+          ? Array.from({ length: 4 }).map((_, index) => (
+              <span
+                key={index}
+                aria-hidden
+                className="h-9 w-32 shrink-0 animate-pulse rounded-full bg-ink/5"
+              />
+            ))
+          : waaierKnoppen.map((entry, index) => {
+              const actief = entry.id === waaier;
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  data-waaier
+                  data-actief={actief ? "ja" : "nee"}
+                  role="radio"
+                  aria-checked={actief}
+                  tabIndex={index === waaierFocus ? 0 : -1}
+                  onFocus={() => setWaaierFocus(index)}
+                  onClick={() => kiesWaaier(entry.id)}
+                  className={`shrink-0 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-sm font-bold transition ${
+                    actief
+                      ? "border-brand bg-brand text-white"
+                      : "border-ink/10 bg-white text-ink hover:border-brand hover:text-brand"
+                  }`}
+                >
+                  {waaierNaam(entry)}{" "}
+                  <span className={actief ? "font-normal text-white/80" : "font-normal text-ink-soft"}>
+                    {entry.count.toLocaleString("nl-NL")}
+                  </span>
+                </button>
+              );
+            })}
       </div>
 
       <div
-        className={`grid w-full min-w-0 gap-1.5 ${
-          compact
-            ? "max-h-56 grid-cols-8 overflow-y-auto pr-1 sm:grid-cols-10"
-            : "max-h-[28rem] grid-cols-6 overflow-y-auto pr-1 sm:grid-cols-10 lg:grid-cols-12"
-        }`}
+        ref={kleurRaster}
         role="listbox"
         aria-label="Kleuren"
         aria-busy={loading}
+        onKeyDown={opKleurToets}
+        className={`grid min-w-0 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${
+          fill ? "min-h-0 flex-1" : "max-h-[30rem]"
+        } ${loading && colors.length > 0 ? "opacity-60" : ""}`}
       >
-        {colors.map((color) => {
-          const isSelected = value === color.key;
-          const title = [color.code, color.name].filter(Boolean).join(" – ");
+        {aanHetLaden &&
+          Array.from({ length: 10 }).map((_, index) => (
+            <span
+              key={index}
+              aria-hidden
+              className="h-[6.75rem] animate-pulse rounded-xl bg-ink/5"
+            />
+          ))}
+
+        {colors.map((color, index) => {
+          const gekozen = value === color.key;
+          const { titel, onder } = kleurLabel(color);
+          const omschrijving = [titel, onder].filter(Boolean).join(", ");
           return (
             <button
               key={color.key}
               type="button"
+              data-kaart
               role="option"
-              aria-selected={isSelected}
-              title={title}
+              aria-selected={gekozen}
+              aria-label={omschrijving}
+              tabIndex={index === kleurFocus ? 0 : -1}
+              onFocus={() => setKleurFocus(index)}
               onClick={() => onChange(color)}
-              className={`aspect-square w-full rounded-md ring-1 ring-black/10 transition hover:scale-105 ${
-                isSelected ? "outline outline-[3px] outline-offset-2 outline-brand" : ""
+              className={`flex flex-col overflow-hidden rounded-xl border-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
+                gekozen
+                  ? "border-brand shadow-lift"
+                  : "border-ink/10 hover:border-ink/40 hover:shadow-card"
               }`}
-              style={{ backgroundColor: color.hex }}
             >
-              <span className="sr-only">{title}</span>
+              <span
+                className="flex h-14 w-full items-center justify-center"
+                // Het vinkje krijgt zwart of wit mee, want op een donker staal
+                // is een zwart vinkje niet te zien.
+                style={{ backgroundColor: color.hex, color: vinkjeOp(color.hex) }}
+                aria-hidden
+              >
+                {gekozen && <Icon name="check" className="h-6 w-6" strokeWidth={3} />}
+              </span>
+              <span className="block min-w-0 px-2 py-1.5">
+                <span className="block truncate text-sm font-bold text-ink">{titel}</span>
+                <span className="block truncate text-xs text-ink-soft">{onder}</span>
+              </span>
             </button>
           );
         })}
-        {colors.length === 0 && (
-          <p className="col-span-full py-6 text-center text-sm text-ink-soft">
-            {loading ? "Kleuren laden…" : "Geen kleuren gevonden voor deze zoekopdracht."}
+
+        {!loading && colors.length === 0 && (
+          <p className="col-span-full py-8 text-center text-sm text-ink-soft">
+            Geen kleuren gevonden. Zoek op een kleurnaam, een code (bijvoorbeeld
+            9010) of de naam van een waaier.
           </p>
         )}
       </div>
 
-      {total > colors.length && (
-        <p className="text-xs text-ink-soft">
-          {colors.length} van {total.toLocaleString("nl-NL")} kleuren getoond — verfijn
-          je zoekopdracht of kies een waaier.
-        </p>
-      )}
-
-      {selected && (
-        <div
-          className="flex items-center gap-4 rounded-xl p-4 ring-1 ring-black/10"
-          style={{ backgroundColor: selected.hex, color: textColorFor(selected.hex) }}
-        >
-          <div>
-            <p className="text-lg font-black">
-              {[selected.code, selected.name].filter(Boolean).join(" · ")}
-            </p>
-            <p className="text-sm font-semibold opacity-90">{selected.group}</p>
-          </div>
-        </div>
-      )}
+      <p role="status" className="text-xs text-ink-soft">
+        {loading
+          ? "Kleuren laden…"
+          : total > colors.length
+            ? `${colors.length} van ${total.toLocaleString("nl-NL")} kleuren getoond — zoek op naam of code om te verfijnen.`
+            : `${colors.length.toLocaleString("nl-NL")} ${colors.length === 1 ? "kleur" : "kleuren"}. De kleuren op je scherm zijn een indicatie.`}
+      </p>
     </div>
   );
 }

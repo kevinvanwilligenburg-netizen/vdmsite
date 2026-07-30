@@ -5,8 +5,10 @@ import path from "node:path";
 import { isKvEnabled, kvGetJSON, kvSAdd, kvSetJSON, kvSMembers } from "@/lib/kv";
 import { getMolliePayment } from "@/lib/mollie";
 import { stuurOrderbevestiging } from "@/lib/orderbevestiging";
+import { getProductById, getProductBySku } from "@/lib/tilroy";
 import {
   isPaidStatus,
+  type CartItem,
   type Order,
   type OrderCustomer,
   type OrderItem,
@@ -82,6 +84,29 @@ async function fileRead<T>(name: string): Promise<T | null> {
   }
 }
 
+/**
+ * Alle bestellingen uit de bestandsopslag.
+ *
+ * Alleen voor de demomodus, waar KV uit staat en er dus ook geen index per
+ * e-mailadres wordt bijgehouden. Zonder dit toont het account lokaal altijd
+ * een lege lijst, ook vlak nadat je zelf een bestelling hebt geplaatst — en
+ * dan is er niets te zien en niets na te lopen.
+ */
+async function fileList(): Promise<Order[]> {
+  try {
+    const namen = await fs.readdir(DATA_DIR);
+    const orders: Order[] = [];
+    for (const naam of namen) {
+      if (!naam.startsWith("ord_") || !naam.endsWith(".json")) continue;
+      const order = await fileRead<Order>(naam);
+      if (order?.id) orders.push(order);
+    }
+    return orders;
+  } catch {
+    return [];
+  }
+}
+
 /* ── Opslaan & laden ───────────────────────────────────────────── */
 
 /**
@@ -149,21 +174,171 @@ export async function getOrder(idOrReference: string): Promise<Order | null> {
  * in plaats van een fout.
  */
 export async function getOrdersByEmail(email: string, limit = 25): Promise<Order[]> {
-  if (!isKvEnabled()) return [];
+  const adres = (email ?? "").trim().toLowerCase();
+  if (!adres) return [];
+
+  const nieuwsteEerst = (orders: Order[]) =>
+    orders.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, limit);
+
+  // Zonder KV staan de bestellingen als bestand op schijf en is er geen index
+  // per e-mailadres; dan lopen we de map door. Dat kan alleen lokaal, en daar
+  // is het ook voor bedoeld.
+  if (!isKvEnabled()) {
+    const alles = await fileList();
+    return nieuwsteEerst(
+      alles.filter((order) => (order.customer?.email ?? "").trim().toLowerCase() === adres),
+    );
+  }
+
   try {
-    const ids = await kvSMembers(KEY.email(email));
+    const ids = await kvSMembers(KEY.email(adres));
     const orders: Order[] = [];
     for (const id of ids.slice(0, limit * 2)) {
       const order = await loadById(id);
       if (order) orders.push(order);
     }
-    return orders
-      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-      .slice(0, limit);
+    return nieuwsteEerst(orders);
   } catch (error) {
     console.error("[orders] bestellingen van klant ophalen mislukt:", error);
     return [];
   }
+}
+
+/**
+ * De bestelling, maar alleen als hij van déze klant is.
+ *
+ * Het referentienummer is zes cijfers (VDM-123456): genoeg om een bestelling
+ * mee op te zoeken, maar het is geen bewijs van wie je bent — net zomin als
+ * het Kluspas-nummer, dat gewoon oploopt. Alles wat vanuit het account iets
+ * mét een bestelling doet, gaat daarom via deze functie, met het adres uit de
+ * sessie.
+ */
+export async function getOrderForEmail(
+  idOrReference: string,
+  email: string,
+): Promise<Order | null> {
+  const gezocht = (email ?? "").trim().toLowerCase();
+  if (!gezocht) return null;
+  const order = await getOrder(idOrReference);
+  if (!order) return null;
+  const van = (order.customer?.email ?? "").trim().toLowerCase();
+  return van && van === gezocht ? order : null;
+}
+
+/* ── Nog eens bestellen ────────────────────────────────────────── */
+
+/** Winkelwagenregel uit een eerdere bestelling, met de prijs van vandaag. */
+export interface HerhaalRegel extends CartItem {
+  /**
+   * Wat de klant er destijds per stuk voor betaalde (centen).
+   *
+   * Alleen om een verschil te kunnen benoemen. De prijs die telt is
+   * `unitPrice`, en die komt uit de catalogus.
+   */
+  eerderePrijs: number;
+}
+
+export interface OvergeslagenRegel {
+  titel: string;
+  reden: string;
+}
+
+export interface Herhaling {
+  regels: HerhaalRegel[];
+  overgeslagen: OvergeslagenRegel[];
+  /** Aantal regels in de oorspronkelijke bestelling. */
+  regelsInBestelling: number;
+  /** Wat de overgenomen regels nu kosten en wat ze toen kostten (centen). */
+  totaalNu: number;
+  totaalToen: number;
+}
+
+/**
+ * Zet een eerdere bestelling om in winkelwagenregels van vandaag.
+ *
+ * Twee dingen liggen hier vast, en die zijn belangrijker dan het gemak van de
+ * knop:
+ *
+ * 1. De prijs komt uit de huidige catalogus, nooit uit de oude bestelling.
+ *    Een klant mag niet de prijs van vorig jaar afrekenen, en de checkout
+ *    rekent toch opnieuw — dan kan hij die prijs beter meteen zien.
+ * 2. Wat er niet meer is, wordt overgeslagen én benoemd. Een mandje dat
+ *    stilletjes korter is dan de bestelling waar het uit komt, ontdekt de
+ *    klant pas bij de bezorging.
+ */
+export async function herhaalBestelling(order: Order): Promise<Herhaling> {
+  const regels: HerhaalRegel[] = [];
+  const overgeslagen: OvergeslagenRegel[] = [];
+
+  for (const item of order.items ?? []) {
+    // Op id én op sku zoeken: een artikel kan in de feed een ander id
+    // gekregen hebben terwijl het gewoon nog in de schappen ligt.
+    const product =
+      (await getProductById(item.productId ?? "")) ??
+      (item.sku ? await getProductBySku(item.sku) : undefined);
+
+    if (!product) {
+      overgeslagen.push({ titel: item.title, reden: "staat niet meer in ons assortiment" });
+      continue;
+    }
+
+    const varianten = product.variants ?? [];
+    const variant =
+      varianten.find((kandidaat) => kandidaat.id === item.variantId) ??
+      (item.sku ? varianten.find((kandidaat) => kandidaat.sku === item.sku) : undefined);
+
+    // Het artikel bestaat nog, maar de maat die de klant koos niet meer. Dan
+    // is het een ander product geworden; liever overslaan en benoemen dan
+    // ongevraagd een andere maat in het mandje leggen.
+    if (varianten.length > 0 && (item.variantId || item.sku) && !variant) {
+      overgeslagen.push({
+        titel: item.title,
+        reden: "deze maat verkopen we niet meer",
+      });
+      continue;
+    }
+
+    const aantal = Math.max(1, Math.min(99, Math.round(Number(item.quantity) || 1)));
+    const unitPrice = variant?.price ?? product.price;
+    const kluspasUnitPrice = variant ? variant.kluspasPrice : product.kluspasPrice;
+    const pickupOnly = variant?.pickupOnly ?? product.pickupOnly;
+    // Dezelfde sleutelvorm als de productpagina, zodat een regel die er al in
+    // ligt wordt opgeteld en niet twee keer in de wagen komt.
+    const key = `${product.id}:${variant?.id ?? ""}:${item.color?.key ?? ""}`;
+
+    const bestaand = regels.find((regel) => regel.key === key);
+    if (bestaand) {
+      bestaand.qty = Math.min(99, bestaand.qty + aantal);
+      continue;
+    }
+
+    regels.push({
+      key,
+      productId: product.id,
+      sku: variant?.sku ?? product.sku,
+      slug: product.slug,
+      name: product.name,
+      ...(variant ? { variantId: variant.id, variantName: variant.name } : {}),
+      ...(item.color ? { color: item.color } : {}),
+      unitPrice,
+      ...(kluspasUnitPrice ? { kluspasUnitPrice } : {}),
+      qty: aantal,
+      icon: product.art.icon,
+      hue: product.art.hue,
+      ...(pickupOnly ? { pickupOnly } : {}),
+      ...(product.image ? { image: product.image } : {}),
+      // Orderbedragen staan in euro's, de winkelwagen rekent in centen.
+      eerderePrijs: Math.round((Number(item.price) || 0) * 100),
+    });
+  }
+
+  return {
+    regels,
+    overgeslagen,
+    regelsInBestelling: (order.items ?? []).length,
+    totaalNu: regels.reduce((som, regel) => som + regel.unitPrice * regel.qty, 0),
+    totaalToen: regels.reduce((som, regel) => som + regel.eerderePrijs * regel.qty, 0),
+  };
 }
 
 /* ── Aanmaken & bijwerken ──────────────────────────────────────── */

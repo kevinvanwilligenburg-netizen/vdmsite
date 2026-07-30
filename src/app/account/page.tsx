@@ -11,13 +11,19 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import {
   SESSIE_COOKIE,
   emailVanSessie,
+  haalFavorieten,
   haalKlant,
   type Aankoop,
   voorkeurWinkel,
 } from "@/lib/account";
 import { getOrdersByEmail } from "@/lib/orders";
+import { PRIJS_COOKIE, prijsModusUit } from "@/lib/prijs";
 import { getStores } from "@/lib/tilroy";
 import { isPaidStatus } from "@/lib/types";
+
+import { AccountNav } from "./_onderdelen/AccountNav";
+import { btwLabel } from "./_onderdelen/bedrag";
+import { statusTekst } from "./_onderdelen/opmaak";
 
 export const dynamic = "force-dynamic";
 
@@ -26,19 +32,6 @@ export const metadata: Metadata = {
   description:
     "Je Kluspas, je kluspunten en al je aankopen — online én uit de winkel — op één plek.",
   robots: { index: false, follow: false },
-};
-
-const STATUS_TEKST: Record<string, string> = {
-  paid: "Betaald",
-  authorized: "Betaald",
-  shipped: "Verzonden",
-  delivered: "Bezorgd",
-  open: "Wacht op betaling",
-  pending: "Wacht op betaling",
-  canceled: "Geannuleerd",
-  failed: "Betaling mislukt",
-  expired: "Verlopen",
-  refunded: "Terugbetaald",
 };
 
 export default async function AccountPage() {
@@ -53,14 +46,17 @@ export default async function AccountPage() {
     );
   }
 
+  const modus = prijsModusUit(cookies().get(PRIJS_COOKIE)?.value);
+
   // Alleen wat snel is doen we hier: de klantgegevens en onze eigen orders.
   // De winkelhistorie haalt de pagina er zelf bij — daarvoor doorloopt het
   // dashboard een jaar verkopen, en daar wachten we de klant niet op.
-  const [klant, webshoporders, winkelKeuze, winkels] = await Promise.all([
+  const [klant, webshoporders, winkelKeuze, winkels, favorieten] = await Promise.all([
     haalKlant(email),
     getOrdersByEmail(email),
     voorkeurWinkel(email),
     getStores(),
+    haalFavorieten(email),
   ]);
 
   const webshopAankopen: Aankoop[] = webshoporders.map((order) => ({
@@ -74,7 +70,7 @@ export default async function AccountPage() {
       bedrag: item.price * item.quantity,
     })),
     referentie: order.reference,
-    status: STATUS_TEKST[order.paymentStatus] ?? order.paymentStatus,
+    status: statusTekst(order.paymentStatus),
     betaald: isPaidStatus(order.paymentStatus),
   }));
 
@@ -93,6 +89,8 @@ export default async function AccountPage() {
         </div>
         <Uitloggen />
       </header>
+
+      <AccountNav actief="/account" />
 
       {/* Eén keer vragen waar de klant meestal komt; daarna nooit meer. */}
       {!winkelKeuze && (
@@ -122,6 +120,28 @@ export default async function AccountPage() {
               </Link>
             </div>
           )}
+
+          <div className="card p-5">
+            <p className="text-xs font-black uppercase tracking-wide text-ink-soft">
+              Bewaard voor later
+            </p>
+            <p className="mt-1 text-ink">
+              {favorieten.length === 0
+                ? "Je hebt nog niets bewaard."
+                : favorieten.length === 1
+                  ? "1 artikel staat op je lijstje."
+                  : `${favorieten.length} artikelen staan op je lijstje.`}
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Bewaard bij je account, dus ook op je telefoon.
+            </p>
+            <Link
+              href="/account/favorieten"
+              className="mt-3 inline-flex text-sm font-bold text-brand hover:underline"
+            >
+              Bekijk je lijstje →
+            </Link>
+          </div>
 
           {klant.adres?.straat && (
             <div className="card p-5">
@@ -156,9 +176,35 @@ export default async function AccountPage() {
           <h2 id="aankopen" className="text-xl font-black uppercase text-ink">
             Jouw aankopen
           </h2>
-          <p className="mb-4 mt-1 text-ink-soft">
-            Alles bij elkaar: wat je online bestelde en wat je in de winkel kocht.
-          </p>
+          <div className="mb-4 mt-1 space-y-2">
+            <p className="text-ink-soft">
+              Alles bij elkaar: wat je online bestelde en wat je in de winkel kocht,
+              voor de bedragen die je hebt afgerekend (incl. btw).{" "}
+              <Link href="/account/bestellingen" className="font-bold text-brand hover:underline">
+                Bij je webshopbestellingen
+              </Link>{" "}
+              kun je een bestelling in één keer opnieuw in je mandje leggen.
+            </p>
+            {/* De knop in de kop staat op excl. btw, maar deze lijst toont wat
+                er is afgerekend. Dat verschil benoemen we, anders gaat een
+                schilder tellen of hij twee keer betaalt. */}
+            {modus === "excl" && (
+              <p className="text-sm text-ink-soft">
+                Je hebt prijzen op {btwLabel(modus)} staan. Bij je{" "}
+                <Link
+                  href="/account/bestellingen"
+                  className="font-bold text-brand hover:underline"
+                >
+                  bestellingen
+                </Link>{" "}
+                en{" "}
+                <Link href="/account/facturen" className="font-bold text-brand hover:underline">
+                  facturen
+                </Link>{" "}
+                staan de bedragen exclusief btw.
+              </p>
+            )}
+          </div>
           <Aankopen webshop={webshopAankopen} />
         </section>
       </div>

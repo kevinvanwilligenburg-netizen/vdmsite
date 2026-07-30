@@ -10,19 +10,46 @@ import type { CompanionProduct } from "@/lib/tilroy";
  * een muurroller bij muurverf, schuurpapier en grondverf bij lak. Met een
  * korte reden erbij, zodat het advies is in plaats van reclame.
  */
-export function Companions({ items }: { items: CompanionProduct[] }) {
+export function Companions({
+  items,
+  variant = "breed",
+}: {
+  items: CompanionProduct[];
+  /**
+   * "kolom" zet het blok naast de koopknop in plaats van eronder. Daar hoort
+   * het thuis: wie de vloer in zijn mandje legt moet op datzelfde moment zien
+   * dat er ondervloer en plinten bij komen kijken, niet pas als hij al langs
+   * de omschrijving is gescrold.
+   */
+  variant?: "breed" | "kolom";
+}) {
   if (items.length === 0) return null;
+  const kolom = variant === "kolom";
 
   return (
-    <section aria-labelledby="erbij-titel" className="card p-5 sm:p-6">
-      <h2 id="erbij-titel" className="flex items-center gap-2 text-lg font-black text-ink">
+    <section
+      aria-labelledby="erbij-titel"
+      className={kolom ? "rounded-xl border-2 border-ink/10 p-4" : "card p-5 sm:p-6"}
+    >
+      <h2
+        id="erbij-titel"
+        className={`flex items-center gap-2 font-black text-ink ${
+          kolom ? "uppercase" : "text-lg"
+        }`}
+      >
         <Icon name="check" className="h-5 w-5 text-brand" strokeWidth={3} />
         Hier heb je ook bij nodig
       </h2>
       <p className="mt-1 text-sm text-ink-soft">
         Zo heb je alles in huis om de klus in één keer goed te doen.
       </p>
-      <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul
+        className={
+          kolom
+            ? "mt-3 space-y-1"
+            : "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        }
+      >
         {items.map(({ product, reason }) => (
           <li key={product.id}>
             <Link

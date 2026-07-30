@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { waaierNaam } from "@/components/kleur/waaier";
 import type { ColorCollection } from "@/lib/colors";
 
 /**
@@ -31,10 +32,10 @@ export function Waaiers({ collections }: { collections: ColorCollection[] }) {
         {gesorteerd.map((collection) => (
           <li key={collection.id}>
             <Link
-              href={`/kleurkiezer?waaier=${encodeURIComponent(collection.id)}`}
+              href={`/kleurkiezer?waaier=${encodeURIComponent(collection.id)}#kleuren`}
               className="flex items-baseline justify-between gap-3 rounded-xl border-2 border-ink/10 px-4 py-2.5 transition hover:border-brand hover:text-brand"
             >
-              <span className="truncate font-bold text-ink">{collection.name}</span>
+              <span className="truncate font-bold text-ink">{waaierNaam(collection)}</span>
               <span className="shrink-0 text-sm font-semibold text-ink-soft">
                 {collection.count.toLocaleString("nl-NL")}
               </span>

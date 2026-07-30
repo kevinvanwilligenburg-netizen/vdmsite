@@ -4,6 +4,8 @@ import { isGeloofwaardigeKluspasPrijs } from "@/lib/kluspas";
 import { parseBase } from "@/lib/paint-bases";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import type { Category, Product, ProductVariant } from "@/lib/types";
+import { soortKenmerken } from "@/lib/soorten";
+import { houtsoortUit, pakInhoudM2, tintUit } from "@/lib/vloer";
 
 /**
  * Echte productcatalogus van De Voordeelmarkt, via de productfeed van het
@@ -425,12 +427,21 @@ function buildSpecs(item: FeedItem, group: FeedItem[]): { label: string; value: 
       group.map((entry) => entry.maat?.trim()).filter((maat) => heeftEchteMaat(maat)),
     ),
   ];
-  add(
-    maten.some((maat) => /\b(ml|l|liter)\b/i.test(maat!)) ? "Inhoud" : "Maten",
-    maten.length > 1
-      ? maten.join(", ")
-      : (maten[0] ?? (heeftEchteMaat(item.maat_range) ? item.maat_range : undefined)),
+  // Bij een vloer met bekende pakinhoud is de rauwe maat ("2673") ruis; de
+  // regel "Pakinhoud: 2,673 m² per pak" verderop zegt hetzelfde, maar dan in
+  // taal die een klant kan lezen.
+  const isVloer = /laminaat|ondervloer|vloer|plint/i.test(
+    `${item.categorie_sub ?? ""} ${item.categories ?? ""}`,
   );
+  const pakM2Spec = isVloer ? pakInhoudM2(item.maat) : null;
+  if (!pakM2Spec) {
+    add(
+      maten.some((maat) => /\b(ml|l|liter)\b/i.test(maat!)) ? "Inhoud" : "Maten",
+      maten.length > 1
+        ? maten.join(", ")
+        : (maten[0] ?? (heeftEchteMaat(item.maat_range) ? item.maat_range : undefined)),
+    );
+  }
 
   // Verpakkingsaantallen: staan alleen in de titel, terwijl een klant er wel
   // op koopt ("krijg ik er één of tien?"). Oplopend, net als de maten.
@@ -438,13 +449,35 @@ function buildSpecs(item: FeedItem, group: FeedItem[]): { label: string; value: 
     .sort((a, b) => aantalUit(a!) - aantalUit(b!));
   add("Verpakking", verpakkingen.length > 0 ? verpakkingen.join(", ") : undefined);
 
-  add("Kleur", item.kleur);
+  // "Transparant" is de kassastandaard (twee derde van de catalogus,
+  // inclusief witte muurverf), geen kleur. In een spec-tabel is het
+  // desinformatie.
+  if ((item.kleur ?? "").trim().toLowerCase() !== "transparant") {
+    add("Kleur", item.kleur);
+  }
   add("Verfsoort", item.verfsoort);
   add("Glans", item.glans);
   add("Toepassing", item.toepassing || item.objectList?.replace(/\|/g, ", "));
   add("Ondergrond", item.ondergrondList?.replace(/\|/g, ", ") || item.ondergrond);
   add("Eigenschappen", item.eigenschappen?.replace(/\|/g, ", "));
   add("Kwaliteit", item.kwaliteit);
+
+  // Uit de titel gelezen kenmerken (zie soorten.ts en vloer.ts): dezelfde
+  // gegevens waar de filters op draaien, dus de tabel en de filterkolom
+  // spreken elkaar nooit tegen.
+  const kenmerken = soortKenmerken(
+    (item.categorie_sub ?? "").trim() || subcategoryOf(item.categories) || "",
+    item.title ?? "",
+  );
+  add("Soort", kenmerken.soort);
+  add("Materiaal", kenmerken.materiaal);
+  add("Dessin", kenmerken.dessin);
+  if (isVloer) {
+    add("Houtsoort", houtsoortUit(item.title ?? ""));
+    add("Tint", tintUit(item.title ?? ""));
+    if (pakM2Spec) add("Pakinhoud", `${formatteerM2(pakM2Spec)} m² per pak`);
+  }
+
   add("Artikelnummer", item.id);
 
   return specs;
@@ -609,6 +642,15 @@ function teBezorgen(item: FeedItem): TeBezorgenArtikel {
   };
 }
 
+/** "2,493" — Nederlandse komma, zonder overbodige nullen. */
+function formatteerM2(waarde: number): string {
+  return waarde
+    .toFixed(3)
+    .replace(/0+$/, "")
+    .replace(/\.$/, "")
+    .replace(".", ",");
+}
+
 function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, string> {
   const attributes: Record<string, string> = {};
   const add = (key: string, value: string | undefined) => {
@@ -628,7 +670,19 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
   add("toepassing", leader.toepassing);
   add("ondergrond", leader.ondergrond);
   add("kwaliteit", leader.kwaliteit);
-  add("kleur", leader.kleur);
+  // Mengverf krijgt bewust géén kleurkenmerk. Het blik is "Transparant" in de
+  // kassa omdat het nog gemengd moet worden — maar voor de klant is het juist
+  // élke kleur. Als filterwaarde is "Transparant" dan een fuik: wie erop
+  // klikt denkt blanke lak te vinden en krijgt mengbassen. Gemeten: 377 van
+  // de mengbare artikelen stonden zo in het kleurfilter.
+  if (leader.mengverf !== "Ja") add("kleur", leader.kleur);
+
+  // Soort, dessin en materiaal uit de productnaam, voor rubrieken waar de
+  // kassa geen onderverdeling kent. Zie src/lib/soorten.ts voor de meting.
+  const kenmerken = soortKenmerken(attributes.subcategorie ?? "", leader.title ?? "");
+  add("soort", kenmerken.soort);
+  add("dessin", kenmerken.dessin);
+  add("materiaal", kenmerken.materiaal);
 
   // Inhoud: alle maten van de groep, zodat filteren op "2,5 L" ook werkt bij
   // een product dat meerdere maten heeft.
@@ -649,6 +703,36 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
 
   if (leader.mengverf === "Ja") attributes.mengverf = "Ja";
   if (leader.aanbieding === "Ja") attributes.aanbieding = "Ja";
+
+  // Vloeren: houtsoort en tint staan alleen in de productnaam. Het kleurveld
+  // is hier onbruikbaar — 25 van de 27 vloerartikelen staan op "Transparant",
+  // want dat veld is voor verf gemaakt. Wie laminaat zoekt filtert op eiken of
+  // noten, licht of donker, en dat kan alleen door de naam te lezen.
+  const rubriek = `${attributes.subcategorie ?? ""} ${leader.categories ?? ""}`;
+  if (/laminaat|ondervloer|vloer|plint/i.test(rubriek)) {
+    const titel = leader.title ?? "";
+    add("houtsoort", houtsoortUit(titel));
+    add("tint", tintUit(titel));
+
+    // De pakinhoud in vierkante meters, zodat de rekenhulp op de
+    // productpagina niet opnieuw hoeft te raden wat "2673" betekent.
+    const perPak = pakInhoudM2(leader.maat);
+    if (perPak) attributes.pakM2 = perPak.toFixed(3);
+
+    // Tilroy schrijft diezelfde pakinhoud op drie manieren: "2,493 M2",
+    // "2493 M2" en kaal "2673". In het inhoudsfilter stonden die als drie
+    // losse keuzes naast elkaar, waarvan er één ("2673") voor een klant
+    // helemaal niets betekent. Hier maken we er één leesbare maat van, zodat
+    // filteren op pakgrootte doet wat het belooft.
+    const perPakVanGroep = group
+      .map((item) => pakInhoudM2(item.maat))
+      .filter((waarde): waarde is number => waarde !== null);
+    if (perPakVanGroep.length > 0) {
+      attributes.inhoud = [
+        ...new Set(perPakVanGroep.map((waarde) => `${formatteerM2(waarde)} m² per pak`)),
+      ].join("|");
+    }
+  }
 
   return attributes;
 }
@@ -940,7 +1024,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v25";
+const KV_KEY = "catalog:products:v28";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

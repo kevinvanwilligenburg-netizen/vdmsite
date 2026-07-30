@@ -7,7 +7,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { MerkLogo } from "@/components/MerkLogo";
 import { ProductCard } from "@/components/ProductCard";
 import { euro } from "@/lib/format";
-import { merkFeiten, merkInleiding, merkVragen } from "@/lib/merkpagina";
+import { merkFeiten, merkInleiding, merkVragen, type MerkRubriek } from "@/lib/merkpagina";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { getBrand, getBrands } from "@/lib/tilroy";
 
@@ -22,6 +22,22 @@ interface Props {
 export async function generateStaticParams() {
   const brands = await getBrands(40);
   return brands.map((brand) => ({ slug: brand.slug }));
+}
+
+/**
+ * Link naar deze rubriek, gefilterd op dit merk.
+ *
+ * Het filter vergelijkt met het merkveld uit de kassa, en dat is niet de
+ * schrijfwijze die hier op het scherm staat. Op /merk/hg leverde de link
+ * `?merk=HG` één artikel op in plaats van tweehonderd, omdat de feed "Hg"
+ * zegt. Daarom alle schrijfwijzen van dit merk meesturen — het filter leest
+ * de parameter als lijst.
+ */
+function rubriekHref(rubriek: MerkRubriek): string {
+  const query = new URLSearchParams();
+  for (const waarde of rubriek.merkwaarden) query.append("merk", waarde);
+  const achter = query.toString();
+  return achter ? `/categorie/${rubriek.slug}?${achter}` : `/categorie/${rubriek.slug}`;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -129,7 +145,7 @@ export default async function BrandPage({ params }: Props) {
             {feiten.rubrieken.map((rubriek) => (
               <Link
                 key={rubriek.slug}
-                href={`/categorie/${rubriek.slug}?merk=${encodeURIComponent(brand.name)}`}
+                href={rubriekHref(rubriek)}
                 className="inline-flex items-center gap-2 rounded-full border-2 border-ink/10 py-1.5 pl-3 pr-2 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
               >
                 {rubriek.naam}

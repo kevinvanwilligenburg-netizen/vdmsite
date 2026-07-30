@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 
-import { kvDel, kvGetJSON, kvGetRaw, kvSetEx, isKvEnabled } from "@/lib/kv";
+import { kvDel, kvGetJSON, kvGetRaw, kvSetEx, kvSetJSON, isKvEnabled } from "@/lib/kv";
 import { DASHBOARD_API_URL } from "@/lib/site";
 
 /**
@@ -265,6 +265,99 @@ export async function haalKlant(email: string): Promise<Klant> {
     console.error("[account] klant opzoeken mislukt:", error);
     return basis;
   }
+}
+
+/* ── Bewaarde artikelen ────────────────────────────────────────── */
+
+/**
+ * Een artikel dat de klant heeft bewaard.
+ *
+ * Alleen de verwijzing, geen naam en geen prijs. Die horen uit de catalogus te
+ * komen: bewaarden we ze hier, dan kijkt de klant maanden later naar een
+ * bedrag dat allang niet meer klopt en dat we bij het afrekenen toch weer
+ * overschrijven.
+ *
+ * De maat hoort er wél bij. Wie een blik van 2,5 liter bewaart, wil dat blik
+ * terugzien en niet het potje van 500 ml.
+ */
+export interface Favoriet {
+  productId: string;
+  variantId?: string;
+  /** Wanneer het bewaard is; bepaalt de volgorde (nieuwste bovenaan). */
+  op: string;
+}
+
+/**
+ * Meer dan dit bewaart niemand; de grens houdt één accountsleutel klein
+ * genoeg om in één keer te lezen en te schrijven.
+ */
+const MAX_FAVORIETEN = 100;
+
+function favorietenSleutel(email: string): string {
+  return `account:favorieten:${normaliseerEmail(email)}`;
+}
+
+/** Herkenningssleutel van één bewaard artikel (product + gekozen maat). */
+export function favorietKey(productId: string, variantId?: string): string {
+  return `${productId}:${variantId ?? ""}`;
+}
+
+/**
+ * Bewaarde artikelen staan bij het account, niet in de browser.
+ *
+ * Dat is precies het punt: wie 's avonds op de bank op zijn telefoon iets
+ * bewaart, wil het de volgende dag op de laptop terugvinden. Browseropslag
+ * doet dat niet, en een klant die het verschil niet kent denkt dat we zijn
+ * lijstje kwijt zijn.
+ */
+export async function haalFavorieten(email: string): Promise<Favoriet[]> {
+  if (!isKvEnabled()) return [];
+  const lijst = await kvGetJSON<Favoriet[]>(favorietenSleutel(email));
+  if (!Array.isArray(lijst)) return [];
+  return lijst.filter((item) => typeof item?.productId === "string" && item.productId.length > 0);
+}
+
+/**
+ * Bewust zonder vervaltijd, anders dan de inlogcode en de winkelkeuze: een
+ * bewaarlijst die na een jaar stilletjes leeg is, is erger dan een paar regels
+ * die blijven staan.
+ */
+async function schrijfFavorieten(email: string, lijst: Favoriet[]): Promise<boolean> {
+  return kvSetJSON(favorietenSleutel(email), lijst.slice(0, MAX_FAVORIETEN));
+}
+
+/** Bewaart een artikel. `null` = opslag deed het niet. */
+export async function bewaarFavoriet(
+  email: string,
+  productId: string,
+  variantId?: string,
+): Promise<Favoriet[] | null> {
+  if (!isKvEnabled()) return null;
+  const key = favorietKey(productId, variantId);
+  const zonder = (await haalFavorieten(email)).filter(
+    (item) => favorietKey(item.productId, item.variantId) !== key,
+  );
+  // Opnieuw bewaren zet het artikel weer bovenaan; dat is wat de klant
+  // bedoelt als hij het nog eens aanklikt.
+  const nieuw: Favoriet[] = [
+    { productId, ...(variantId ? { variantId } : {}), op: new Date().toISOString() },
+    ...zonder,
+  ].slice(0, MAX_FAVORIETEN);
+  return (await schrijfFavorieten(email, nieuw)) ? nieuw : null;
+}
+
+/** Haalt een artikel uit de lijst. `null` = opslag deed het niet. */
+export async function verwijderFavoriet(
+  email: string,
+  productId: string,
+  variantId?: string,
+): Promise<Favoriet[] | null> {
+  if (!isKvEnabled()) return null;
+  const key = favorietKey(productId, variantId);
+  const nieuw = (await haalFavorieten(email)).filter(
+    (item) => favorietKey(item.productId, item.variantId) !== key,
+  );
+  return (await schrijfFavorieten(email, nieuw)) ? nieuw : null;
 }
 
 /* ── Aankopen: webshop én winkel ───────────────────────────────── */
