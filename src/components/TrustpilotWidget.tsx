@@ -1,6 +1,7 @@
 "use client";
 
 import Script from "next/script";
+import { useConsent } from "@/components/consent/ConsentProvider";
 import { useEffect, useRef } from "react";
 
 import {
@@ -31,14 +32,18 @@ export function TrustpilotWidget({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Trustpilot is een derde partij die eigen cookies zet. Zonder toestemming
+  // laden we het script niet; dat is de enige externe partij op deze site.
+  const { magDerden } = useConsent();
 
   useEffect(() => {
+    if (!magDerden) return;
     const tp = (window as unknown as { Trustpilot?: { loadFromElement: (el: HTMLElement, b: boolean) => void } })
       .Trustpilot;
     if (tp && ref.current) tp.loadFromElement(ref.current, true);
-  }, []);
+  }, [magDerden]);
 
-  if (!TRUSTPILOT_BUSINESS_UNIT_ID) return null;
+  if (!TRUSTPILOT_BUSINESS_UNIT_ID || !magDerden) return null;
 
   const template = TEMPLATES[variant];
 

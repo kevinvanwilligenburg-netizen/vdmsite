@@ -1,14 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Roboto_Condensed } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AddedToCart } from "@/components/cart/AddedToCart";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { ConsentMode } from "@/components/consent/ConsentMode";
+import { ConsentProvider } from "@/components/consent/ConsentProvider";
+import { CookieBanner } from "@/components/consent/CookieBanner";
+import { GoogleTagManager } from "@/components/consent/GoogleTagManager";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { StoreProvider } from "@/components/store/StoreProvider";
 import { WhatsAppKnop } from "@/components/WhatsAppKnop";
+import { CONSENT_COOKIE } from "@/lib/consent";
 import { getStores } from "@/lib/tilroy";
 import {
   absoluteUrl,
@@ -129,9 +135,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     name: store.name,
   }));
 
+  const consentCookie = cookies().get(CONSENT_COOKIE)?.value;
+
   return (
     <html lang="nl" className={robotoCondensed.variable}>
+      <head>
+        {/* Moet vóór elke Google-tag staan; zie ConsentMode. */}
+        <ConsentMode cookieWaarde={consentCookie} />
+      </head>
       <body>
+        {/* Na ConsentMode in de head: de standen staan dan al op denied. */}
+        <GoogleTagManager />
         <JsonLd data={organizationJsonLd(rating)} />
         <JsonLd data={websiteJsonLd} />
         <a
@@ -140,6 +154,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         >
           Direct naar de inhoud
         </a>
+        <ConsentProvider>
         <StoreProvider stores={storeOptions}>
           <CartProvider>
             <Header />
@@ -153,6 +168,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <WhatsAppKnop />
           </CartProvider>
         </StoreProvider>
+        <CookieBanner />
+        </ConsentProvider>
       </body>
     </html>
   );
