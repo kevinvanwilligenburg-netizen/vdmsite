@@ -30,8 +30,8 @@ export function InlogInline({
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
 
-  async function vraagCode(event: React.FormEvent) {
-    event.preventDefault();
+  async function vraagCode(event?: React.SyntheticEvent) {
+    event?.preventDefault();
     setBezig(true);
     setFout(null);
     try {
@@ -50,8 +50,8 @@ export function InlogInline({
     }
   }
 
-  async function controleer(event: React.FormEvent) {
-    event.preventDefault();
+  async function controleer(event?: React.SyntheticEvent) {
+    event?.preventDefault();
     setBezig(true);
     setFout(null);
     try {
@@ -74,8 +74,16 @@ export function InlogInline({
     }
   }
 
+  /*
+   * Bewust GEEN <form>: dit blok staat middenin het afrekenformulier, en een
+   * formulier in een formulier is ongeldige HTML. De browser knipte het
+   * buitenste formulier daar stuk en React gooide bij de hydratiefout de
+   * complete boom opnieuw op — waarbij de fontklasse op <html> verdween en
+   * de hele site in Times New Roman stond. Enter werkt via onKeyDown, mét
+   * preventDefault zodat Enter hier niet stiekem de bestelling afrekent.
+   */
   return stap === "email" ? (
-    <form onSubmit={vraagCode} className="mt-2 space-y-2">
+    <div className="mt-2 space-y-2">
       <label htmlFor="inline-email" className="sr-only">
         E-mailadres
       </label>
@@ -88,9 +96,16 @@ export function InlogInline({
         onChange={(event) => setEmail(event.target.value)}
         className="input bg-white"
         placeholder="jouw@email.nl"
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void vraagCode();
+          }
+        }}
       />
       <button
-        type="submit"
+        type="button"
+        onClick={() => void vraagCode()}
         disabled={bezig}
         className="btn btn-primary w-full py-2 text-sm disabled:opacity-60"
       >
@@ -104,9 +119,9 @@ export function InlogInline({
           {fout}
         </p>
       )}
-    </form>
+    </div>
   ) : (
-    <form onSubmit={controleer} className="mt-2 space-y-2">
+    <div className="mt-2 space-y-2">
       <p className="text-xs text-ink-soft">
         We hebben een code gestuurd naar {email}.
       </p>
@@ -124,9 +139,16 @@ export function InlogInline({
         onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
         className="input bg-white text-center text-xl font-black tracking-[0.3em]"
         placeholder="000000"
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (code.length === 6) void controleer();
+          }
+        }}
       />
       <button
-        type="submit"
+        type="button"
+        onClick={() => void controleer()}
         disabled={bezig || code.length !== 6}
         className="btn btn-primary w-full py-2 text-sm disabled:opacity-60"
       >
@@ -148,6 +170,6 @@ export function InlogInline({
           {fout}
         </p>
       )}
-    </form>
+    </div>
   );
 }

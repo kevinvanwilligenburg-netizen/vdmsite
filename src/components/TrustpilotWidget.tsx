@@ -62,6 +62,18 @@ export function TrustpilotWidget({
         data-style-height={template.height}
         data-style-width="100%"
         data-theme="light"
+        {...(variant === "carousel"
+          ? {
+              // Uit de embed-code van Kevins Trustpilot-beheer. Het token is
+              // openbaar (staat in de HTML van elke site die de widget
+              // voert). Sterrenfilter 3–5 is zijn keuze; de talen staan op
+              // Nederlands in plaats van de en-US uit de gegenereerde
+              // snippet — de klanten lezen Nederlands.
+              "data-token": "ab003025-c9e0-4101-a2ca-689be0484882",
+              "data-stars": "3,4,5",
+              "data-review-languages": "nl",
+            }
+          : {})}
       >
         <a href={trustpilotProfileUrl()} target="_blank" rel="noopener noreferrer">
           Lees onze reviews op Trustpilot ({TRUSTPILOT_DOMAIN})
