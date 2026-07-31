@@ -33,6 +33,19 @@ export interface ProductVariant {
    * niet.
    */
   pickupOnly?: string;
+  /**
+   * Het fabriekswit-artikel bij deze maat (Sikkens): een écht artikel met
+   * eigen sku, prijs en voorraad. Wie 100% wit kiest bestelt dít artikel —
+   * dan boekt de kassa de juiste voorraad af, en wit is geregeld goedkoper
+   * dan dezelfde verf gemengd (tot € 58 op een blik van 5 liter).
+   */
+  wit?: {
+    sku: string;
+    price: number; // centen
+    compareAtPrice?: number;
+    kluspasPrice?: number;
+    inStock: boolean;
+  };
 }
 
 export interface Product {

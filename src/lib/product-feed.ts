@@ -277,28 +277,61 @@ const SUBCATEGORIEEN_NIET_ONLINE = new Set([
 const PASTA_IN_DE_NAAM = /\b(mengpasta|kleurpasta|colorpaste|colorant)\b/i;
 
 /**
- * De verzonnen witte Sikkens-artikelen.
+ * De witte Sikkens-artikelen: echte producten, gekoppeld aan hun mengbare broer.
  *
  * Voor elke Sikkens-lak staat er in Tilroy een apart artikel "… Wit". Dat is
- * geen los product: het is de kassaregel voor iemand die de gewone verf in
- * 100% wit meeneemt. Online zou het een tweede, bijna identieke pagina naast
- * de mengbare verf zetten, en de klant laten kiezen tussen twee dingen die
- * hetzelfde zijn.
+ * — correctie van Kevin, 2026-07-31 — géén kassaregel maar fabriekswit met
+ * eigen voorraad en eigen prijs, en die prijs is geregeld fors lager dan
+ * dezelfde verf gemengd (Alphatex SF 5 L: € 85,95 wit tegen € 144,62 basis).
  *
- * De grens is `mengverf`: de verzonnen witten staan op "Nee", terwijl er twee
- * échte mengbare artikelen zijn met "wit" in de naam (Alpha Primer wit,
- * Alphaloxan Flex /Wit) die gewoon moeten blijven staan. Alleen op de naam
- * filteren zou die twee ook wegnemen.
+ * Een eigen productpagina ernaast willen we nog steeds niet: dat zijn twee
+ * bijna identieke pagina's die elkaar beconcurreren. Daarom hangt het
+ * wit-artikel als `wit` aan de maatvariant van het mengbare product. Wie
+ * 100% wit kiest, bestelt de sku van het wit-artikel — dan boekt de kassa de
+ * juiste voorraad af. Wit zonder mengbare broer (2 stuks, gemeten) blijft een
+ * gewoon los product.
  */
-function isVerzonnenWit(item: FeedItem): boolean {
+function isWitKandidaat(item: FeedItem): boolean {
   if ((item.brand ?? "").trim().toLowerCase() !== "sikkens") return false;
   if ((item.mengverf ?? "").trim() === "Ja") return false;
   return /\bwit\s*$/i.test(item.title ?? "");
 }
 
+function witSleutel(titel: string, maat: string | undefined): string {
+  return `${titel.trim().replace(/\s+/g, " ").toLowerCase()}|${(maat ?? "")
+    .trim()
+    .toLowerCase()}`;
+}
+
+interface WitKoppeling {
+  /** Wit-artikel per mengbare titel+maat. */
+  index: Map<string, FeedItem>;
+  /** Id's van gekoppelde wit-artikelen; die worden geen eigen product. */
+  gekoppeld: Set<string>;
+}
+
+function koppelWitArtikelen(items: FeedItem[]): WitKoppeling {
+  const mengbaar = new Set<string>();
+  for (const item of items) {
+    if ((item.brand ?? "").trim().toLowerCase() !== "sikkens") continue;
+    if ((item.mengverf ?? "").trim() !== "Ja") continue;
+    mengbaar.add(witSleutel(item.title ?? "", item.maat));
+  }
+  const index = new Map<string, FeedItem>();
+  const gekoppeld = new Set<string>();
+  for (const item of items) {
+    if (!isWitKandidaat(item) || !item.id) continue;
+    const romp = (item.title ?? "").replace(/\s*\/?\s*wit\s*$/i, "");
+    const sleutel = witSleutel(romp, item.maat);
+    if (!mengbaar.has(sleutel)) continue;
+    index.set(sleutel, item);
+    gekoppeld.add(item.id);
+  }
+  return { index, gekoppeld };
+}
+
 function hoortOnline(item: FeedItem): boolean {
   if (!hoofdgroepOnline(item)) return false;
-  if (isVerzonnenWit(item)) return false;
   const merk = (item.brand ?? "").trim().toLowerCase();
   if (MERKEN_NIET_ONLINE.has(merk)) return false;
   if (PASTA_IN_DE_NAAM.test(item.title ?? "")) return false;
@@ -766,7 +799,10 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
 }
 
 /** Zet de varianten van één groep om in één Product. */
-function buildProduct(group: FeedItem[]): Product | null {
+function buildProduct(
+  group: FeedItem[],
+  witIndex: Map<string, FeedItem> = new Map(),
+): Product | null {
   const leader = group.find((item) => item.group_leader === "true") ?? group[0];
   if (!leader?.title) return null;
 
@@ -799,6 +835,14 @@ function buildProduct(group: FeedItem[]): Product | null {
       const eigenPrijs = toCents(item.sale_price ?? item.price);
       const eigenAdvies = toCents(item.price);
       const eigenKluspas = toCents(item.kluspas_prijs);
+      // Fabriekswit bij deze maat, als dat er is (alleen Sikkens-mengverf).
+      const witItem =
+        (item.mengverf ?? "").trim() === "Ja"
+          ? witIndex.get(witSleutel(item.title ?? "", item.maat))
+          : undefined;
+      const witPrijs = witItem ? toCents(witItem.sale_price ?? witItem.price) : 0;
+      const witAdvies = witItem ? toCents(witItem.price) : 0;
+      const witKluspas = witItem ? toCents(witItem.kluspas_prijs) : 0;
       return {
         id: item.id,
         name: verpakking ? `${item.maat} — ${verpakking}` : item.maat,
@@ -812,6 +856,21 @@ function buildProduct(group: FeedItem[]): Product | null {
         ...(verpakking ? { packaging: verpakking } : {}),
         ...(base ? { base } : {}),
         ...(afhalen.reden ? { pickupOnly: afhalen.reden } : {}),
+        ...(witItem && witPrijs > 0
+          ? {
+              wit: {
+                sku: witItem.id!,
+                price: witPrijs,
+                ...(witAdvies > witPrijs ? { compareAtPrice: witAdvies } : {}),
+                ...(isGeloofwaardigeKluspasPrijs(witPrijs, witKluspas)
+                  ? { kluspasPrice: witKluspas }
+                  : {}),
+                inStock:
+                  Number(witItem.voorraad ?? 0) > 0 ||
+                  (witItem.availability ?? "").trim() === "in stock",
+              },
+            }
+          : {}),
       };
     });
 
@@ -1027,9 +1086,14 @@ async function fetchFeed(): Promise<Product[]> {
     laatsteBron = "xml";
   }
 
+  // Fabriekswit aan de mengbare broer hangen vóór het groeperen; de
+  // gekoppelde wit-artikelen worden zelf geen product meer.
+  const wit = koppelWitArtikelen(items);
+
   const groups = new Map<string, FeedItem[]>();
   for (const item of items) {
     if (!hoortOnline(item)) continue;
+    if (item.id && wit.gekoppeld.has(item.id)) continue;
     const key = groupKeyFor(item);
     const list = groups.get(key);
     if (list) list.push(item);
@@ -1039,7 +1103,7 @@ async function fetchFeed(): Promise<Product[]> {
   const products: Product[] = [];
   const seenSlugs = new Set<string>();
   for (const group of groups.values()) {
-    const product = buildProduct(group);
+    const product = buildProduct(group, wit.index);
     if (!product || seenSlugs.has(product.slug)) continue;
     seenSlugs.add(product.slug);
     products.push(product);
@@ -1052,7 +1116,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v28";
+const KV_KEY = "catalog:products:v29";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Icon } from "@/components/icons";
+import { Mark } from "@/components/Mark";
 import { OrderClientActions } from "@/components/order/OrderClientActions";
 import { ReorderColor, type SavedColor } from "@/components/order/ReorderColor";
 import { euros } from "@/lib/format";
@@ -73,6 +74,9 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
               Je krijgt bericht op{" "}
               <strong className="text-ink">{order.customer.email}</strong>.
             </p>
+            <div className="mx-auto mt-4 w-44">
+              <Mark pose="mengen" hoogte="h-28" />
+            </div>
           </>
         ) : open ? (
           <>

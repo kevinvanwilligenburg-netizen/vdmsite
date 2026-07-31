@@ -9,6 +9,7 @@ import { Mark } from "@/components/Mark";
 import { ProductArt } from "@/components/ProductArt";
 import { euro } from "@/lib/format";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
+import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 
 export function CartPageClient() {
   const { items, subtotal, hydrated, setQty, removeItem } = useCart();
@@ -188,7 +189,7 @@ export function CartPageClient() {
             14 dagen bedenktijd, terugbrengen mag in elke winkel
           </li>
         </ul>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="Betaalmethoden">
+        <div className="mt-3 grid grid-cols-8 gap-1.5" aria-label="Betaalmethoden">
           {["ideal", "bancontact", "klarna", "visa", "mastercard", "applepay", "googlepay", "paypal"].map(
             (methode) => (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -196,13 +197,16 @@ export function CartPageClient() {
                 key={methode}
                 src={`/betaalmethoden/${methode}.svg`}
                 alt={methode}
-                className="h-6 w-9 rounded border border-ink/10 bg-white object-contain p-0.5"
+                className="h-6 w-full rounded border border-ink/10 bg-white object-contain p-1"
                 loading="lazy"
               />
             ),
           )}
         </div>
         <p className="mt-2 text-xs text-ink-soft">Veilig betalen via Mollie</p>
+        <div className="mt-3 rounded-lg bg-slate-50 p-2">
+          <TrustpilotWidget variant="micro" />
+        </div>
       </aside>
     </div>
   );

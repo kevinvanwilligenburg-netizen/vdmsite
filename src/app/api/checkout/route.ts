@@ -139,7 +139,20 @@ export async function POST(request: Request) {
     }
 
     let color: OrderItem["color"];
-    if (entry.colorKey) {
+    // 100% wit is geen mengkleur maar een eigen artikel: de variant draagt de
+    // sku en prijs van het fabriekswit, en dáár boekt de kassa de voorraad af.
+    const wit100 = entry.colorKey === "wit";
+    if (wit100) {
+      if (!variant?.wit) {
+        return badRequest(`${product.name} is niet in 100% wit leverbaar.`);
+      }
+      color = {
+        key: "wit",
+        code: "100% Wit",
+        name: "100% Wit — direct uit voorraad",
+        hex: "#FFFFFF",
+      };
+    } else if (entry.colorKey) {
       if (!product.colorMixable) {
         return badRequest(`${product.name} is niet op kleur te mengen.`);
       }
@@ -162,8 +175,13 @@ export async function POST(request: Request) {
     // ⚠️ De Kluspas-prijs hoort bij de gekozen maat. Namen we hier die van het
     // product (= de goedkoopste maat), dan rekende een klant met pas voor een
     // blik van 2,5 liter de pasprijs van het blikje van 500 ml af.
-    const listCents = variant?.price ?? product.price;
-    const listKluspas = variant ? variant.kluspasPrice : product.kluspasPrice;
+    const listCents = wit100 && variant?.wit ? variant.wit.price : variant?.price ?? product.price;
+    const listKluspas =
+      wit100 && variant?.wit
+        ? variant.wit.kluspasPrice
+        : variant
+          ? variant.kluspasPrice
+          : product.kluspasPrice;
     const unitCents = kluspas ? kluspasUnitPrice(listCents, listKluspas) : listCents;
     subtotalCents += unitCents * qty;
     kluspasSavingCents += (listCents - unitCents) * qty;
@@ -181,7 +199,10 @@ export async function POST(request: Request) {
       variantId: variant?.id,
       // sku van de bestelde variant (of het product) — Tilroy identificeert
       // orderregels uitsluitend hierop; ean gaat mee zodra de bron die levert.
-      sku: variant?.sku ?? product.sku,
+      // Bij 100% wit is dat de sku van het wit-artikel, zodat de kassa de
+      // voorraad van het juiste blik afboekt. Uit de catalogus, nooit uit het
+      // verzoek.
+      sku: wit100 && variant?.wit ? variant.wit.sku : variant?.sku ?? product.sku,
       ean: product.ean,
       title: product.name,
       brand: product.brand,

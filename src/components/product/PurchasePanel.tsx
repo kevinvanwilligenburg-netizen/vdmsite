@@ -39,6 +39,10 @@ export function PurchasePanel({
   const [error, setError] = useState<string | null>(null);
   const [color, setColor] = useState<PaintColor | null>(null);
   const [vensterOpen, setVensterOpen] = useState(false);
+  // 100% wit is bij Sikkens een écht artikel met eigen voorraad en prijs —
+  // vaak goedkoper dan gemengd. Het staat standaard aan omdat wit veruit het
+  // meest verkocht wordt; wie een kleur kiest zet het vanzelf uit.
+  const [witGekozen, setWitGekozen] = useState(true);
 
   // ?kleur= uit de kleurkiezer pas na hydration lezen, zodat de pagina
   // volledig statisch gerenderd kan blijven (belangrijk voor SEO).
@@ -76,6 +80,14 @@ export function PurchasePanel({
     ? pickVariant(product, size, color)
     : variants.find((variant) => variant.id === variantId);
 
+  // Het fabriekswit-artikel bij de gekozen inhoud, als dat bestaat en op
+  // voorraad is. Zit aan de maat, niet aan de basis.
+  const witVariant = basesInPlay
+    ? variants.find((variant) => (variant.size ?? variant.name) === size && variant.wit)
+    : undefined;
+  const wit = witVariant?.wit && witVariant.wit.inStock ? witVariant.wit : undefined;
+  const wit100 = Boolean(wit && witGekozen && !color);
+
   // Maat en verpakking als twee keuzes: de unieke maten in de volgorde van de
   // feed (die staat al op grootte), en daarbinnen de verpakkingen.
   const maten = useMemo(() => {
@@ -99,21 +111,29 @@ export function PurchasePanel({
   // Prijs, adviesprijs en Kluspas-prijs horen bij de gekozen maat. Namen we
   // die van het product, dan stond bij 2,5 liter de Kluspas-korting van het
   // blik van 500 ml.
-  const unitPrice = activeVariant?.price ?? product.price;
-  const compareAtPrice = activeVariant
-    ? activeVariant.compareAtPrice
-    : product.compareAtPrice;
-  const kluspasPrice = activeVariant ? activeVariant.kluspasPrice : product.kluspasPrice;
+  const unitPrice = wit100 && wit ? wit.price : activeVariant?.price ?? product.price;
+  const compareAtPrice =
+    wit100 && wit
+      ? wit.compareAtPrice
+      : activeVariant
+        ? activeVariant.compareAtPrice
+        : product.compareAtPrice;
+  const kluspasPrice =
+    wit100 && wit
+      ? wit.kluspasPrice
+      : activeVariant
+        ? activeVariant.kluspasPrice
+        : product.kluspasPrice;
   const activeBase = activeVariant?.base;
   const coverage = coveragePerLiter(product);
 
   const cartKey = useMemo(
-    () => `${product.id}:${activeVariant?.id ?? ""}:${color?.key ?? ""}`,
-    [product.id, activeVariant?.id, color],
+    () => `${product.id}:${activeVariant?.id ?? ""}:${wit100 ? "wit" : color?.key ?? ""}`,
+    [product.id, activeVariant?.id, color, wit100],
   );
 
   function handleAdd() {
-    if (product.colorMixable && !color) {
+    if (product.colorMixable && !wit100 && !color) {
       setError("Kies eerst een kleur voor deze mengverf.");
       setVensterOpen(true);
       return;
@@ -124,24 +144,34 @@ export function PurchasePanel({
         key: cartKey,
         productId: product.id,
         // De sku van de gekozen variant; daarmee checkt de checkout of de
-        // artikelen in de afhaalwinkel liggen.
-        sku: activeVariant?.sku ?? product.sku,
+        // artikelen in de afhaalwinkel liggen. Bij 100% wit is dat de sku van
+        // het wit-artikel zelf — dan boekt de kassa de juiste voorraad af.
+        sku: wit100 && wit ? wit.sku : activeVariant?.sku ?? product.sku,
         slug: product.slug,
         name: product.name,
         image: product.image,
-        variantId: activeVariant?.id,
-        variantName: activeBase
-          ? `${activeVariant?.size ?? activeVariant?.name} · ${PAINT_BASES[activeBase].label}`
-          : activeVariant?.name,
-        color: color
+        variantId: wit100 ? witVariant?.id : activeVariant?.id,
+        variantName: wit100
+          ? `${witVariant?.size ?? witVariant?.name} · 100% Wit`
+          : activeBase
+            ? `${activeVariant?.size ?? activeVariant?.name} · ${PAINT_BASES[activeBase].label}`
+            : activeVariant?.name,
+        color: wit100
           ? {
-              key: color.key,
-              code: color.code,
-              name: color.name,
-              hex: color.hex,
-              collection: color.group,
+              key: "wit",
+              code: "100% Wit",
+              name: "100% Wit — direct uit voorraad",
+              hex: "#FFFFFF",
             }
-          : undefined,
+          : color
+            ? {
+                key: color.key,
+                code: color.code,
+                name: color.name,
+                hex: color.hex,
+                collection: color.group,
+              }
+            : undefined,
         unitPrice,
         kluspasUnitPrice: kluspasPrice,
         icon: product.art.icon,
@@ -256,7 +286,56 @@ export function PurchasePanel({
             <span className="font-normal text-ink-soft">(gratis gemengd door onze verfspecialist)</span>
           </p>
 
-          {color ? (
+          {wit && (
+            /* 100% wit is een écht artikel met eigen voorraad, en vaak
+               goedkoper dan mengen. Daarom is het een keuze naast de kiezer,
+               niet een kleur erin. */
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                aria-pressed={wit100}
+                onClick={() => {
+                  setWitGekozen(true);
+                  setColor(null);
+                  setError(null);
+                }}
+                className={`rounded-lg border-2 px-3 py-2.5 text-left transition ${
+                  wit100
+                    ? "border-brand bg-brand-light"
+                    : "border-ink/10 hover:border-brand"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-ink">
+                  <span className="h-4 w-4 shrink-0 rounded-full border border-ink/20 bg-white" aria-hidden />
+                  100% Wit
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-soft">
+                  direct uit voorraad
+                  {wit.price !== activeVariant?.price ? ` · ${euro(wit.price)}` : ""}
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={!wit100}
+                onClick={() => {
+                  setWitGekozen(false);
+                  setVensterOpen(true);
+                }}
+                className={`rounded-lg border-2 px-3 py-2.5 text-left transition ${
+                  !wit100 ? "border-brand bg-brand-light" : "border-ink/10 hover:border-brand"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-ink">
+                  <Icon name="palette" className="h-4 w-4 shrink-0 text-brand" />
+                  Andere kleur
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-soft">gratis gemengd</span>
+              </button>
+            </div>
+          )}
+
+          {!wit100 &&
+            (color ? (
             <div className="mt-3 flex items-center gap-3">
               <span
                 className="h-11 w-11 shrink-0 rounded-lg ring-1 ring-black/10"
@@ -277,7 +356,7 @@ export function PurchasePanel({
                 Wijzig
               </button>
             </div>
-          ) : (
+            ) : wit ? null : (
             /* Eén duidelijke ingang naar het venster. De hele waaier hier
                uitklappen duwde de bestelknop van het scherm. */
             <button
@@ -288,7 +367,7 @@ export function PurchasePanel({
               Kies je kleur
               <Icon name="palette" className="h-5 w-5 shrink-0" />
             </button>
-          )}
+            ))}
 
           {color && activeBase && (
             <p className="mt-2 text-xs text-ink-soft">
@@ -299,7 +378,7 @@ export function PurchasePanel({
               — dat kiezen wij voor je.
             </p>
           )}
-          {!color && basesInPlay && (
+          {!color && !wit100 && basesInPlay && (
             <p className="mt-2 text-xs text-ink-soft">
               De juiste mengbasis kiezen wij automatisch bij jouw kleur.
             </p>
@@ -312,6 +391,7 @@ export function PurchasePanel({
             huidige={color}
             onKies={(next) => {
               setColor(next);
+              setWitGekozen(false);
               setError(null);
             }}
           />

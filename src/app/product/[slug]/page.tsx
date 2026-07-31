@@ -6,6 +6,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
 import { Companions } from "@/components/product/Companions";
+import { Mark } from "@/components/Mark";
 import { VloerRekenhulp } from "@/components/product/VloerRekenhulp";
 import { pakInhoudVan } from "@/lib/vloer";
 import { PurchasePanel } from "@/components/product/PurchasePanel";
@@ -314,12 +315,17 @@ export default async function ProductPage({ params }: Props) {
       </section>
 
       <section aria-labelledby="product-faq-titel" className="max-w-3xl">
-        <h2
-          id="product-faq-titel"
-          className="mb-4 text-xl font-black uppercase text-ink sm:text-2xl"
-        >
-          Veelgestelde vragen
-        </h2>
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <h2
+            id="product-faq-titel"
+            className="text-xl font-black uppercase text-ink sm:text-2xl"
+          >
+            Veelgestelde vragen
+          </h2>
+          <div className="hidden w-28 shrink-0 sm:block">
+            <Mark pose="vragend" hoogte="h-24" />
+          </div>
+        </div>
         <div className="space-y-3">
           {productFaqs.map((faq) => (
             <details key={faq.q} className="card group p-5">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
+import { Mark } from "@/components/Mark";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Wat kost bezorgen?",
     answer:
-      "Bezorgen is gratis, net als afhalen in de winkel. Je betaalt alleen je producten.",
+      "Bezorgen is gratis vanaf € 59. Daaronder betaal je € 4,95 in Nederland en € 7,95 in België. Sikkens bezorgen we altijd gratis, ongeacht het bedrag. Afhalen in de winkel is altijd gratis. In België duurt bezorgen 1–2 werkdagen.",
   },
   {
     question: "Hoe werkt afhalen in de winkel (Click & Collect)?",
@@ -37,7 +38,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Hoe kan ik betalen?",
     answer:
-      "Je rekent veilig af via Mollie met iDEAL, Bancontact, creditcard of Apple Pay. Liever later betalen? Dat kan met Klarna: je ontvangt je bestelling eerst en betaalt daarna.",
+      "Je rekent veilig af via Mollie met iDEAL, Bancontact, KBC of Belfius (België), creditcard, Apple Pay, Google Pay of PayPal. Liever achteraf betalen? Dat kan met Klarna. Bestel je zakelijk, vul dan je bedrijfsnaam in — dan kun je op rekening betalen via Billie, met 30 dagen betaaltermijn.",
   },
   {
     question: "Kan ik mijn bestelling retourneren?",
@@ -67,14 +68,19 @@ export default function CustomerServicePage() {
       <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Klantenservice" }]} />
       <JsonLd data={faqJsonLd} />
 
-      <header className="max-w-3xl">
-        <h1 className="text-3xl font-black uppercase text-ink sm:text-4xl">
-          Klantenservice
-        </h1>
-        <p className="mt-3 text-ink-soft">
-          We helpen je graag — online én in de winkel. Bekijk de veelgestelde
-          vragen of neem direct contact op.
-        </p>
+      <header className="flex max-w-3xl items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black uppercase text-ink sm:text-4xl">
+            Klantenservice
+          </h1>
+          <p className="mt-3 text-ink-soft">
+            We helpen je graag — online én in de winkel. Bekijk de veelgestelde
+            vragen of neem direct contact op.
+          </p>
+        </div>
+        <div className="hidden w-32 shrink-0 sm:block">
+          <Mark pose="vragend" hoogte="h-32" />
+        </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3" aria-label="Contact">
