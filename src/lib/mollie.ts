@@ -30,6 +30,9 @@ export interface MolliePayment {
 async function mollieFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${MOLLIE_API_URL}${path}`, {
     ...init,
+    // Mollie antwoordt normaal binnen een seconde; zonder limiet hing de
+    // hele bestelling op een stille verbinding, zonder foutmelding.
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Authorization: `Bearer ${MOLLIE_API_KEY}`,
       "Content-Type": "application/json",

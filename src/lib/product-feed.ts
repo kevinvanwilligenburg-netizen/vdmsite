@@ -828,6 +828,39 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
 }
 
 /** Zet de varianten van één groep om in één Product. */
+/**
+ * De echte webtekst uit Tilroy, als de feed die meegeeft.
+ *
+ * In Tilroy staat per product een handgeschreven Nederlandse webtekst
+ * (gemeten: 5.218 van de 6.156 producten) en een commerciële webnaam (6.097,
+ * al zonder basissuffix en maat: "Sikkens Rubbol Primer" waar de kassa
+ * "Sikkens Rubbol Primer N00 1L" zegt). Het dashboard gaat die als
+ * `webnaam` en `omschrijving_web` in de feed zetten; tot die tijd zijn deze
+ * velden leeg en verandert er niets.
+ *
+ * De webtekst is HTML; wij tonen alinea's. Blokelementen worden dus
+ * alineascheidingen en de rest van de tags verdwijnt.
+ */
+function webTekstUit(item: FeedItem): string | undefined {
+  const ruw = (item.omschrijving_web ?? "").trim();
+  if (ruw.length < 60) return undefined;
+  const tekst = ruw
+    .replace(/<\s*(br|\/p|\/div|\/li|\/h[1-6])[^>]*>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&eacute;/gi, "é")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return tekst.length >= 60 ? tekst : undefined;
+}
+
+function webNaamUit(item: FeedItem): string | undefined {
+  const naam = (item.webnaam ?? "").trim().replace(/\s+/g, " ");
+  return naam.length > 3 ? naam : undefined;
+}
+
 function buildProduct(
   group: FeedItem[],
   witIndex: Map<string, FeedItem> = new Map(),
@@ -953,24 +986,36 @@ function buildProduct(
       : leader.title,
   );
 
+  // De commerciële webnaam uit Tilroy wint van wat wij zelf afleiden; die is
+  // daar al met de hand opgeschoond. De slug verandert dan mee — de
+  // productpagina vangt oude slugs op via het groepsnummer aan het eind.
+  const webNaam = webNaamUit(leader);
+  const definitieveNaam = webNaam ? schoneNaam(metGlans(webNaam, leader.glans)) : name;
+  const webTekst = webTekstUit(leader);
+
   return {
     id: groupId,
-    slug: `${slugify(name)}-${groupId}`,
-    name,
+    slug: `${slugify(definitieveNaam)}-${groupId}`,
+    name: definitieveNaam,
     // De uitsluiting hierboven kijkt naar het merk uit de feed, niet naar deze
     // weergavenaam; een artikel zonder merk wordt dus niet per ongeluk verborgen.
     brand: leader.brand || "De Voordeelmarkt",
     sku: leader.id,
     category: categorySlugFor(leader),
     shortDescription: isBaseFamily
-      ? `${name} in elke gewenste kleur — wij mengen gratis in de juiste basis.`
+      ? `${definitieveNaam} in elke gewenste kleur — wij mengen gratis in de juiste basis.`
       : leader.description && leader.description !== name
         ? leader.description
-        : `${name} — voordelig online bestellen bij De Voordeelmarkt.`,
+        : `${definitieveNaam} — voordelig online bestellen bij De Voordeelmarkt.`,
+    // De handgeschreven webtekst uit Tilroy gaat vóór alles wat wij afleiden
+    // of laten genereren; zie webTekstUit().
     description:
-      [leader.description, leader.toepassing, leader.ondergrond]
+      webTekst ??
+      ([leader.description, leader.toepassing, leader.ondergrond]
         .filter(Boolean)
-        .join(" ") || name,
+        .join(" ") ||
+        definitieveNaam),
+    ...(webTekst ? { heeftEigenTekst: true } : {}),
     price,
     compareAtPrice: compareAtPrice > price ? compareAtPrice : undefined,
     kluspasPrice: kluspasPrice > 0 ? kluspasPrice : undefined,
@@ -1149,7 +1194,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v30";
+const KV_KEY = "catalog:products:v31";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

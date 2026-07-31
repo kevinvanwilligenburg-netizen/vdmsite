@@ -64,6 +64,8 @@ export interface Product {
   kluspasPrice?: number;
   unit?: string;
   colorMixable?: boolean; // verf die in de winkel op kleur wordt gemengd
+  /** Waar: de omschrijving is Tilroy's handgeschreven webtekst, geen terugvalzin. */
+  heeftEigenTekst?: boolean;
   variants?: ProductVariant[];
   specs?: { label: string; value: string }[];
   /** Filterbare eigenschappen uit de feed (glans, verfsoort, inhoud, …). */

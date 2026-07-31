@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
@@ -22,6 +22,7 @@ import {
   getCategory,
   getCompanions,
   getProduct,
+  getProductById,
   getProducts,
   getRelatedProducts,
   getStores,
@@ -85,7 +86,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params }: Props) {
-  const product = await getProduct(params.slug);
+  let product = await getProduct(params.slug);
+  if (!product) {
+    // Slugs dragen het groepsnummer aan het eind. Wordt een productnaam
+    // commerciëler (Tilroy-webnaam), dan verschuift de slug — maar het
+    // nummer niet. Oude links, Google en de Shopping-feed landen zo alsnog
+    // op het juiste product, blijvend doorgestuurd.
+    const groepsnummer = params.slug.match(/-(\d{6,})$/)?.[1];
+    if (groepsnummer) {
+      const opId = await getProductById(groepsnummer);
+      if (opId && opId.slug !== params.slug) {
+        permanentRedirect(`/product/${opId.slug}`);
+      }
+      product = opId;
+    }
+  }
   if (!product) notFound();
   const [category, related, companions, colors, stores, rating, seo] = await Promise.all([
     getCategory(product.category),
@@ -104,10 +119,14 @@ export default async function ProductPage({ params }: Props) {
   // dan tonen we geen rekenhulp; een verkeerd aantal pakken is erger dan geen.
   const perPak = pakInhoudVan(product, product.variants?.[0]?.name);
 
-  // Een eigen tekst gaat voor de terugvalzin uit de feed, die op duizenden
+  // Volgorde van de teksten: Tilroy's handgeschreven webtekst wint (opdracht
+  // Kevin — dat is de tekst van de winkel zelf), dan de gegenereerde
+  // SEO-tekst, en pas daarna de terugvalzin uit de feed die op duizenden
   // artikelen hetzelfde is.
   const korteTekst = seo?.kort ?? product.shortDescription;
-  const langeTekst = seo?.lang ?? product.description;
+  const langeTekst = product.heeftEigenTekst
+    ? product.description
+    : seo?.lang ?? product.description;
 
   // Verzendkosten en 14 dagen retour gelden voor het hele assortiment. Het
   // tarief moet hier kloppen met wat de klant afrekent: een "0" terwijl er

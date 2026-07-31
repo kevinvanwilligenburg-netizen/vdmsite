@@ -734,3 +734,38 @@ export async function getStockForSkus(skus: string[]): Promise<ProductStock> {
 export function skusFor(product: Product): string[] {
   return [...new Set([product.sku, ...(product.variants ?? []).map((v) => v.sku)])];
 }
+
+/**
+ * Voorraad per sku, in ÉÉN aanvraag naar de hub.
+ *
+ * De checkout vroeg de voorraad per orderregel apart op, ná elkaar — bij vijf
+ * artikelen en een koude hub telde dat op tot de "je wordt doorgestuurd…"
+ * die maar bleef staan waar Kevin op stuitte. Zelfde gegevens, één rit.
+ */
+export async function getStockPerSku(
+  skus: string[],
+): Promise<Map<string, { webshopQty: number; otherStoresQty: number }> | null> {
+  const uniek = [...new Set(skus.filter(Boolean))];
+  const [stores, hub] = await Promise.all([getStores(), fetchHubStock(uniek)]);
+  if (!hub) return null;
+
+  const winkelShopIds = stores
+    .map((store) => store.tilroyShopId)
+    .filter((id): id is string => Boolean(id) && id !== TEST_SHOP_ID);
+
+  const kaart = new Map<string, { webshopQty: number; otherStoresQty: number }>();
+  for (const item of hub.items) {
+    const sku = String(item.sku ?? "");
+    if (!sku) continue;
+    const qtyVoor = (shopId: string) => {
+      const qty = item.shops?.[shopId];
+      return Number.isFinite(qty) ? (qty as number) : 0;
+    };
+    const webshopQty = qtyVoor(NIJVERDAL_SHOP_ID) + qtyVoor(WAREHOUSE_SHOP_ID);
+    const otherStoresQty = winkelShopIds
+      .filter((id) => id !== NIJVERDAL_SHOP_ID && id !== WAREHOUSE_SHOP_ID)
+      .reduce((totaal, id) => totaal + qtyVoor(id), 0);
+    kaart.set(sku, { webshopQty, otherStoresQty });
+  }
+  return kaart;
+}

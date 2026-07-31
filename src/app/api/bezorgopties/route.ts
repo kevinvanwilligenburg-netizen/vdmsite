@@ -9,7 +9,7 @@ import {
   tekortVoorGratis,
   verzendtarief,
 } from "@/lib/shipping";
-import { getProductBySku, getStockForSkus } from "@/lib/tilroy";
+import { getProductBySku, getStockPerSku } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
 
@@ -39,18 +39,14 @@ export async function POST(request: Request) {
 
   const promises = [];
   try {
-    for (const regel of regels) {
-      const stock = await getStockForSkus([regel.sku!]);
-      if (!stock.live) {
-        promises.length = 0;
-        break;
+    // Eén voorraadaanvraag voor alle regels tegelijk; per regel de hub
+    // bevragen was een van de redenen dat de checkout zo traag aanvoelde.
+    const perSku = await getStockPerSku(regels.map((regel) => regel.sku!));
+    if (perSku) {
+      for (const regel of regels) {
+        const voorraad = perSku.get(regel.sku!) ?? { webshopQty: 0, otherStoresQty: 0 };
+        promises.push(deliveryPromise(voorraad, undefined, land));
       }
-      promises.push(
-        deliveryPromise({
-          webshopQty: stock.webshopQty ?? 0,
-          otherStoresQty: stock.otherStoresQty ?? 0,
-        }, undefined, land),
-      );
     }
   } catch (error) {
     console.error("[bezorgopties] voorraadcheck mislukt:", error);

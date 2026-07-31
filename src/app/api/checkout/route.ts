@@ -12,7 +12,7 @@ import { kluspasUnitPrice } from "@/lib/kluspas";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import { baseUrlFromRequest } from "@/lib/site";
-import { getProductById, getStockForSkus, getStore } from "@/lib/tilroy";
+import { getProductById, getStockForSkus, getStockPerSku, getStore } from "@/lib/tilroy";
 import type { CheckoutInput, OrderItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +25,16 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const POSTAL_CODE_PATTERN = /^\d{4}\s?[A-Za-z]{2}$/;
 
 export async function POST(request: Request) {
+  // Stopwatch per fase. "Je wordt doorgestuurd…" bleef bij Kevin lang staan
+  // en de logs konden niet vertellen wáár de tijd zat; nu wel.
+  const gestart = Date.now();
+  let vorigMeetpunt = gestart;
+  const klok: string[] = [];
+  const meet = (fase: string) => {
+    klok.push(`${fase} ${Date.now() - vorigMeetpunt}ms`);
+    vorigMeetpunt = Date.now();
+  };
+
   let input: CheckoutInput;
   try {
     input = (await request.json()) as CheckoutInput;
@@ -170,6 +180,7 @@ export async function POST(request: Request) {
   const nietVerzendbaar: string[] = [];
   let subtotalCents = 0;
   let kluspasSavingCents = 0;
+  meet("validatie");
   for (const entry of input.items) {
     const product = await getProductById(String(entry.productId ?? ""));
     if (!product) return badRequest("Een van de artikelen bestaat niet (meer).");
@@ -379,21 +390,23 @@ export async function POST(request: Request) {
     const promises = [];
     let fulfilStoreId: string | undefined;
     try {
-      for (const item of items) {
-        const stock = await getStockForSkus([item.sku ?? item.productId]);
-        if (!stock.live) {
-          promises.length = 0;
-          break;
+      // Eén voorraadaanvraag voor het hele mandje. Regel voor regel de hub
+      // bevragen — ná elkaar — was waarom "Je wordt doorgestuurd…" bij vijf
+      // artikelen tientallen seconden bleef staan.
+      const perSku = await getStockPerSku(items.map((item) => item.sku ?? item.productId));
+      if (perSku) {
+        for (const item of items) {
+          const voorraad = perSku.get(item.sku ?? item.productId) ?? {
+            webshopQty: 0,
+            otherStoresQty: 0,
+          };
+          promises.push(deliveryPromise(voorraad, undefined, land));
         }
-        promises.push(
-          deliveryPromise({
-            webshopQty: stock.webshopQty ?? 0,
-            otherStoresQty: stock.otherStoresQty ?? 0,
-          }, undefined, land),
-        );
-        if ((stock.webshopQty ?? 0) === 0) {
+        // Verstuurt een andere winkel? Eén aparte blik op de rijen volstaat.
+        if (promises.some((p) => p.carrier === "postnl") && !fulfilStoreId) {
+          const stock = await getStockForSkus(items.map((item) => item.sku ?? item.productId));
           const from = stock.stores.find((row) => row.qty > 0 && row.storeId !== "nijverdal");
-          if (from && !fulfilStoreId) fulfilStoreId = from.storeId;
+          if (from) fulfilStoreId = from.storeId;
         }
       }
     } catch (error) {
@@ -429,7 +442,9 @@ export async function POST(request: Request) {
     };
   }
 
+  meet("artikelen-en-voorraad");
   const order = await createOrder(orderInput);
+  meet("order-opslaan");
   const baseUrl = baseUrlFromRequest(request);
 
   if (!mollieEnabled()) {
@@ -449,6 +464,10 @@ export async function POST(request: Request) {
       isBetaalmethode(input.betaalmethode) ? input.betaalmethode : undefined,
     );
     await setMolliePaymentId(order.id, paymentId);
+    meet("mollie");
+    console.log(
+      "[checkout] " + order.reference + " klaar in " + (Date.now() - gestart) + "ms — " + klok.join(", "),
+    );
     return NextResponse.json({ orderId: order.id, reference: order.reference, checkoutUrl });
   } catch (error) {
     console.error(`[mollie] betaling aanmaken voor ${order.reference} mislukt:`, error);
