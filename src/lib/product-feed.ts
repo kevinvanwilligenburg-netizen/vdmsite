@@ -277,6 +277,15 @@ const SUBCATEGORIEEN_NIET_ONLINE = new Set([
 const PASTA_IN_DE_NAAM = /\b(mengpasta|kleurpasta|colorpaste|colorant)\b/i;
 
 /**
+ * Kassaregels die als artikel in de catalogus staan: statiegeld ("Borg E 20,-"
+ * in Fitex Diversen) en de foutief-gemengde-verf-bonnen ("Onze fout, uw
+ * voordeel EUR 50,00"). Die laatste zitten al in de Verfmengmachine-rubriek
+ * die offline staat, maar op naam vangen we ook de exemplaren die ooit ergens
+ * anders worden geboekt — een borgbon met een koopknop is geen gezicht.
+ */
+const KASSAREGEL_IN_DE_NAAM = /^borg\b|foutief gemengd/i;
+
+/**
  * De witte Sikkens-artikelen: echte producten, gekoppeld aan hun mengbare broer.
  *
  * Voor elke Sikkens-lak staat er in Tilroy een apart artikel "… Wit". Dat is
@@ -335,6 +344,7 @@ function hoortOnline(item: FeedItem): boolean {
   const merk = (item.brand ?? "").trim().toLowerCase();
   if (MERKEN_NIET_ONLINE.has(merk)) return false;
   if (PASTA_IN_DE_NAAM.test(item.title ?? "")) return false;
+  if (KASSAREGEL_IN_DE_NAAM.test(item.title ?? "")) return false;
   // Twee bronnen voor de subgroep: het losse veld sinds de sync, en het
   // laatste stuk van "Verf > …" van daarvoor. Beide checken, want deze bron
   // is al één keer van vorm gewisseld en een gemiste wissel zet stilletjes
@@ -635,6 +645,25 @@ function metGlans(naam: string, glans: string | undefined): string {
 }
 
 /**
+ * Zet de drager (Alkyd of Acryl) in de naam als de artikelen die zelf noemen.
+ *
+ * Histor voert Perfect Finish in twee werelden: alkyd (terpentine, basis ZX)
+ * en acryl (watergedragen, basis ZN) — per document van Kevin twee echt
+ * verschillende verven. De productlijn uit de kassa zegt alleen "Histor
+ * Perfect Finish", en dan stonden beide families als tweemaal exact
+ * "Histor Perfect Finish Hoogglans" in de lijst, met verschillende prijzen.
+ * Het woord staat gewoon in de artikelnamen; we hoeven het er alleen uit te
+ * lezen. Sikkens-lijnen noemen geen drager en veranderen dus niet.
+ */
+function metDrager(naam: string, artikelTitel: string): string {
+  const drager = artikelTitel.match(/\b(alkyd|acryl)\b/i)?.[1];
+  if (!drager) return naam;
+  if (naam.toLowerCase().includes(drager.toLowerCase())) return naam;
+  const netjes = drager.charAt(0).toUpperCase() + drager.slice(1).toLowerCase();
+  return `${naam} ${netjes}`;
+}
+
+/**
  * De maat als getal, om varianten op te kunnen sorteren.
  *
  * Liters wegen zwaarder dan millimeters, zodat inhoud en lengte nooit door
@@ -908,10 +937,14 @@ function buildProduct(
   const isBaseFamily = variants.some((variant) => variant.base);
   const name = schoneNaam(
     isBaseFamily
-    ? // De groepen lopen per glansgraad uiteen, maar de productlijn noemt die
-      // niet: dan staan Mat, Zijdeglans en Hoogglans als drie regels met
-      // exact dezelfde naam en verschillende prijzen in de lijst.
-      metGlans(leader.productlijn || leader.title, leader.glans)
+    ? // De groepen lopen per glansgraad en drager uiteen, maar de productlijn
+      // noemt die niet: dan staan Mat, Zijdeglans en Hoogglans — en alkyd
+      // naast acryl — als regels met exact dezelfde naam en verschillende
+      // prijzen in de lijst.
+      metGlans(
+        metDrager(leader.productlijn || leader.title, leader.title ?? ""),
+        leader.glans,
+      )
     : // Zijn er meerdere maten samengevoegd, dan mag de maat van de eerste
       // niet in de naam blijven staan: "Mack Houtbout M8 x 80 mm" met daaronder
       // ook 90, 100 en 120 leest als een fout.
@@ -1116,7 +1149,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v29";
+const KV_KEY = "catalog:products:v30";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

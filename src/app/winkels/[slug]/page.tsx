@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { mapsUrl, openingHoursSpecification, STORE_SERVICES } from "@/lib/stores";
 import { absoluteUrl, CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { getDeals, getStore, getStores } from "@/lib/tilroy";
+import { getVacaturesVoorWinkel } from "@/lib/vacatures";
 
 export const revalidate = 3600;
 
@@ -40,10 +41,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function StorePage({ params }: Props) {
-  const [store, stores, deals] = await Promise.all([
+  const [store, stores, deals, vacatures] = await Promise.all([
     getStore(params.slug),
     getStores(),
     getDeals(4),
+    getVacaturesVoorWinkel(params.slug),
   ]);
   if (!store) notFound();
 
@@ -263,6 +265,29 @@ export default async function StorePage({ params }: Props) {
           ))}
         </div>
       </section>
+
+      {vacatures.length > 0 && (
+        <section aria-labelledby="vacatures-titel" className="card p-6">
+          <h2 id="vacatures-titel" className="text-lg font-black text-ink">
+            Werken bij De Voordeelmarkt {store.city}
+          </h2>
+          <ul className="mt-3 space-y-2">
+            {vacatures.map((vacature) => (
+              <li key={vacature.id}>
+                <Link
+                  href="/vacatures"
+                  className="flex items-center justify-between gap-3 rounded-lg border-2 border-ink/10 px-4 py-2.5 transition hover:border-brand hover:text-brand"
+                >
+                  <span className="font-bold text-ink">{vacature.titel}</span>
+                  <span className="shrink-0 text-sm text-ink-soft">
+                    {vacature.uren ?? "Bekijk →"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="andere-titel">
         <h2 id="andere-titel" className="mb-3 text-lg font-black text-ink">
