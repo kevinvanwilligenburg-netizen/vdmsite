@@ -19,6 +19,12 @@ export interface MailBericht {
   onderwerp: string;
   tekst: string;
   html?: string;
+  /**
+   * Blinde kopie, voor Trustpilot's uitnodigingsservice: die leest de
+   * orderbevestiging mee en nodigt de klant namens ons uit voor een review.
+   * Alleen meesturen bij bevestigingen — niet bij inlogcodes.
+   */
+  bcc?: string;
 }
 
 export type MailResultaat =
@@ -44,6 +50,7 @@ async function viaDashboard(bericht: MailBericht): Promise<MailResultaat | null>
         subject: bericht.onderwerp,
         text: bericht.tekst,
         html: bericht.html,
+        ...(bericht.bcc ? { bcc: bericht.bcc } : {}),
       }),
       signal: AbortSignal.timeout(10_000),
     });
@@ -78,6 +85,7 @@ async function viaResend(bericht: MailBericht): Promise<MailResultaat | null> {
       body: JSON.stringify({
         from: AFZENDER,
         to: [bericht.aan],
+        ...(bericht.bcc ? { bcc: [bericht.bcc] } : {}),
         subject: bericht.onderwerp,
         text: bericht.tekst,
         ...(bericht.html ? { html: bericht.html } : {}),

@@ -154,6 +154,12 @@ function regelVoor(product: Product, kleur: PaintColor): string | null {
     `<g:image_link>${xml(product.image!)}</g:image_link>`,
     `<g:availability>${voorradig ? "in stock" : "out of stock"}</g:availability>`,
     `<g:price>${(prijs / 100).toFixed(2)} EUR</g:price>`,
+    // Kevin: Google krijgt altijd de Kluspas-prijs te zien. Als sale_price,
+    // zodat Google 'm als dé prijs toont terwijl de gewone prijs ernaast
+    // blijft bestaan — allebei staan ook zo op de landingspagina.
+    ...(variant?.kluspasPrice && variant.kluspasPrice < prijs
+      ? [`<g:sale_price>${(variant.kluspasPrice / 100).toFixed(2)} EUR</g:sale_price>`]
+      : []),
     `<g:brand>${xml(product.brand)}</g:brand>`,
     `<g:mpn>${xml(variant?.sku ?? product.sku)}</g:mpn>`,
     `<g:condition>new</g:condition>`,

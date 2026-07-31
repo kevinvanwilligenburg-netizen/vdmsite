@@ -60,9 +60,15 @@ export function PurchasePanel({
       return;
     }
 
-    // Kleur uit een merkenwaaier: opzoeken bij de server.
+    // Kleur uit een merkenwaaier: opzoeken bij de server. Een sleutel
+    // ("hub:akzo:…", uit de Shopping-feed) gaat via ?key= — als zoektekst
+    // matcht hij nergens op en landde de klant zonder kleur, met de
+    // wit-prijs in beeld terwijl de feed de mengprijs beloofde.
     let active = true;
-    fetch(`/api/kleuren?q=${encodeURIComponent(preselect)}&collection=alle&limit=1`)
+    const opzoeken = preselect.includes(":")
+      ? `/api/kleuren?key=${encodeURIComponent(preselect)}`
+      : `/api/kleuren?q=${encodeURIComponent(preselect)}&collection=alle&limit=1`;
+    fetch(opzoeken)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const found = data?.colors?.[0];

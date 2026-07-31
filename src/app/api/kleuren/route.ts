@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getColorCollections, searchColors } from "@/lib/colors";
+import { getColorCollections, resolvePaintColor, searchColors } from "@/lib/colors";
 import type { PaintColor } from "@/lib/types";
 
 export const revalidate = 3600;
@@ -25,6 +25,15 @@ export async function GET(request: Request) {
 
   if (url.searchParams.get("meta") === "1") {
     return NextResponse.json({ collections: await getColorCollections() });
+  }
+
+  // Sleutel-opzoeking voor deeplinks (?kleur=hub:… uit de Shopping-feed).
+  // Een sleutel is geen zoektekst: "hub:akzo:…" matcht op geen enkele naam,
+  // waardoor de klant zonder voorgeselecteerde kleur landde.
+  const key = (url.searchParams.get("key") ?? "").trim();
+  if (key) {
+    const kleur = await resolvePaintColor(key);
+    return NextResponse.json({ colors: kleur ? [kleur] : [], total: kleur ? 1 : 0 });
   }
 
   const q = (url.searchParams.get("q") ?? "").trim();

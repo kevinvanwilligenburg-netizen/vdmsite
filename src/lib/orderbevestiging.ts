@@ -104,11 +104,17 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     `<p>Groet,<br>${SITE_NAME}</p>`,
   ].join("");
 
+  // Trustpilot leest de bevestiging mee via BCC en nodigt de klant uit voor
+  // een review. Alleen op deze mail: een inlogcode of verzendmail met een
+  // meelezer erop zou raar zijn. Zonder variabele gebeurt er niets.
+  const reviewBcc = (process.env.TRUSTPILOT_BCC ?? "").trim();
+
   const resultaat = await verstuurMail({
     aan: order.customer.email,
     onderwerp: `Bestelling ${order.reference} — bedankt!`,
     tekst,
     html,
+    ...(reviewBcc ? { bcc: reviewBcc } : {}),
   });
 
   if (!resultaat.ok) {
