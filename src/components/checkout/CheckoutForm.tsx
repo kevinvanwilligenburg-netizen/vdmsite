@@ -13,6 +13,7 @@ import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { betaalmethodenVoor } from "@/lib/betaalmethoden";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
 import { CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
+import { BEDRIJFSTYPEN } from "@/lib/zakelijk";
 import { euro } from "@/lib/format";
 
 interface StoreOption {
@@ -53,12 +54,15 @@ export function CheckoutForm({
   stores,
   ingelogdAls,
   voorkeurWinkel,
+  whatsappNummer,
 }: {
   stores: StoreOption[];
   /** E-mailadres van de ingelogde klant; korting hangt hieraan. */
   ingelogdAls?: string;
   /** Winkel uit het account (slug), of "online". */
   voorkeurWinkel?: string;
+  /** WhatsApp-nummer uit het portal; env-variabele als terugval. */
+  whatsappNummer?: string;
 }) {
   const { items, subtotal, hydrated } = useCart();
   const { favourite } = useStore();
@@ -82,6 +86,54 @@ export function CheckoutForm({
   const [sameDay, setSameDay] = useState(false);
   const [opties, setOpties] = useState<BezorgOpties | null>(null);
   const [betaalmethode, setBetaalmethode] = useState("ideal");
+
+  // Particulier of zakelijk; bepaalt de velden én de kortingsgrond. De
+  // korting zelf beslist de server — dit stuurt alleen wat we meesturen en
+  // wat we alvast laten zien.
+  const [klantType, setKlantType] = useState<"particulier" | "zakelijk">("particulier");
+  const [accountAanmaken, setAccountAanmaken] = useState(false);
+  const [profpas, setProfpas] = useState(false);
+  const [kvkNummer, setKvkNummer] = useState("");
+  const [btwNummer, setBtwNummer] = useState("");
+  const [bedrijfsType, setBedrijfsType] = useState("");
+  const [viesStatus, setViesStatus] = useState<
+    "leeg" | "bezig" | "geldig" | "ongeldig" | "onbeslist"
+  >("leeg");
+  const [viesNaam, setViesNaam] = useState("");
+
+  // Live BTW-controle zodra het veld verlaten wordt: de klant hoort meteen
+  // of zijn nummer klopt, niet pas na de bestelknop. De server controleert
+  // bij het afrekenen opnieuw — dit is alleen de spiegel.
+  const controleerBtwLive = () => {
+    const nummer = btwNummer.trim();
+    if (!nummer) {
+      setViesStatus("leeg");
+      return;
+    }
+    setViesStatus("bezig");
+    fetch("/api/zakelijk/vies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ btw: nummer }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.status === "geldig" || data?.status === "ongeldig" || data?.status === "onbeslist") {
+          setViesStatus(data.status);
+          setViesNaam(typeof data.naam === "string" ? data.naam : "");
+        } else {
+          setViesStatus("onbeslist");
+        }
+      })
+      .catch(() => setViesStatus("onbeslist"));
+  };
+
+  // Waar de korting op dit moment op staat; de server toetst dit opnieuw.
+  const kortingActief = Boolean(
+    ingelogdAls ||
+      (klantType === "particulier" && accountAanmaken) ||
+      (klantType === "zakelijk" && profpas && viesStatus === "geldig"),
+  );
 
   // Apple Pay alleen tonen waar het ook echt werkt (Safari op een Apple-
   // apparaat met een kaart in de Wallet). Bieden we het overal aan, dan kiest
@@ -165,7 +217,7 @@ export function CheckoutForm({
 
   // De exacte bezorgdag hangt af van de voorraad per artikel; die bepaalt de
   // server bij het plaatsen van de bestelling. Hier tonen we alleen of de
-  // 10:00-cutoff nog loopt.
+  // 09:00-cutoff nog loopt.
   const [beforeCutoff, setBeforeCutoff] = useState(
     () => new Date().getHours() < SAME_DAY_CUTOFF_HOUR,
   );
@@ -277,7 +329,7 @@ export function CheckoutForm({
 
   // Zonder account geen korting: de server rekent hem ook alleen door voor
   // een ingelogde klant.
-  const totaal = subtotal - (ingelogdAls ? kluspasKorting : 0) + verzendkosten + toeslag;
+  const totaal = subtotal - (kortingActief ? kluspasKorting : 0) + verzendkosten + toeslag;
   const tekortVoorGratis = fulfilment === "delivery" ? (opties?.verzending.tekort ?? 0) : 0;
 
   if (!hydrated) {
@@ -306,10 +358,22 @@ export function CheckoutForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fulfilment,
+          klantType,
+          ...(klantType === "particulier" && accountAanmaken ? { accountAanmaken: true } : {}),
+          ...(klantType === "zakelijk"
+            ? {
+                ...(profpas ? { profpas: true } : {}),
+                ...(kvkNummer.trim() ? { kvk: kvkNummer.trim() } : {}),
+                ...(btwNummer.trim() ? { btw: btwNummer.trim() } : {}),
+                ...(bedrijfsType ? { bedrijfsType } : {}),
+              }
+            : {}),
           customer: {
             firstName,
             lastName,
-            ...(company.trim() ? { company: company.trim() } : {}),
+            ...(klantType === "zakelijk" && company.trim()
+              ? { company: company.trim() }
+              : {}),
             email,
             phone,
             ...(fulfilment === "delivery"
@@ -448,6 +512,33 @@ export function CheckoutForm({
 
         <section className="card p-6">
           <h2 className="text-lg font-black text-ink">2. Jouw gegevens</h2>
+
+          {/* Particulier of zakelijk stuurt de velden én de kortingsgrond:
+              een particulier krijgt korting via een account, een bedrijf via
+              de Profpas — en die eist een BTW-nummer dat VIES bevestigt. */}
+          <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="Klanttype">
+            {(
+              [
+                { waarde: "particulier", label: "Particulier" },
+                { waarde: "zakelijk", label: "Zakelijk" },
+              ] as const
+            ).map((optie) => (
+              <button
+                key={optie.waarde}
+                type="button"
+                aria-pressed={klantType === optie.waarde}
+                onClick={() => setKlantType(optie.waarde)}
+                className={`rounded-lg border-2 px-3 py-2.5 font-bold transition ${
+                  klantType === optie.waarde
+                    ? "border-brand bg-brand-light text-brand"
+                    : "border-ink/10 text-ink hover:border-brand"
+                }`}
+              >
+                {optie.label}
+              </button>
+            ))}
+          </div>
+
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="voornaam" className="mb-1 block text-sm font-bold text-ink">
@@ -479,22 +570,110 @@ export function CheckoutForm({
                 placeholder="Achternaam"
               />
             </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="bedrijf" className="mb-1 block text-sm font-bold text-ink">
-                Bedrijfsnaam <span className="font-normal text-ink-soft">(niet verplicht)</span>
-              </label>
-              <input
-                id="bedrijf"
-                autoComplete="organization"
-                value={company}
-                onChange={(event) => setCompany(event.target.value)}
-                className="input"
-                placeholder="Alleen bij zakelijk bestellen"
-              />
-              <p className="mt-1 text-xs text-ink-soft">
-                Met bedrijfsnaam kun je op rekening betalen via Billie.
-              </p>
-            </div>
+            {klantType === "zakelijk" && (
+              <>
+                <div>
+                  <label htmlFor="bedrijf" className="mb-1 block text-sm font-bold text-ink">
+                    Bedrijfsnaam
+                  </label>
+                  <input
+                    id="bedrijf"
+                    required
+                    autoComplete="organization"
+                    value={company}
+                    onChange={(event) => setCompany(event.target.value)}
+                    className="input"
+                    placeholder="Bedrijfsnaam"
+                  />
+                  <p className="mt-1 text-xs text-ink-soft">
+                    Met bedrijfsnaam kun je op rekening betalen via Billie.
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="bedrijfstype" className="mb-1 block text-sm font-bold text-ink">
+                    Type bedrijf
+                  </label>
+                  <select
+                    id="bedrijfstype"
+                    value={bedrijfsType}
+                    onChange={(event) => setBedrijfsType(event.target.value)}
+                    className="input"
+                  >
+                    <option value="">Maak een keuze</option>
+                    {BEDRIJFSTYPEN.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="kvk" className="mb-1 block text-sm font-bold text-ink">
+                    KvK-nummer
+                  </label>
+                  <input
+                    id="kvk"
+                    inputMode="numeric"
+                    value={kvkNummer}
+                    onChange={(event) => setKvkNummer(event.target.value)}
+                    className="input"
+                    placeholder="12345678"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="btw" className="mb-1 block text-sm font-bold text-ink">
+                    BTW-nummer
+                  </label>
+                  <input
+                    id="btw"
+                    value={btwNummer}
+                    onChange={(event) => {
+                      setBtwNummer(event.target.value);
+                      setViesStatus("leeg");
+                    }}
+                    onBlur={controleerBtwLive}
+                    className="input"
+                    placeholder="NL123456789B01"
+                  />
+                  {viesStatus === "bezig" && (
+                    <p className="mt-1 text-xs text-ink-soft">Controleren bij VIES…</p>
+                  )}
+                  {viesStatus === "geldig" && (
+                    <p className="mt-1 text-xs font-semibold text-green-700">
+                      ✓ Geldig BTW-nummer{viesNaam ? ` — ${viesNaam}` : ""}
+                    </p>
+                  )}
+                  {viesStatus === "ongeldig" && (
+                    <p className="mt-1 text-xs font-semibold text-brand-dark">
+                      Dit nummer wordt niet herkend in het EU-register (VIES).
+                    </p>
+                  )}
+                  {viesStatus === "onbeslist" && (
+                    <p className="mt-1 text-xs text-ink-soft">
+                      VIES is even niet bereikbaar; we controleren opnieuw bij het
+                      afrekenen.
+                    </p>
+                  )}
+                </div>
+                <label className="flex cursor-pointer items-start gap-2.5 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={profpas}
+                    onChange={(event) => setProfpas(event.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-[#F5821F]"
+                  />
+                  <span className="text-sm">
+                    <span className="font-bold text-ink">
+                      Ik wil een Profpas — korting direct verrekend
+                    </span>
+                    <span className="block text-ink-soft">
+                      Geldt zodra je BTW-nummer door het EU-register (VIES) is
+                      bevestigd. Zo blijft de korting bij échte bedrijven.
+                    </span>
+                  </span>
+                </label>
+              </>
+            )}
             <div>
               <label htmlFor="email" className="mb-1 block text-sm font-bold text-ink">
                 E-mailadres
@@ -776,21 +955,39 @@ export function CheckoutForm({
                   </span>
                 </span>
               </p>
+            ) : klantType === "zakelijk" ? (
+              <p className="flex items-start gap-2 text-sm text-ink-soft">
+                <Icon name="tag" className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                {kortingActief
+                  ? `Profpas-korting van ${euro(kluspasKorting)} is verrekend.`
+                  : `Met een Profpas betaal je ${euro(kluspasKorting)} minder — vink hierboven aan en vul je BTW-nummer in.`}
+              </p>
             ) : (
               <>
-                <p className="flex items-start gap-2 text-sm font-bold text-ink">
-                  <Icon name="tag" className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                  Met een account betaal je {euro(kluspasKorting)} minder
-                </p>
-                <p className="mt-1 text-xs text-ink-soft">
-                  Een account maken kost niets en gaat met je e-mailadres — geen
-                  wachtwoord. De korting is meteen verrekend.
-                </p>
-                {/* Inline, niet via een link naar de accountpagina.
-                    Wegklikken van het afrekenen op het moment dat de klant er
-                    bijna is, kost bestellingen — ook met een parameter die hem
-                    netjes terugbrengt. */}
-                <InlogInline startEmail={email} />
+                <label className="flex cursor-pointer items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={accountAanmaken}
+                    onChange={(event) => setAccountAanmaken(event.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-[#F5821F]"
+                  />
+                  <span className="text-sm">
+                    <span className="font-bold text-ink">
+                      Maak gratis een account aan — {euro(kluspasKorting)} korting,
+                      direct verrekend
+                    </span>
+                    <span className="block text-ink-soft">
+                      Op je e-mailadres, zonder wachtwoord. Je ziet er je
+                      bestellingen, facturen en gemengde kleuren terug.
+                    </span>
+                  </span>
+                </label>
+                {!accountAanmaken && (
+                  /* Inline, niet via een link naar de accountpagina.
+                     Wegklikken van het afrekenen op het moment dat de klant er
+                     bijna is, kost bestellingen. */
+                  <InlogInline startEmail={email} />
+                )}
               </>
             )}
           </div>
@@ -852,7 +1049,7 @@ export function CheckoutForm({
             <dt className="text-ink-soft">Subtotaal</dt>
             <dd className="font-semibold text-ink">{euro(subtotal)}</dd>
           </div>
-          {ingelogdAls && kluspasKorting > 0 && (
+          {kortingActief && kluspasKorting > 0 && (
             <div className="flex justify-between">
               <dt className="font-semibold text-green-700">
                 Jouw korting
@@ -931,9 +1128,9 @@ export function CheckoutForm({
             >
               <Icon name="phone" className="h-4 w-4 shrink-0 text-brand" /> {CONTACT_PHONE}
             </a>
-            {WHATSAPP_NUMMER && (
+            {(whatsappNummer ?? WHATSAPP_NUMMER) && (
               <a
-                href={`https://wa.me/${WHATSAPP_NUMMER}`}
+                href={`https://wa.me/${whatsappNummer ?? WHATSAPP_NUMMER}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-ink transition hover:text-brand"

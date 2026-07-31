@@ -4,6 +4,7 @@ import { CategoryCard } from "@/components/CategoryCard";
 import { Icon } from "@/components/icons";
 import { ProductCard } from "@/components/ProductCard";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
+import { BezorgBelofte } from "@/components/BezorgBelofte";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
 import { getCategories, getDeals, getStores } from "@/lib/tilroy";
@@ -24,7 +25,7 @@ const HIGHLIGHTS = [
   {
     icon: "truck",
     title: "Snel in huis",
-    text: "Uit ons webshopmagazijn vóór 10:00 besteld = vandaag bezorgd, anders binnen 1 werkdag.",
+    text: "Uit ons webshopmagazijn vóór 09:00 besteld = op werkdagen vandaag bezorgd, anders morgen in huis.",
   },
   {
     icon: "store",
@@ -47,8 +48,8 @@ export default async function HomePage() {
   const heroTitle = banner?.title ?? "De beste verf voor de laagste prijs.";
   const heroSubtitle =
     banner?.subtitle ??
-    "Mengverf in elke kleur, gereedschap en alles om te klussen. Gratis bezorgd — vaak vandaag nog — of gratis afgehaald in de winkel.";
-  const heroBadge = banner?.badge ?? "Vóór 10:00 besteld, vandaag verzonden";
+    "Mengverf in elke kleur, gereedschap en alles om te klussen. Gratis bezorgd of gratis afgehaald in de winkel — en verf mengen we gratis.";
+  const heroBadge = banner?.badge;
   const heroCtaLabel = banner?.ctaLabel ?? "Bekijk de topdeals";
   const heroCtaHref = banner?.ctaHref ?? "#topdeals";
 
@@ -71,7 +72,10 @@ export default async function HomePage() {
           <div className="grid items-center gap-8 p-8 sm:p-12 lg:grid-cols-[1.2fr_1fr]">
             <div>
               <p className="inline-block rounded-md bg-ink px-3 py-1.5 text-sm font-black uppercase text-white">
-                {heroBadge}
+                {/* Zet het dashboard een eigen banner-badge, dan wint die;
+                    anders de levende belofte die na 09:00 en in het weekend
+                    vanzelf omschakelt. */}
+                {heroBadge ?? <BezorgBelofte soort="badge" />}
               </p>
               <h1 className="mt-4 text-4xl font-black leading-tight text-white sm:text-5xl">
                 {heroTitle}
@@ -121,7 +125,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <TrustpilotWidget variant="horizontal" className="py-1" />
+      <TrustpilotWidget variant="carousel" className="py-1" />
 
       {/* USP's */}
       <section aria-label="Waarom De Voordeelmarkt" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -161,7 +165,7 @@ export default async function HomePage() {
           </h2>
           <p className="font-semibold text-white/90">
             Kies online uit 140+ RAL-kleuren. Wij mengen je verf gratis in de
-            winkel — vandaag besteld is vaak vandaag al onderweg.
+            winkel — vóór 09:00 besteld is op werkdagen vandaag al onderweg.
           </p>
           <div className="flex flex-wrap gap-1.5" aria-hidden>
             {swatches.slice(0, 10).map((color) => (
@@ -186,7 +190,7 @@ export default async function HomePage() {
           </h2>
           <p className="font-semibold text-white/80">
             Ligt je artikel in ons webshopmagazijn in Nijverdal, dan bezorgt DHL
-            het vandaag nog bij bestelling vóór 10:00. Andere artikelen sturen
+            het op werkdagen vandaag nog bij bestelling vóór 09:00. Andere artikelen sturen
             we met PostNL binnen één werkdag. Ophalen kan altijd gratis.
           </p>
           <Link
@@ -276,8 +280,8 @@ export default async function HomePage() {
         <p className="mt-3 leading-relaxed">
           Online bestellen is zo gedaan: kies je producten en reken veilig af
           met iDEAL, Bancontact, creditcard of Apple Pay. Artikelen uit ons
-          webshopmagazijn in Nijverdal bezorgen we bij bestelling vóór 10:00
-          dezelfde dag nog; de rest sturen we binnen één werkdag met PostNL.
+          webshopmagazijn in Nijverdal bezorgen we bij bestelling vóór 09:00
+          (op werkdagen) dezelfde dag nog; de rest sturen we binnen één werkdag met PostNL.
           Afhalen kan ook — gratis, in Nijverdal, Apeldoorn, Deventer, Zutphen
           of Emmen.
         </p>

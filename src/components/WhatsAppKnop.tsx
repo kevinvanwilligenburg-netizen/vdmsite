@@ -16,9 +16,10 @@ import { WHATSAPP_NUMMER } from "@/lib/site";
 /** Pagina's waar de knop in de weg zit of afleidt van het afrekenen. */
 const NIET_OP = [/^\/afrekenen/, /^\/bestelling\//, /^\/account/];
 
-export function WhatsAppKnop() {
+export function WhatsAppKnop({ nummer }: { nummer?: string } = {}) {
   const pathname = usePathname();
-  if (!WHATSAPP_NUMMER) return null;
+  const nr = (nummer ?? "").replace(/[^0-9]/g, "") || WHATSAPP_NUMMER;
+  if (!nr) return null;
   if (NIET_OP.some((patroon) => patroon.test(pathname))) return null;
 
   // Op de productpagina staat onderaan de mobiele koopbalk; daar plaatsen we
@@ -27,7 +28,7 @@ export function WhatsAppKnop() {
 
   return (
     <a
-      href={`https://wa.me/${WHATSAPP_NUMMER}?text=${encodeURIComponent(
+      href={`https://wa.me/${nr}?text=${encodeURIComponent(
         "Hoi! Ik heb een vraag over ",
       )}`}
       target="_blank"

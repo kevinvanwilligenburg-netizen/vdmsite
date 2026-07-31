@@ -79,6 +79,39 @@ function msUntilCutoffFrom(now: Date): number {
   return Math.max(0, cutoff.getTime() - now.getTime());
 }
 
+/**
+ * De bezorgbelofte als tekst, afhankelijk van dag en tijd.
+ *
+ * Eén bron voor elke plek die iets belooft (homepage, menubalk, winkelwagen):
+ * vóór 09:00 op een werkdag mag "vandaag verzonden" er staan, daarna is het
+ * morgen, en in het weekend rijdt de spoeddienst niet — dan is zaterdag
+ * "maandag in huis". Een statische tekst die om 14:00 nog "vandaag" roept,
+ * maakt een belofte die we al vijf uur niet meer waarmaken.
+ */
+export function bezorgBelofte(now: Date = new Date()): {
+  vandaagKan: boolean;
+  badge: string;
+  usp: string;
+} {
+  const werkdag = now.getDay() >= 1 && now.getDay() <= 5;
+  if (werkdag && now.getHours() < SAME_DAY_CUTOFF_HOUR) {
+    return {
+      vandaagKan: true,
+      badge: "Vóór 09:00 besteld, vandaag verzonden",
+      usp: "Vóór 09:00 besteld? Vandaag bezorgd mogelijk",
+    };
+  }
+  // DHL bezorgt niet op zondag: op zaterdag is de eerstvolgende bezorgdag
+  // maandag, elke andere dag gewoon morgen.
+  const morgen = addDays(startOfDay(now), 1);
+  const wanneer = morgen.getDay() === 0 ? "maandag" : "morgen";
+  return {
+    vandaagKan: false,
+    badge: `Voor 23:59 besteld, ${wanneer} in huis`,
+    usp: `Vandaag besteld, ${wanneer} in huis`,
+  };
+}
+
 export interface StockSnapshot {
   /** Aantal in Nijverdal (webshopvoorraad). */
   webshopQty: number;
@@ -96,7 +129,11 @@ export function deliveryPromise(
   land: "NL" | "BE" = "NL",
 ): DeliveryPromise {
   const msUntilCutoff = msUntilCutoffFrom(now);
-  const beforeCutoff = now.getHours() < SAME_DAY_CUTOFF_HOUR;
+  // Same-day alleen op werkdagen vóór de cutoff: in het weekend rijdt de
+  // spoeddienst niet, en een zaterdagklant die € 1,25 betaalt voor "vandaag"
+  // krijgt anders gewoon maandag zijn pakket.
+  const werkdag = now.getDay() >= 1 && now.getDay() <= 5;
+  const beforeCutoff = werkdag && now.getHours() < SAME_DAY_CUTOFF_HOUR;
 
   // België: DHL doet er een dag langer over en het spoednetwerk (same-day)
   // stopt bij de grens. Belofte is 1–2 werkdagen, zonder betaalde spoedoptie —
@@ -126,12 +163,19 @@ export function deliveryPromise(
     // Morgen is de standaard en die is gratis. Vandaag is een keuze die de
     // klant in de checkout maakt en betaalt — daarom staat hier nooit
     // "same-day" als type: dat veld stuurt het DHL-spoedlabel aan.
+    //
+    // Op zaterdag is "morgen" zondag, en dan bezorgt DHL niet: dan is de
+    // eerstvolgende bezorgdag maandag en moet het label dat ook zeggen.
+    const bezorgdag =
+      addDays(startOfDay(now), 1).getDay() === 0
+        ? addDays(startOfDay(now), 2)
+        : addDays(startOfDay(now), 1);
     return {
       type: "next-day",
       carrier: "dhl",
-      deliveryDate: addDays(startOfDay(now), 1),
+      deliveryDate: bezorgdag,
       msUntilCutoff,
-      label: "Morgen bezorgd",
+      label: bezorgdag.getDay() === 1 && now.getDay() === 6 ? "Maandag bezorgd" : "Morgen bezorgd",
       sameDayAvailable: beforeCutoff,
       sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
       ...(beforeCutoff ? { sameDayDate: startOfDay(now) } : {}),

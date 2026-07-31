@@ -616,7 +616,7 @@ export async function getStore(idOrSlug: string): Promise<Store | undefined> {
  * Vestigings-id's in Tilroy zoals de hub ze aanlevert.
  *
  * Nijverdal (7827) houdt de webshopvoorraad: wat daar ligt, gaat met DHL de
- * deur uit en valt onder de strakke cutoff (vóór 10:00 = vandaag bezorgd).
+ * deur uit en valt onder de strakke cutoff (vóór 09:00 = vandaag bezorgd).
  * Ligt een artikel alleen in een andere winkel, dan verstuurt die winkel het
  * met PostNL binnen één werkdag. De testvestiging telt nooit mee; het
  * magazijn-id (8934) is administratief en wordt niet als winkel getoond.
@@ -678,7 +678,7 @@ export interface ProductStock {
   /** Voorraad per winkel (voor afhalen). */
   stores: StoreStock[];
   /**
-   * Voorraad die met DHL onder de 10:00-cutoff verstuurd kan worden: dat is
+   * Voorraad die met DHL onder de 09:00-cutoff verstuurd kan worden: dat is
    * Nijverdal (webshopvoorraad) plus het administratieve magazijn.
    * `null` als de voorraad onbekend is.
    */

@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { Icon } from "@/components/icons";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
-import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
+import { getWhatsappNummer } from "@/lib/contact";
+import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { getBrands, getNavCategories, getStores } from "@/lib/tilroy";
 
@@ -18,10 +19,11 @@ const SERVICE_LINKS = [
 ];
 
 export async function Footer() {
-  const [categories, brands, stores] = await Promise.all([
+  const [categories, brands, stores, whatsappNummer] = await Promise.all([
     getNavCategories(10),
     getBrands(10),
     getStores(),
+    getWhatsappNummer(),
   ]);
   return (
     <footer className="mt-14 bg-ink text-white sm:mt-16">
@@ -157,10 +159,10 @@ export async function Footer() {
                 <Icon name="mail" className="h-4 w-4 shrink-0" /> {CONTACT_EMAIL}
               </a>
             </li>
-            {WHATSAPP_NUMMER && (
+            {whatsappNummer && (
               <li>
                 <a
-                  href={`https://wa.me/${WHATSAPP_NUMMER}`}
+                  href={`https://wa.me/${whatsappNummer}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 transition hover:text-brand-bright"

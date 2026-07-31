@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { emailVanSessie, kluspasNummerVan, SESSIE_COOKIE } from "@/lib/account";
+import { controleerBtw } from "@/lib/vies";
+import { btwFormaatGeldig, isBedrijfsType, kvkGeldig, normaliseerBtw } from "@/lib/zakelijk";
 import { isBetaalmethode } from "@/lib/betaalmethoden";
 import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
@@ -104,10 +106,62 @@ export async function POST(request: Request) {
    * klant op die terugkomt.
    */
   const sessieEmail = await emailVanSessie(cookies().get(SESSIE_COOKIE)?.value);
-  const kluspas = Boolean(sessieEmail);
+
+  /*
+   * Drie geldige gronden voor directe korting, elk server-side getoetst:
+   *
+   * 1. Ingelogd — het bestaande pad.
+   * 2. Particulier die bij het bestellen een account laat aanmaken. Het adres
+   *    is dan meteen een account (accounts zijn e-mailgebaseerd; inloggen kan
+   *    altijd al met een code naar datzelfde adres).
+   * 3. Zakelijk met Profpas-vinkje — alleen als VIES het BTW-nummer écht
+   *    bevestigt. Formaat is niet genoeg: een verzonnen nummer ziet er net zo
+   *    uit. Zo houden we koopjesjagers zonder bedrijf buiten de korting.
+   *
+   * VIES onbereikbaar telt als níét bevestigd: anders is elke storing bij de
+   * EU een gratis kortingsdag. De klant krijgt dat als nette melding terug en
+   * kan zonder vinkje gewoon bestellen.
+   */
+  const klantType = input.klantType === "zakelijk" ? "zakelijk" : "particulier";
+  const accountAanmaken = klantType === "particulier" && input.accountAanmaken === true;
+  const kvk = (input.kvk ?? "").replace(/[^0-9]/g, "");
+  const btw = normaliseerBtw(input.btw ?? "");
+
+  if (klantType === "zakelijk") {
+    if (!company) return badRequest("Vul je bedrijfsnaam in.");
+    if (kvk && !kvkGeldig(kvk)) return badRequest("Een KvK-nummer heeft acht cijfers.");
+    if (input.bedrijfsType && !isBedrijfsType(input.bedrijfsType)) {
+      return badRequest("Ongeldig bedrijfstype.");
+    }
+  }
+
+  let kluspas = Boolean(sessieEmail) || accountAanmaken;
+  if (klantType === "zakelijk" && input.profpas === true) {
+    if (!btwFormaatGeldig(btw)) {
+      return badRequest(
+        "Voor de Profpas-korting is een geldig BTW-nummer nodig (bijv. NL123456789B01).",
+      );
+    }
+    const vies = await controleerBtw(btw);
+    if (vies.status === "geldig") {
+      kluspas = true;
+      console.log(
+        `[checkout] VIES bevestigt ${btw}${vies.naam ? ` (${vies.naam})` : ""}`,
+      );
+    } else if (vies.status === "ongeldig") {
+      return badRequest(
+        "Dit BTW-nummer wordt niet herkend in het EU-register (VIES). Controleer het nummer, of bestel zonder Profpas-korting.",
+      );
+    } else {
+      return badRequest(
+        "De BTW-controle (VIES) is tijdelijk niet bereikbaar. Probeer het zo weer, of bestel zonder Profpas-korting — die kunnen we dan later bijschrijven.",
+      );
+    }
+  }
+
   // Het pasnummer zetten we alleen in de order als de klant er echt een heeft;
   // de winkel koppelt de bestelling daarmee aan de kaart.
-  const kluspasInput = kluspas ? await kluspasNummerVan(sessieEmail!) : "";
+  const kluspasInput = sessieEmail ? await kluspasNummerVan(sessieEmail) : "";
 
   // Prijzen en productgegevens altijd server-side bepalen; de client levert
   // alleen id's en aantallen aan. Bedragen in de order zijn EURO'S (contract).
@@ -288,6 +342,15 @@ export async function POST(request: Request) {
       email,
       phone,
       ...(company ? { company } : {}),
+      ...(klantType === "zakelijk"
+        ? {
+            ...(kvk ? { kvk } : {}),
+            ...(btw ? { btw } : {}),
+            ...(input.bedrijfsType && isBedrijfsType(input.bedrijfsType)
+              ? { bedrijfsType: input.bedrijfsType }
+              : {}),
+          }
+        : {}),
       ...(address ?? {}),
       country: land,
     },
@@ -309,7 +372,7 @@ export async function POST(request: Request) {
     orderInput.store = { id: store.id, name: store.name, city: store.city };
   } else {
     // De bezorgbelofte volgt uit de voorraad: ligt alles in Nijverdal
-    // (webshopvoorraad), dan gaat het met DHL onder de 10:00-cutoff; anders
+    // (webshopvoorraad), dan gaat het met DHL onder de 09:00-cutoff; anders
     // verstuurt de winkel die het artikel heeft het met PostNL binnen één
     // werkdag. Lukt de voorraadcheck niet, dan beloven we het voorzichtige
     // scenario in plaats van iets wat we niet waar kunnen maken.

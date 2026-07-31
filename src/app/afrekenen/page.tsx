@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { emailVanSessie, SESSIE_COOKIE, voorkeurWinkel } from "@/lib/account";
+import { getWhatsappNummer } from "@/lib/contact";
 import { pickupPromise } from "@/lib/pickup";
 import { getStores } from "@/lib/tilroy";
 
@@ -17,9 +18,10 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const [stores, email] = await Promise.all([
+  const [stores, email, whatsapp] = await Promise.all([
     getStores(),
     emailVanSessie(cookies().get(SESSIE_COOKIE)?.value),
+    getWhatsappNummer(),
   ]);
   // De winkel die de klant in zijn account koos; die reist mee naar een
   // ander apparaat, de lokale winkelkiezer niet.
@@ -45,6 +47,7 @@ export default async function CheckoutPage() {
       <h1 className="text-3xl font-black uppercase italic text-ink">Afrekenen</h1>
       <CheckoutForm
         stores={storeOptions}
+        whatsappNummer={whatsapp}
         ingelogdAls={email ?? undefined}
         voorkeurWinkel={voorkeur ?? undefined}
       />

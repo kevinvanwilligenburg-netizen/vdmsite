@@ -220,6 +220,10 @@ export interface OrderCustomer {
   phone?: string;
   /** Bedrijfsnaam; vereist voor betalen op rekening (Billie), verder optioneel. */
   company?: string;
+  /** Zakelijke gegevens; alleen gevuld bij zakelijk bestellen. */
+  kvk?: string;
+  btw?: string;
+  bedrijfsType?: string;
   /** Straatnaam (zonder huisnummer — Tilroy wil die velden apart). */
   street?: string;
   houseNumber?: string;
@@ -307,6 +311,15 @@ export interface CheckoutItemInput {
 }
 
 export interface CheckoutInput {
+  /** Particulier of zakelijk; bepaalt welke kortingsgronden gelden. */
+  klantType?: "particulier" | "zakelijk";
+  /** Particulier: maak bij deze bestelling een account aan → directe korting. */
+  accountAanmaken?: boolean;
+  /** Zakelijk: Profpas aanvragen → korting, mits VIES het BTW-nummer bevestigt. */
+  profpas?: boolean;
+  kvk?: string;
+  btw?: string;
+  bedrijfsType?: string;
   customer: {
     firstName: string;
     lastName: string;

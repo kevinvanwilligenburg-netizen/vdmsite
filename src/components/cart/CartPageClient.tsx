@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { useKorting } from "@/components/cart/useKorting";
+import { BezorgBelofte } from "@/components/BezorgBelofte";
 import { Icon } from "@/components/icons";
 import { Mark } from "@/components/Mark";
 import { ProductArt } from "@/components/ProductArt";
@@ -178,7 +179,7 @@ export function CartPageClient() {
         <ul className="mt-5 space-y-1.5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
           <li className="flex items-start gap-2">
             <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
-            Vandaag besteld, morgen in huis — vóór 09:00 zelfs vandaag mogelijk
+            <BezorgBelofte soort="usp" />
           </li>
           <li className="flex items-start gap-2">
             <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />

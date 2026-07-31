@@ -16,6 +16,7 @@ import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { StoreProvider } from "@/components/store/StoreProvider";
 import { WhatsAppKnop } from "@/components/WhatsAppKnop";
+import { getWhatsappNummer } from "@/lib/contact";
 import { CONSENT_COOKIE } from "@/lib/consent";
 import { getStores } from "@/lib/tilroy";
 import {
@@ -126,9 +127,10 @@ const websiteJsonLd = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const [rating, stores] = await Promise.all([
+  const [rating, stores, whatsapp] = await Promise.all([
     getTrustpilotRating().then(aggregateRatingJsonLd),
     getStores(),
+    getWhatsappNummer(),
   ]);
   const storeOptions = stores.map((store) => ({
     slug: store.slug,
@@ -181,7 +183,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             {/* Bevestiging na "in winkelwagen", met wat erbij hoort. */}
             <AddedToCart />
             {/* Vragen stellen zoals klanten dat zelf het liefst doen. */}
-            <WhatsAppKnop />
+            <WhatsAppKnop nummer={whatsapp} />
           </CartProvider>
         </StoreProvider>
         <CookieBanner />

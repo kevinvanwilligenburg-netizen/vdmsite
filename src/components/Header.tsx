@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 
+import { BezorgBelofte } from "@/components/BezorgBelofte";
 import { CartBadge } from "@/components/cart/CartBadge";
 import { Icon } from "@/components/icons";
 import { Logo, Tagline } from "@/components/Logo";
@@ -9,12 +10,14 @@ import { MobileNav } from "@/components/MobileNav";
 import { SearchBox } from "@/components/search/SearchBox";
 import { PrijsSchakelaar } from "@/components/prijs/PrijsWeergave";
 import { StorePicker } from "@/components/store/StorePicker";
+import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { emailVanSessie, SESSIE_COOKIE } from "@/lib/account";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { getMenu, getStores } from "@/lib/tilroy";
 
+// De eerste USP is de levende bezorgbelofte (BezorgBelofte): na 09:00 en in
+// het weekend belooft die geen "vandaag" meer.
 const USPS = [
-  "Vóór 09:00 besteld? Vandaag bezorgd mogelijk",
   "Verf gemengd in elke kleur",
   `Gratis bezorgd vanaf ${GRATIS_VANAF_TEKST} · altijd gratis afhalen`,
 ];
@@ -32,15 +35,22 @@ export async function Header() {
       {/* USP-balk (oranje, zoals op devoordeelmarkt.nl) */}
       <div className="bg-brand-bright text-white">
         <div className="container-page flex items-center justify-center gap-8 py-1.5 text-[11px] font-bold sm:justify-between sm:text-xs">
-          {USPS.map((usp, index) => (
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name="check" className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />
+            <BezorgBelofte soort="usp" />
+          </span>
+          {USPS.map((usp) => (
             <span
               key={usp}
-              className={`inline-flex items-center gap-1.5 ${index > 0 ? "hidden sm:inline-flex" : ""}`}
+              className="hidden items-center gap-1.5 sm:inline-flex"
             >
               <Icon name="check" className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />
               {usp}
             </span>
           ))}
+          <span className="hidden w-56 lg:block">
+            <TrustpilotWidget variant="micro" />
+          </span>
           <Link href="/klantenservice" className="hidden underline-offset-2 hover:underline md:inline">
             Klantenservice
           </Link>

@@ -138,7 +138,7 @@ export default async function StorePage({ params }: Props) {
           {store.address}. Wij mengen verf gratis in elke kleur, je parkeert
           gratis voor de deur en online bestellingen haal je hier kosteloos op.
           {isWebshopStore &&
-            " Deze vestiging verzorgt bovendien onze webshopvoorraad: bestel je vóór 10:00 uur, dan gaat je pakket dezelfde dag nog de deur uit."}
+            " Deze vestiging verzorgt bovendien onze webshopvoorraad: bestel je op werkdagen vóór 09:00, dan gaat je pakket dezelfde dag nog de deur uit."}
         </p>
       </header>
 
