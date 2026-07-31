@@ -14,6 +14,7 @@ const SERVICE_LINKS = [
   { href: "/klantenservice", label: "Klantenservice & FAQ" },
   { href: "/bezorgen-en-afhalen", label: "Bezorgen & afhalen" },
   { href: "/winkels", label: "Openingstijden & adressen" },
+  { href: "/vacatures", label: "Werken bij De Voordeelmarkt" },
   { href: "/algemene-voorwaarden", label: "Algemene voorwaarden" },
   { href: "/privacy", label: "Privacy & cookies" },
 ];
