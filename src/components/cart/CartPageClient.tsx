@@ -8,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { Mark } from "@/components/Mark";
 import { ProductArt } from "@/components/ProductArt";
 import { euro } from "@/lib/format";
+import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 
 export function CartPageClient() {
   const { items, subtotal, hydrated, setQty, removeItem } = useCart();
@@ -166,6 +167,42 @@ export function CartPageClient() {
         >
           Verder winkelen
         </Link>
+
+        {/*
+          Vertrouwen op het beslismoment: wanneer komt het, en kan ik betalen
+          zoals ik gewend ben? Dat stond nergens, terwijl dit de plek is waar
+          de klant twijfelt — de betaaliconen en de levertijd horen bij de
+          afrekenknop, niet in de footer twee schermen lager.
+        */}
+        <ul className="mt-5 space-y-1.5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
+          <li className="flex items-start gap-2">
+            <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+            Vandaag besteld, morgen in huis — vóór 09:00 zelfs vandaag mogelijk
+          </li>
+          <li className="flex items-start gap-2">
+            <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+            Gratis bezorgd vanaf {GRATIS_VANAF_TEKST} · afhalen altijd gratis
+          </li>
+          <li className="flex items-start gap-2">
+            <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+            14 dagen bedenktijd, terugbrengen mag in elke winkel
+          </li>
+        </ul>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="Betaalmethoden">
+          {["ideal", "bancontact", "klarna", "visa", "mastercard", "applepay", "googlepay", "paypal"].map(
+            (methode) => (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                key={methode}
+                src={`/betaalmethoden/${methode}.svg`}
+                alt={methode}
+                className="h-6 w-9 rounded border border-ink/10 bg-white object-contain p-0.5"
+                loading="lazy"
+              />
+            ),
+          )}
+        </div>
+        <p className="mt-2 text-xs text-ink-soft">Veilig betalen via Mollie</p>
       </aside>
     </div>
   );

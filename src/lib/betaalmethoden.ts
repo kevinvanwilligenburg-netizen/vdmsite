@@ -21,6 +21,8 @@ export interface Betaalmethode {
   logo: string;
   /** Landen waar we deze methode tonen; leeg = overal. */
   landen?: ("NL" | "BE")[];
+  /** Alleen tonen zodra er een bedrijfsnaam is ingevuld (betalen op rekening). */
+  zakelijk?: boolean;
 }
 
 export const BETAALMETHODEN: Betaalmethode[] = [
@@ -36,6 +38,20 @@ export const BETAALMETHODEN: Betaalmethode[] = [
     label: "Bancontact",
     uitleg: "Betaal direct met je Belgische bankkaart",
     logo: "/betaalmethoden/bancontact.svg",
+    landen: ["BE"],
+  },
+  {
+    id: "kbc",
+    label: "KBC/CBC",
+    uitleg: "Betaal via de KBC- of CBC-app",
+    logo: "/betaalmethoden/kbc.svg",
+    landen: ["BE"],
+  },
+  {
+    id: "belfius",
+    label: "Belfius",
+    uitleg: "Betaal via Belfius Direct Net",
+    logo: "/betaalmethoden/belfius.svg",
     landen: ["BE"],
   },
   {
@@ -57,10 +73,23 @@ export const BETAALMETHODEN: Betaalmethode[] = [
     logo: "/betaalmethoden/applepay.svg",
   },
   {
+    id: "googlepay",
+    label: "Google Pay",
+    uitleg: "Betaal met de kaarten in je Google-account",
+    logo: "/betaalmethoden/googlepay.svg",
+  },
+  {
     id: "paypal",
     label: "PayPal",
     uitleg: "Betaal met je PayPal-saldo of gekoppelde rekening",
     logo: "/betaalmethoden/paypal.svg",
+  },
+  {
+    id: "billie",
+    label: "Op rekening (Billie)",
+    uitleg: "Voor bedrijven: achteraf betalen op factuur, 30 dagen",
+    logo: "/betaalmethoden/billie.svg",
+    zakelijk: true,
   },
 ];
 

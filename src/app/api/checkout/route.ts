@@ -34,6 +34,8 @@ export async function POST(request: Request) {
   const lastName = (input.customer?.lastName ?? "").trim();
   const email = (input.customer?.email ?? "").trim();
   const phone = (input.customer?.phone ?? "").trim();
+  // Bedrijfsnaam is vrijwillig; alleen schoonmaken en begrenzen, niet eisen.
+  const company = (input.customer?.company ?? "").toString().trim().slice(0, 120);
   if (firstName.length < 2) return badRequest("Vul je voornaam in.");
   if (lastName.length < 2) return badRequest("Vul je achternaam in.");
   if (!EMAIL_PATTERN.test(email)) return badRequest("Vul een geldig e-mailadres in.");
@@ -264,6 +266,7 @@ export async function POST(request: Request) {
       lastName,
       email,
       phone,
+      ...(company ? { company } : {}),
       ...(address ?? {}),
       country: land,
     },
@@ -302,7 +305,7 @@ export async function POST(request: Request) {
           deliveryPromise({
             webshopQty: stock.webshopQty ?? 0,
             otherStoresQty: stock.otherStoresQty ?? 0,
-          }),
+          }, undefined, land),
         );
         if ((stock.webshopQty ?? 0) === 0) {
           const from = stock.stores.find((row) => row.qty > 0 && row.storeId !== "nijverdal");
@@ -316,7 +319,7 @@ export async function POST(request: Request) {
     const promise =
       promises.length > 0
         ? combinePromises(promises)
-        : deliveryPromise({ webshopQty: 0, otherStoresQty: 1 });
+        : deliveryPromise({ webshopQty: 0, otherStoresQty: 1 }, undefined, land);
 
     // Vandaag bezorgen alleen als de klant het vroeg én het op dít moment
     // ook echt kan. De server beslist, niet het formulier: anders zou een

@@ -34,6 +34,21 @@ export interface ColorCollection {
 
 const RAL_COLLECTION_ID = "ral";
 
+/**
+ * "Populair": de kleuren waar klanten daadwerkelijk voor komen, als eigen
+ * waaier voorin de kiezer — zoals Klus=r een "Populair"-collectie voert.
+ *
+ * Bewust zonder jaartal en gevuld uit VEELGEKOZEN in plaats van een
+ * redactielijst: wit is met afstand de meestverkochte verf en de rest van dit
+ * rijtje (antraciet voor kozijnen, gitzwart, dennengroen voor deuren) is waar
+ * de mengmachine dagelijks op draait. Een verzonnen "trendcollectie 2026"
+ * belooft een selectie die we niet gemaakt hebben.
+ *
+ * De kleuren zíjn de RAL-kleuren — zelfde sleutels (`ral:9010`), dus voor de
+ * winkelwagen en resolvePaintColor bestaat deze waaier niet eens.
+ */
+const POPULAIR_COLLECTION_ID = "populair";
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -103,7 +118,15 @@ export async function loadAllColors(): Promise<PaintColor[]> {
   return colors;
 }
 
-/** Collecties met aantallen, RAL bovenaan. */
+/** De Populair-waaier: VEELGEKOZEN, maar dan als volwaardige kleurenlijst. */
+export function populairPaintColors(): PaintColor[] {
+  const alle = ralPaintColors();
+  return VEELGEKOZEN.map((code) =>
+    alle.find((kleur) => kleur.key === `ral:${code}`),
+  ).filter((kleur): kleur is PaintColor => Boolean(kleur));
+}
+
+/** Collecties met aantallen: Populair voorop, dan RAL, dan de rest op grootte. */
 export async function getColorCollections(): Promise<ColorCollection[]> {
   const colors = await loadAllColors();
   const counts = new Map<string, { name: string; count: number }>();
@@ -118,11 +141,15 @@ export async function getColorCollections(): Promise<ColorCollection[]> {
     name: value.name,
     count: value.count,
   }));
-  return list.sort((a, b) => {
+  const gesorteerd = list.sort((a, b) => {
     if (a.id === RAL_COLLECTION_ID) return -1;
     if (b.id === RAL_COLLECTION_ID) return 1;
     return b.count - a.count || a.name.localeCompare(b.name, "nl");
   });
+  return [
+    { id: POPULAIR_COLLECTION_ID, name: "Populair", count: populairPaintColors().length },
+    ...gesorteerd,
+  ];
 }
 
 export interface ColorQuery {
@@ -140,8 +167,18 @@ export async function searchColors(
   const q = (query.q ?? "").trim().toLowerCase().replace(/^ral\s*/, "");
   const collectionId = query.collectionId;
 
-  const matches = colors.filter((color) => {
-    if (collectionId && collectionId !== "alle" && color.collectionId !== collectionId) {
+  // Populair is geen echte collectie maar een selectie uit RAL; de kleuren
+  // dragen hun eigen collectionId, dus het gewone filter zou niets vinden.
+  const bron =
+    collectionId === POPULAIR_COLLECTION_ID ? populairPaintColors() : colors;
+
+  const matches = bron.filter((color) => {
+    if (
+      collectionId &&
+      collectionId !== "alle" &&
+      collectionId !== POPULAIR_COLLECTION_ID &&
+      color.collectionId !== collectionId
+    ) {
       return false;
     }
     if (!q) return true;

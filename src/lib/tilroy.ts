@@ -110,6 +110,18 @@ function rubriekNaamSleutel(category: Category): string {
 }
 
 /**
+ * Hoort deze rubriek in navigatie en op merkpagina's?
+ *
+ * Zelfde lijst als het menu gebruikt. Eén Sikkens-artikel staat in Tilroy nog
+ * in het restgroepje "Verf" (code 1); zonder deze regel kreeg de merkpagina
+ * een knop "Verf 1" naast "Verf en Beits 59" — twee knoppen die hetzelfde
+ * beloven, waarvan er één bijna leeg is.
+ */
+export function toonbareRubriek(naam: string): boolean {
+  return !GEEN_RUBRIEK.has(naam.trim().toLocaleLowerCase("nl"));
+}
+
+/**
  * De rubrieken die in menu en footer horen: groot genoeg om een rubriek te
  * zijn, en de grootste eerst. `getCategories()` blijft compleet — een klant
  * die op /categorie/anza belandt krijgt gewoon zijn pagina, we zetten er

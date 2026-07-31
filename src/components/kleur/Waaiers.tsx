@@ -17,7 +17,10 @@ import type { ColorCollection } from "@/lib/colors";
  */
 export function Waaiers({ collections }: { collections: ColorCollection[] }) {
   if (collections.length === 0) return null;
-  const gesorteerd = [...collections].sort((a, b) => b.count - a.count);
+  // De volgorde komt uit getColorCollections: Populair en RAL voorop, daarna
+  // op grootte. Hier opnieuw op aantal sorteren zou Populair (10 kleuren)
+  // helemaal onderaan zetten — precies de waaier die voorop hoort.
+  const gesorteerd = collections;
 
   return (
     <section aria-labelledby="waaiers-titel">

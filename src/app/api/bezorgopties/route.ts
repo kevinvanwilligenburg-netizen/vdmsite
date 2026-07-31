@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         deliveryPromise({
           webshopQty: stock.webshopQty ?? 0,
           otherStoresQty: stock.otherStoresQty ?? 0,
-        }),
+        }, undefined, land),
       );
     }
   } catch (error) {
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   const promise =
     promises.length > 0
       ? combinePromises(promises)
-      : deliveryPromise({ webshopQty: 0, otherStoresQty: 1 });
+      : deliveryPromise({ webshopQty: 0, otherStoresQty: 1 }, undefined, land);
 
   // Sikkens gaat franco de deur uit, ongeacht het bedrag. Welke merken er in
   // het mandje liggen weet de client niet betrouwbaar, dus zoeken we ze hier

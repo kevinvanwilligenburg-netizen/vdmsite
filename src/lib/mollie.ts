@@ -57,6 +57,17 @@ export async function createMolliePayment(
    */
   method?: string,
 ): Promise<{ paymentId: string; checkoutUrl: string }> {
+  // Google Pay is de uitzondering op het vooraf kiezen: Mollie kan die
+  // betaling alleen starten vanaf een echte Google Pay-knop, en die staat op
+  // Mollie's eigen betaalpagina. Method meesturen levert een betaling op die
+  // nergens af te ronden is — gemeten bij Klus=r. Dus: zonder method, dan
+  // toont Mollie zelf de knop.
+  const gekozenMethod = method === "googlepay" ? undefined : method;
+
+  // Billie is betalen op rekening voor bedrijven; Mollie eist daarvoor het
+  // volledige factuuradres mét bedrijfsnaam.
+  const zakelijk = gekozenMethod === "billie";
+
   const body: Record<string, unknown> = {
     amount: {
       currency: "EUR",
@@ -66,7 +77,26 @@ export async function createMolliePayment(
     redirectUrl: `${baseUrl}/bestelling/${order.reference}`,
     locale: "nl_NL",
     metadata: { orderId: order.id },
-    ...(method ? { method } : {}),
+    ...(gekozenMethod ? { method: gekozenMethod } : {}),
+    ...(zakelijk &&
+    order.customer.company &&
+    order.customer.street &&
+    order.customer.postalCode &&
+    order.customer.city
+      ? {
+          billingAddress: {
+            organizationName: order.customer.company,
+            givenName: order.customer.firstName,
+            familyName: order.customer.lastName,
+            email: order.customer.email,
+            streetAndNumber:
+              `${order.customer.street} ${order.customer.houseNumber ?? ""}${order.customer.houseNumberSuffix ?? ""}`.trim(),
+            postalCode: order.customer.postalCode,
+            city: order.customer.city,
+            country: order.customer.country ?? "NL",
+          },
+        }
+      : {}),
   };
   // Mollie weigert webhooks naar localhost; lokaal synct de orderpagina
   // de betaalstatus zelf bij (zie getOrderSynced in lib/orders.ts).
@@ -74,9 +104,27 @@ export async function createMolliePayment(
     body.webhookUrl = `${baseUrl}/api/webhooks/mollie`;
   }
 
-  const payment = await mollieFetch<
-    MolliePayment & { _links: { checkout?: { href: string } } }
-  >("/payments", { method: "POST", body: JSON.stringify(body) });
+  let payment: MolliePayment & { _links: { checkout?: { href: string } } };
+  try {
+    payment = await mollieFetch<
+      MolliePayment & { _links: { checkout?: { href: string } } }
+    >("/payments", { method: "POST", body: JSON.stringify(body) });
+  } catch (error) {
+    // Methode niet actief in het Mollie-profiel (of tijdelijk niet
+    // beschikbaar): de bestelling mag daar niet op stuklopen. Zonder method
+    // krijgt de klant Mollie's keuzescherm — een extra klik, geen dode order.
+    if (gekozenMethod && error instanceof Error && /status 4\d\d/.test(error.message)) {
+      const { method: _weg, ...zonderMethode } = body as { method?: unknown } & Record<
+        string,
+        unknown
+      >;
+      payment = await mollieFetch<
+        MolliePayment & { _links: { checkout?: { href: string } } }
+      >("/payments", { method: "POST", body: JSON.stringify(zonderMethode) });
+    } else {
+      throw error;
+    }
+  }
 
   const checkoutUrl = payment._links.checkout?.href;
   if (!checkoutUrl) {

@@ -96,6 +96,15 @@ const CATEGORIE_NAAM: Record<string, string> = {
 };
 
 /**
+ * Weergavenaam voor een rubriek-slug, met de kassanaam als terugval.
+ * Voor iedereen die rubrieklabels toont zonder langs categorieenUit te gaan
+ * (merkpagina's): zo heet g9000 óók daar "IJzerwaren" en niet "Ijzerwaren".
+ */
+export function categorieWeergaveNaam(slug: string, kassanaam: string): string {
+  return CATEGORIE_NAAM[slug] ?? kassanaam;
+}
+
+/**
  * Een pictogram en een tint per categorie. Sleutelwoord in de slug bepaalt de
  * keuze, zodat een nieuwe categorie uit Tilroy vanzelf iets passends krijgt in
  * plaats van een leeg vakje.
@@ -293,8 +302,13 @@ function hoortOnline(item: FeedItem): boolean {
   const merk = (item.brand ?? "").trim().toLowerCase();
   if (MERKEN_NIET_ONLINE.has(merk)) return false;
   if (PASTA_IN_DE_NAAM.test(item.title ?? "")) return false;
+  // Twee bronnen voor de subgroep: het losse veld sinds de sync, en het
+  // laatste stuk van "Verf > …" van daarvoor. Beide checken, want deze bron
+  // is al één keer van vorm gewisseld en een gemiste wissel zet stilletjes
+  // 111 mengmachine-artikelen online.
   const sub = ((item.categories ?? "").split(">").pop() ?? "").trim().toLowerCase();
-  return !SUBCATEGORIEEN_NIET_ONLINE.has(sub);
+  const subVeld = (item.categorie_sub ?? "").trim().toLowerCase();
+  return !SUBCATEGORIEEN_NIET_ONLINE.has(sub) && !SUBCATEGORIEEN_NIET_ONLINE.has(subVeld);
 }
 
 

@@ -93,9 +93,34 @@ export interface StockSnapshot {
 export function deliveryPromise(
   stock: StockSnapshot,
   now: Date = new Date(),
+  land: "NL" | "BE" = "NL",
 ): DeliveryPromise {
   const msUntilCutoff = msUntilCutoffFrom(now);
   const beforeCutoff = now.getHours() < SAME_DAY_CUTOFF_HOUR;
+
+  // België: DHL doet er een dag langer over en het spoednetwerk (same-day)
+  // stopt bij de grens. Belofte is 1–2 werkdagen, zonder betaalde spoedoptie —
+  // een belofte die we niet waar kunnen maken is erger dan een ruime.
+  if (land === "BE") {
+    if (stock.webshopQty > 0 || stock.otherStoresQty > 0) {
+      return {
+        type: "next-workday",
+        carrier: stock.webshopQty > 0 ? "dhl" : "postnl",
+        deliveryDate: nextWorkday(nextWorkday(now)),
+        msUntilCutoff,
+        label: "Binnen 1–2 werkdagen bezorgd",
+        sameDayAvailable: false,
+        sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
+      };
+    }
+    return {
+      type: "unavailable",
+      msUntilCutoff,
+      label: "Tijdelijk niet leverbaar",
+      sameDayAvailable: false,
+      sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
+    };
+  }
 
   if (stock.webshopQty > 0) {
     // Morgen is de standaard en die is gratis. Vandaag is een keuze die de

@@ -63,6 +63,7 @@ export function CheckoutForm({
   const [fulfilment, setFulfilment] = useState<Fulfilment>("delivery");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [street, setStreet] = useState("");
@@ -92,10 +93,18 @@ export function CheckoutForm({
 
   const methoden = useMemo(
     () =>
-      betaalmethodenVoor(country).filter(
-        (methode) => methode.id !== "applepay" || applePay,
-      ),
-    [country, applePay],
+      betaalmethodenVoor(country).filter((methode) => {
+        if (methode.id === "applepay") return applePay;
+        // Google Pay werkt via Mollie in elke browser mét een Google-account,
+        // maar op een Apple Pay-apparaat is dat de vreemde eend: daar tonen we
+        // Apple Pay. Alle twee tegelijk is keuzestress zonder winst.
+        if (methode.id === "googlepay") return !applePay;
+        // Op rekening (Billie) is er alleen voor bedrijven; de tegel
+        // verschijnt zodra er een bedrijfsnaam staat.
+        if (methode.zakelijk) return company.trim().length >= 2;
+        return true;
+      }),
+    [country, applePay, company],
   );
   // Verdwijnt de gekozen methode (ander land, geen Apple Pay), val dan terug
   // op de eerste die er wél is.
@@ -298,6 +307,7 @@ export function CheckoutForm({
           customer: {
             firstName,
             lastName,
+            ...(company.trim() ? { company: company.trim() } : {}),
             email,
             phone,
             ...(fulfilment === "delivery"
@@ -466,6 +476,22 @@ export function CheckoutForm({
                 className="input"
                 placeholder="Achternaam"
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="bedrijf" className="mb-1 block text-sm font-bold text-ink">
+                Bedrijfsnaam <span className="font-normal text-ink-soft">(niet verplicht)</span>
+              </label>
+              <input
+                id="bedrijf"
+                autoComplete="organization"
+                value={company}
+                onChange={(event) => setCompany(event.target.value)}
+                className="input"
+                placeholder="Alleen bij zakelijk bestellen"
+              />
+              <p className="mt-1 text-xs text-ink-soft">
+                Met bedrijfsnaam kun je op rekening betalen via Billie.
+              </p>
             </div>
             <div>
               <label htmlFor="email" className="mb-1 block text-sm font-bold text-ink">

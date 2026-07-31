@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -57,7 +57,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     );
     if (treffer) {
       const sub = treffer.attributes!.subcategorie!;
-      redirect(
+      // Permanent (308): de oude rubriek-URL's komen nooit meer terug, en
+      // alleen bij een permanente omleiding geeft Google de opgebouwde
+      // positie door aan de nieuwe URL.
+      permanentRedirect(
         `/categorie/${treffer.category}?subcategorie=${encodeURIComponent(sub)}`,
       );
     }

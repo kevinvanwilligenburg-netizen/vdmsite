@@ -205,6 +205,8 @@ export interface OrderCustomer {
   firstName: string;
   lastName: string;
   phone?: string;
+  /** Bedrijfsnaam; vereist voor betalen op rekening (Billie), verder optioneel. */
+  company?: string;
   /** Straatnaam (zonder huisnummer — Tilroy wil die velden apart). */
   street?: string;
   houseNumber?: string;
@@ -295,6 +297,8 @@ export interface CheckoutInput {
   customer: {
     firstName: string;
     lastName: string;
+    /** Bedrijfsnaam; nodig om op rekening (Billie) te kunnen betalen. */
+    company?: string;
     email: string;
     phone: string;
     street?: string;

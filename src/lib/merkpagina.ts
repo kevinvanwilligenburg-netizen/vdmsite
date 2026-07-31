@@ -1,5 +1,6 @@
 import { euro } from "@/lib/format";
-import { isEchtMerk, merknaam } from "@/lib/tilroy";
+import { categorieWeergaveNaam } from "@/lib/product-feed";
+import { isEchtMerk, merknaam, toonbareRubriek } from "@/lib/tilroy";
 import type { Product } from "@/lib/types";
 
 /**
@@ -60,6 +61,21 @@ function rubriekNaam(product: Product): string {
  * Olie en Vernis". Zonder deze keuze hangt het label af van de volgorde
  * waarin de feed binnenkomt, en wisselt het per crawl.
  */
+/**
+ * Tilroy kent "Gereedschap" onder twee codes (5 en 8000). Twee knoppen met
+ * hetzelfde woord en verschillende aantallen is een raadsel; de grootste
+ * blijft staan, net als in het menu.
+ */
+function ontdubbeldOpNaam<T extends { naam: string }>(rubrieken: T[]): T[] {
+  const gezien = new Set<string>();
+  return rubrieken.filter((rubriek) => {
+    const sleutel = rubriek.naam.trim().toLocaleLowerCase("nl");
+    if (gezien.has(sleutel)) return false;
+    gezien.add(sleutel);
+    return true;
+  });
+}
+
 function vaakstGeschreven(namen: Map<string, number>): string {
   return [...namen.entries()].sort(
     (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "nl"),
@@ -107,14 +123,19 @@ export function merkFeiten(products: Product[]): MerkFeiten {
     aantal: products.length,
     vanaf: Math.min(...prijzen),
     tot: Math.max(...prijzen),
-    rubrieken: [...perRubriek.entries()]
-      .map(([slug, { namen, aantal, merkwaarden }]) => ({
-        slug,
-        naam: vaakstGeschreven(namen),
-        aantal,
-        merkwaarden: [...merkwaarden],
-      }))
-      .sort((a, b) => b.aantal - a.aantal),
+    rubrieken: ontdubbeldOpNaam(
+      [...perRubriek.entries()]
+        .map(([slug, { namen, aantal, merkwaarden }]) => ({
+          slug,
+          naam: categorieWeergaveNaam(slug, vaakstGeschreven(namen)),
+          aantal,
+          merkwaarden: [...merkwaarden],
+        }))
+        // Zelfde regel als het menu: het restgroepje "Verf" (code 1, met bij
+        // Sikkens precies één artikel) hoort ook hier niet als knop.
+        .filter((rubriek) => toonbareRubriek(rubriek.naam))
+        .sort((a, b) => b.aantal - a.aantal),
+    ),
     maten: [...maatTeller.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
