@@ -393,7 +393,10 @@ export async function POST(request: Request) {
       // Eén voorraadaanvraag voor het hele mandje. Regel voor regel de hub
       // bevragen — ná elkaar — was waarom "Je wordt doorgestuurd…" bij vijf
       // artikelen tientallen seconden bleef staan.
-      const perSku = await getStockPerSku(items.map((item) => item.sku ?? item.productId));
+      const perSku = await getStockPerSku(
+        items.map((item) => item.sku ?? item.productId),
+        8_000,
+      );
       if (perSku) {
         for (const item of items) {
           const voorraad = perSku.get(item.sku ?? item.productId) ?? {

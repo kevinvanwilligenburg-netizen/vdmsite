@@ -744,9 +744,23 @@ export function skusFor(product: Product): string[] {
  */
 export async function getStockPerSku(
   skus: string[],
+  /**
+   * Hoe lang we op de hub willen wachten. De koude start van de hub duurt
+   * gemeten 40 seconden; een klant die wil afrekenen laten we hooguit deze
+   * tijd staan en krijgt daarna de voorzichtige belofte (binnen 1 werkdag,
+   * geen spoedoptie) in plaats van een hangende knop.
+   */
+  maxWachtMs?: number,
 ): Promise<Map<string, { webshopQty: number; otherStoresQty: number }> | null> {
   const uniek = [...new Set(skus.filter(Boolean))];
-  const [stores, hub] = await Promise.all([getStores(), fetchHubStock(uniek)]);
+  const hubBelofte = fetchHubStock(uniek);
+  const begrensd = maxWachtMs
+    ? Promise.race([
+        hubBelofte,
+        new Promise<null>((klaar) => setTimeout(() => klaar(null), maxWachtMs)),
+      ])
+    : hubBelofte;
+  const [stores, hub] = await Promise.all([getStores(), begrensd]);
   if (!hub) return null;
 
   const winkelShopIds = stores

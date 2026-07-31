@@ -41,7 +41,10 @@ export async function POST(request: Request) {
   try {
     // Eén voorraadaanvraag voor alle regels tegelijk; per regel de hub
     // bevragen was een van de redenen dat de checkout zo traag aanvoelde.
-    const perSku = await getStockPerSku(regels.map((regel) => regel.sku!));
+    const perSku = await getStockPerSku(
+      regels.map((regel) => regel.sku!),
+      8_000,
+    );
     if (perSku) {
       for (const regel of regels) {
         const voorraad = perSku.get(regel.sku!) ?? { webshopQty: 0, otherStoresQty: 0 };
