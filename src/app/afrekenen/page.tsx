@@ -3,8 +3,6 @@ import { cookies } from "next/headers";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
-import { Mark } from "@/components/Mark";
-import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { emailVanSessie, SESSIE_COOKIE, voorkeurWinkel } from "@/lib/account";
 import { pickupPromise } from "@/lib/pickup";
 import { getStores } from "@/lib/tilroy";
@@ -44,15 +42,7 @@ export default async function CheckoutPage() {
           { name: "Afrekenen" },
         ]}
       />
-      <div className="flex items-end justify-between gap-4">
-        <h1 className="text-3xl font-black uppercase italic text-ink">Afrekenen</h1>
-        {/* Mark bij het afrekenen: een gezicht op het spannendste moment.
-            Klein en terzijde — hij moet geruststellen, niet afleiden. */}
-        <div className="hidden shrink-0 items-end gap-4 sm:flex">
-          <div className="w-44"><TrustpilotWidget variant="micro" /></div>
-          <div className="w-40"><Mark pose="mengen" hoogte="h-24" /></div>
-        </div>
-      </div>
+      <h1 className="text-3xl font-black uppercase italic text-ink">Afrekenen</h1>
       <CheckoutForm
         stores={storeOptions}
         ingelogdAls={email ?? undefined}

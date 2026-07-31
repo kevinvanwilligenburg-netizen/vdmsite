@@ -7,10 +7,12 @@ import { InlogInline } from "@/components/account/InlogInline";
 import { useCart } from "@/components/cart/CartProvider";
 import { useKorting } from "@/components/cart/useKorting";
 import { Icon } from "@/components/icons";
+import { Mark } from "@/components/Mark";
 import { useStore } from "@/components/store/StoreProvider";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { betaalmethodenVoor } from "@/lib/betaalmethoden";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
+import { CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
 import { euro } from "@/lib/format";
 
 interface StoreOption {
@@ -734,7 +736,8 @@ export function CheckoutForm({
         </section>
       </div>
 
-      <aside className="card h-fit p-6">
+      <div className="h-fit space-y-4">
+      <aside className="card p-6">
         <h2 className="text-lg font-black text-ink">Jouw bestelling</h2>
         <ul className="mt-4 space-y-3 text-sm">
           {items.map((item) => (
@@ -910,6 +913,52 @@ export function CheckoutForm({
           <TrustpilotWidget variant="micro" />
         </div>
       </aside>
+
+      {/* De kolom onder de bestelkaart was leeg; hier staat Mark op formaat,
+          met de hulplijnen voor wie op het laatste moment twijfelt. Bellen of
+          appen op dit punt redt bestellingen die anders stilletjes afhaken. */}
+      <section className="card hidden overflow-hidden lg:block">
+        <Mark pose="mengen" hoogte="h-56" className="rounded-none" />
+        <div className="space-y-3 p-5">
+          <h2 className="font-black text-ink">Hulp nodig bij je bestelling?</h2>
+          <p className="text-sm text-ink-soft">
+            Onze verfspecialisten helpen je zo — ook met kleuradvies.
+          </p>
+          <div className="space-y-2 text-sm font-semibold">
+            <a
+              href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, "")}`}
+              className="flex items-center gap-2 text-ink transition hover:text-brand"
+            >
+              <Icon name="phone" className="h-4 w-4 shrink-0 text-brand" /> {CONTACT_PHONE}
+            </a>
+            {WHATSAPP_NUMMER && (
+              <a
+                href={`https://wa.me/${WHATSAPP_NUMMER}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-ink transition hover:text-brand"
+              >
+                <Icon name="chat" className="h-4 w-4 shrink-0 text-brand" /> App met de winkel
+              </a>
+            )}
+          </div>
+          <ul className="space-y-1 border-t border-ink/10 pt-3 text-sm text-ink-soft">
+            <li className="flex items-center gap-2">
+              <Icon name="check" className="h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+              Verf gratis gemengd in elke kleur
+            </li>
+            <li className="flex items-center gap-2">
+              <Icon name="check" className="h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+              14 dagen bedenktijd, retour in elke winkel
+            </li>
+            <li className="flex items-center gap-2">
+              <Icon name="check" className="h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
+              5 winkels in Oost-Nederland
+            </li>
+          </ul>
+        </div>
+      </section>
+      </div>
     </form>
   );
 }

@@ -39,7 +39,10 @@ export function Mark({
       alt=""
       width={900}
       height={1350}
-      className={`${hoogte} w-full rounded-xl object-cover object-top ${className}`}
+      // Beeldpunt op ~een vijfde van boven: de studiofoto's hebben veel lucht
+      // boven Marks hoofd, en met object-top bleef er in een laag blok alleen
+      // een pluk haar over.
+      className={`${hoogte} w-full rounded-xl object-cover object-[50%_20%] ${className}`}
     />
   );
 }
