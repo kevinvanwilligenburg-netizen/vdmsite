@@ -831,6 +831,50 @@ function formatteerM2(waarde: number): string {
     .replace(".", ",");
 }
 
+/**
+ * Vijfhonderd artikelen onder één afkorting is geen indeling.
+ *
+ * "Schildersger. en Schuurpapier" telt 582 artikelen: kwasten, rollers,
+ * schuurpapier, afplaktape en verfbakken door elkaar. Wie een kwast zoekt
+ * ziet in het menu geen kwasten — hij ziet een afkorting waar hij eerst op
+ * moet klikken om te ontdekken wat erin zit. De kassa gaat niet fijner dan
+ * dit, maar de artikelnamen wel: die zeggen precies wat het is.
+ *
+ * Alleen voor deze vergaarbak, en alleen wat zeker is. Wat niet te herkennen
+ * valt, houdt de kassanaam — een verkeerde inhoudsopgave is erger dan een
+ * grove.
+ */
+const VERFGEREEDSCHAP_SOORTEN: { naam: string; match: RegExp }[] = [
+  // Zonder woordgrens vooraan: "Radiatorkwast" en "muurroller" zijn ook
+  // gewoon een kwast en een roller. Merklijnen staan erbij omdat Anza zijn
+  // kwasten en vachten alleen bij naam noemt (Diamond Classic, Micmex).
+  {
+    naam: "Kwasten en penselen",
+    match: /(kwast|penseel|borstel|blokwitter|witter\b|diamond classic|titanium rond|platinum serie|synthetic alkyd|serie 7\d\d|\bmaat \d+|\bplat \d)/i,
+  },
+  {
+    naam: "Verfrollers en toebehoren",
+    match: /(roller|vachtje|verfrol|anti-?spat|verlengsteel|telescoopsteel|beugel|\bvilt\b|wistex|muurvacht|pro\s+(?:mini|maxi)|micmex|antex|elon|rimax|structuurrol|aflakrol|muurrol|\bmv rol\b|\brol\b)/i,
+  },
+  // Sets vóór de losse onderdelen: een aflakset ís geen roller, het is een
+  // startpakket met roller, kwast en bak erin.
+  { naam: "Verfsets en startpakketten", match: /(aflakset|muurverfset|verfset|paintbox|\d-?delig|\ddlg)/i },
+  { naam: "Schuurpapier en schuurblokken", match: /\bschuur/i },
+  { naam: "Afplakken en afdekken", match: /(afplak|masking|afdek|\btape\b|plakband|folie|stucloper|afdekvlies)/i },
+  {
+    naam: "Messen, spanen en schrapers",
+    match: /(plamuurmes|stripmes|plafoneermes|afbreekmes|steekmes|kitmes|\bmes\b|spaan|spreader|schraper|krabber|vervangmes|trekmes|behangstrijker|lijmkam|reservemes|behangafsteker)/i,
+  },
+  { naam: "Verfbakken en roosters", match: /(verfbak|inzetbak|rooster|mengbeker|verfemmer|mengstok|zeef|verfmixer|mengspiraal)/i },
+  { naam: "Reinigen en beschermen", match: /(handschoen|stoffer|bezem|doek|emmer|reiniger|zeem|spons|overall)/i },
+  { naam: "Kitpistolen", match: /(kitpistool|kitspuit)/i },
+];
+
+function verfijndeSoort(kassaSub: string, titel: string): string | undefined {
+  if (!/schildersger/i.test(kassaSub)) return undefined;
+  return VERFGEREEDSCHAP_SOORTEN.find((soort) => soort.match.test(titel))?.naam;
+}
+
 function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, string> {
   const attributes: Record<string, string> = {};
   const add = (key: string, value: string | undefined) => {
@@ -841,10 +885,8 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
   // Twee niveaus van Tilroy: de hoofdgroep is de categorie, de subgroep is
   // het "Soort"-filter binnen die categorie.
   add("hoofdgroep", (leader.categorie_hoofd ?? "").trim() || undefined);
-  add(
-    "subcategorie",
-    (leader.categorie_sub ?? "").trim() || subcategoryOf(leader.categories),
-  );
+  const kassaSub = (leader.categorie_sub ?? "").trim() || subcategoryOf(leader.categories) || "";
+  add("subcategorie", verfijndeSoort(kassaSub, leader.title ?? "") || kassaSub);
   add("glans", leader.glans);
   add("verfsoort", leader.verfsoort);
   add("toepassing", leader.toepassing);
@@ -1364,7 +1406,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v40";
+const KV_KEY = "catalog:products:v41";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
