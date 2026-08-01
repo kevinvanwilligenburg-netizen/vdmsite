@@ -180,6 +180,33 @@ export function ColorPicker({
     ];
   }, [waaiers, query, waaier, totaalAantal]);
 
+  /*
+   * Chips voor de waaiers waar het meeste op gekozen wordt, de rest in een
+   * keuzelijst.
+   *
+   * De hele rij stond in één horizontaal schuivend vak. Met ruim honderd
+   * waaiers betekende dat slepen naar rechts om iets te vinden waarvan je
+   * niet weet of het er staat — en op een aanraakscherm vecht dat schuiven
+   * met het scrollen van de pagina. De acht grootste dekken verreweg de
+   * meeste keuzes; wie iets anders zoekt typt de naam (de chips filteren
+   * mee) of pakt de lijst.
+   */
+  const CHIPS_ZICHTBAAR = 8;
+  const { chips, inLijst } = useMemo(() => {
+    const zoekt = query.trim().length > 0;
+    // Tijdens het zoeken zijn de treffers juist het antwoord: dan alles tonen
+    // wat matcht (dat zijn er per definitie weinig).
+    if (zoekt) return { chips: waaierKnoppen, inLijst: [] as typeof waaierKnoppen };
+    const eerste = waaierKnoppen.slice(0, CHIPS_ZICHTBAAR);
+    const rest = waaierKnoppen.slice(CHIPS_ZICHTBAAR);
+    // De gekozen waaier hoort zichtbaar te zijn, ook als hij achteraan staat.
+    const actief = rest.find((entry) => entry.id === waaier);
+    return {
+      chips: actief ? [...eerste, actief] : eerste,
+      inLijst: rest,
+    };
+  }, [waaierKnoppen, waaier, query]);
+
   // De actieve waaier in beeld schuiven; met honderden waaiers staat hij
   // anders buiten het zichtbare stuk van de rij.
   useEffect(() => {
@@ -274,14 +301,15 @@ export function ColorPicker({
         />
       </div>
 
-      {/* Waaiers als rij knoppen. Radiogroep, want het is één keuze uit een
-          reeks — en zo werken de pijltjes zoals een schermlezer aankondigt. */}
+      {/* Waaiers als knoppen die netjes doorlopen op een tweede regel.
+          Radiogroep, want het is één keuze uit een reeks — en zo werken de
+          pijltjes zoals een schermlezer aankondigt. */}
       <div
         ref={waaierRij}
         role="radiogroup"
         aria-label="Kleurwaaier"
         onKeyDown={opWaaierToets}
-        className="relative -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+        className="relative -mx-1 flex flex-wrap items-center gap-2 px-1 pb-1"
       >
         {waaiers.length === 0
           ? Array.from({ length: 4 }).map((_, index) => (
@@ -291,7 +319,7 @@ export function ColorPicker({
                 className="h-9 w-32 shrink-0 animate-pulse rounded-full bg-ink/5"
               />
             ))
-          : waaierKnoppen.map((entry, index) => {
+          : chips.map((entry, index) => {
               const actief = entry.id === waaier;
               return (
                 <button
@@ -317,6 +345,27 @@ export function ColorPicker({
                 </button>
               );
             })}
+
+        {/* De overige waaiers in een lijst in plaats van achter een
+            schuifbalk: honderd namen wegslepen naar rechts vindt niemand, en
+            op een telefoon vecht dat schuiven met het scrollen van de pagina. */}
+        {inLijst.length > 0 && (
+          <label className="inline-flex items-center gap-2 text-sm text-ink-soft">
+            <span className="sr-only">Andere kleurwaaier kiezen</span>
+            <select
+              value={inLijst.some((entry) => entry.id === waaier) ? waaier : ""}
+              onChange={(event) => event.target.value && kiesWaaier(event.target.value)}
+              className="max-w-52 rounded-full border-2 border-ink/10 bg-white px-3 py-1.5 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
+            >
+              <option value="">Meer waaiers ({inLijst.length})…</option>
+              {inLijst.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {waaierNaam(entry)} ({entry.count.toLocaleString("nl-NL")})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <div

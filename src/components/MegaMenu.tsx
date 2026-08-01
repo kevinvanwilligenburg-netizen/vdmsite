@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/icons";
@@ -84,6 +85,23 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
     return () => document.removeEventListener("keydown", opToets);
   }, [open]);
 
+  // Bij een klik in het paneel navigeert de site zonder de pagina te herladen;
+  // de header blijft dus staan, en daarmee bleef ook het uitgeklapte paneel
+  // over de nieuwe pagina hangen. De klant zag zijn categoriepagina niet en
+  // dacht dat er niets gebeurde. Sluiten zodra het pad wijzigt.
+  const pad = usePathname();
+  useEffect(() => {
+    setOpen(null);
+    annuleerSluiten();
+  }, [pad, annuleerSluiten]);
+
+  // En meteen bij de klik zelf: wie op de pagina klikt waar hij al staat,
+  // wijzigt het pad niet en zou het paneel anders open houden.
+  const sluitNu = useCallback(() => {
+    annuleerSluiten();
+    setOpen(null);
+  }, [annuleerSluiten]);
+
   return (
     <nav
       ref={navRef}
@@ -112,6 +130,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
             <div key={category.slug} className="static">
               <Link
                 href={`/categorie/${category.slug}`}
+                onClick={sluitNu}
                 aria-expanded={heeftPaneel ? isOpen : undefined}
                 onMouseEnter={() => {
                   annuleerSluiten();
@@ -192,6 +211,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                 <li key={category.slug}>
                   <Link
                     href={`/categorie/${category.slug}`}
+                    onClick={sluitNu}
                     className="flex items-baseline justify-between gap-3 rounded-md px-2 py-1.5 font-semibold text-ink transition hover:bg-brand-light hover:text-brand"
                   >
                     <span className="truncate">{category.name}</span>
@@ -226,6 +246,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                     <li key={soort.label}>
                       <Link
                         href={soort.href}
+                        onClick={sluitNu}
                         className="flex items-baseline justify-between gap-3 rounded-md px-2 py-1.5 font-semibold text-ink transition hover:bg-brand-light hover:text-brand"
                       >
                         <span className="truncate">{soort.label}</span>
@@ -238,6 +259,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                 </ul>
                 <Link
                   href={`/categorie/${category.slug}`}
+                  onClick={sluitNu}
                   className="mt-3 inline-block px-2 text-sm font-bold text-brand hover:underline"
                 >
                   Alles in {category.name.toLowerCase()} ({category.count}) →
@@ -254,6 +276,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                       <li key={merk.label}>
                         <Link
                           href={merk.href}
+                          onClick={sluitNu}
                           className="flex items-baseline justify-between gap-3 rounded-md px-2 py-1.5 font-semibold text-ink transition hover:bg-brand-light hover:text-brand"
                         >
                           <span className="truncate">{merk.label}</span>
@@ -266,6 +289,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                   </ul>
                   <Link
                     href="/merken"
+                    onClick={sluitNu}
                     className="mt-3 inline-block px-2 text-sm font-bold text-brand hover:underline"
                   >
                     Alle merken →
@@ -296,6 +320,7 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
                   </p>
                   <Link
                     href={category.mengverf ? "/kleurkiezer" : "/klusadvies"}
+                    onClick={sluitNu}
                     className="btn btn-primary mt-4 py-2 text-sm"
                   >
                     {category.mengverf ? "Open de kleurkiezer" : "Naar het klusadvies"}
