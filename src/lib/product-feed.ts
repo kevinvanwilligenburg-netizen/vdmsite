@@ -92,6 +92,7 @@ const CATEGORIE_NAAM: Record<string, string> = {
   "buiten-en-tuinverlichting": "Buiten- & tuinverlichting",
   "licht-en-lampjes": "Licht & lampjes",
   huishoudelijk: "Huishouden",
+  schoonmaak: "Schoonmaak en onderhoud",
   stickers: "Raamfolie & stickers",
   facilitair: "Winkelbenodigdheden",
 };
@@ -111,6 +112,7 @@ export function categorieWeergaveNaam(slug: string, kassanaam: string): string {
  * plaats van een leeg vakje.
  */
 const CATEGORIE_BEELD: { match: RegExp; icon: string; hue: number }[] = [
+  { match: /schoonmaak/, icon: "spray", hue: 190 },
   { match: /verfbenodigd/, icon: "brush", hue: 45 },
   { match: /muurverf|alkydverf|partij-verf|speciaalverven|\bverf\b/, icon: "roller", hue: 25 },
   { match: /lakken/, icon: "can", hue: 30 },
@@ -166,7 +168,30 @@ const HOOFDGROEPEN_NIET_ONLINE = new Set([
  * Zolang de feed de codes nog niet meestuurt vallen we terug op de naam; dan
  * werkt de site door zoals hij deed.
  */
+/**
+ * Subgroepen die in de kassa onder de verkeerde hoofdgroep hangen.
+ *
+ * "Huishoudelijk" telt 258 artikelen en is voor 241 stuks HG-schoonmaak:
+ * parketreinigers, tegelbeschermers, sanitairreinigers. Dat stond als
+ * grootste "soort" ónder Verfbenodigdheden — wie verf kwam halen zag eerst
+ * schoonmaakmiddelen, en wie een parketreiniger zocht keek nooit bij
+ * verfbenodigdheden. Het is een eigen bestemming, groter dan Auto en fiets.
+ * De kassa kent geen aparte groep, dus die maken we hier, met een eigen
+ * (codeloze) slug.
+ */
+const EIGEN_RUBRIEKEN: { sub: RegExp; slug: string; naam: string }[] = [
+  { sub: /^huishoudelijk$/i, slug: "schoonmaak", naam: "Schoonmaak en onderhoud" },
+];
+
+function eigenRubriekVoor(item: FeedItem): { slug: string; naam: string } | undefined {
+  const sub = (item.categorie_sub ?? "").trim();
+  if (!sub) return undefined;
+  return EIGEN_RUBRIEKEN.find((rubriek) => rubriek.sub.test(sub));
+}
+
 function categorySlugFor(item: FeedItem): string {
+  const eigen = eigenRubriekVoor(item);
+  if (eigen) return eigen.slug;
   // De codes zijn in de steekproef ronde getallen (1000, 3000, 6000), maar er
   // zijn er meer gezien dan er paden zijn. Geen aanname over de vorm dus:
   // slugify vangt op wat er ook in staat.
@@ -870,9 +895,47 @@ const VERFGEREEDSCHAP_SOORTEN: { naam: string; match: RegExp }[] = [
   { naam: "Kitpistolen", match: /(kitpistool|kitspuit)/i },
 ];
 
+/**
+ * Afkortingen uit de kassa die een klant niet hoeft te ontcijferen.
+ *
+ * In een filterlijst is "Acc. elektrisch gereedschap" geen categorie maar een
+ * puzzel; "Schildersger. en Schuurpapier" blijft over voor het gereedschap
+ * dat we niet konden thuisbrengen en heet daarom "Overig".
+ */
+const SOORT_ALIAS: Record<string, string> = {
+  "schildersger. en schuurpapier": "Overig schildersgereedschap",
+  "acc. elektrisch gereedschap": "Accessoires elektrisch gereedschap",
+  "interbosch aanhangw. en auto": "Aanhangwagen en auto",
+  // Vier rollen tape stonden als eigen "soort" naast de rubrieken.
+  "zelfklevende artikelen": "Afplakken en afdekken",
+};
+
+/**
+ * Soorten binnen Schoonmaak en onderhoud, op wat de klant wil schoonmaken.
+ * HG zet dat keurig in de naam ("Parketreiniger", "Whirlpool Reiniger");
+ * één bak "Huishoudelijk" met 258 flessen wijst niemand de weg.
+ */
+const SCHOONMAAK_SOORTEN: { naam: string; match: RegExp }[] = [
+  { naam: "Vloeren en parket", match: /(parket|laminaat|vloer|tapijt|vinyl)/i },
+  { naam: "Badkamer en sanitair", match: /(sanitair|badkamer|douche|whirlpool|toilet|kalk|schimmel)/i },
+  { naam: "Keuken", match: /(keuken|oven|vaatwasser|afvoer|gootsteen)/i },
+  { naam: "Tegels en steen", match: /(tegel|natuursteen|voeg|grind|terras|beton)/i },
+  { naam: "Auto en buiten", match: /(auto|car |bbq|barbecue|tuinmeubel|gevel|strooizout|groene aanslag)/i },
+  { naam: "Meubels en leer", match: /(meubel|leer|leder|bankstel|textiel|tapijtreiniger)/i },
+];
+
 function verfijndeSoort(kassaSub: string, titel: string): string | undefined {
-  if (!/schildersger/i.test(kassaSub)) return undefined;
-  return VERFGEREEDSCHAP_SOORTEN.find((soort) => soort.match.test(titel))?.naam;
+  if (/schildersger/i.test(kassaSub)) {
+    const soort = VERFGEREEDSCHAP_SOORTEN.find((entry) => entry.match.test(titel))?.naam;
+    if (soort) return soort;
+  }
+  if (/^huishoudelijk$/i.test(kassaSub.trim())) {
+    return (
+      SCHOONMAAK_SOORTEN.find((entry) => entry.match.test(titel))?.naam ??
+      "Overige schoonmaak"
+    );
+  }
+  return SOORT_ALIAS[kassaSub.trim().toLocaleLowerCase("nl")];
 }
 
 function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, string> {
@@ -884,7 +947,10 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
 
   // Twee niveaus van Tilroy: de hoofdgroep is de categorie, de subgroep is
   // het "Soort"-filter binnen die categorie.
-  add("hoofdgroep", (leader.categorie_hoofd ?? "").trim() || undefined);
+  add(
+    "hoofdgroep",
+    eigenRubriekVoor(leader)?.naam ?? ((leader.categorie_hoofd ?? "").trim() || undefined),
+  );
   const kassaSub = (leader.categorie_sub ?? "").trim() || subcategoryOf(leader.categories) || "";
   add("subcategorie", verfijndeSoort(kassaSub, leader.title ?? "") || kassaSub);
   add("glans", leader.glans);
@@ -1406,7 +1472,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v41";
+const KV_KEY = "catalog:products:v42";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

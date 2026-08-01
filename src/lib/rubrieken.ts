@@ -11,19 +11,26 @@
  * handled by plugins" — een foutmelding die niet verraadt dat het om een
  * import in een client-component gaat.
  *
- * ⚠️ De slugs komen uit Tilroy. Verandert daar een categorienaam, dan wijst
- * een regel hier naar niets en verdwijnt die stilletjes uit de balk; het menu
- * slaat onbekende slugs over. Controleer na een naamswijziging of er nog zes
- * rubrieken staan.
+ * Op naam en niet op slug. De slugs waren ooit leesbaar ("lakken"), maar sinds
+ * de hoofdgroepen van Tilroy zijn het codes (g1000). Alle zes regels wezen
+ * daardoor naar niets en de balk viel stilletjes terug op "de grootste
+ * rubrieken" — wat er toevallig goed uitzag, maar niets met deze keuze te
+ * maken had. /api/menucheck meldt het nu als een rubriek niet meer bestaat.
  */
 export const HOOFDRUBRIEKEN = [
-  "lakken",
-  "muurverf",
-  "schildersger-en-schuurpapier",
-  "behang",
-  "bevestigingsmaterialen",
-  "handgereedschap",
+  "Verf en Beits",
+  "Verfbenodigdheden",
+  "IJzerwaren",
+  "Behang en wandbekleding",
+  "Lijmen en kitten",
+  "Gereedschap",
 ];
+
+/** Staat deze rubriek vast in de balk? Vergelijkt op naam, hoofdletterloos. */
+export function isHoofdrubriek(naam: string): boolean {
+  const gezocht = naam.trim().toLocaleLowerCase("nl");
+  return HOOFDRUBRIEKEN.some((vast) => vast.toLocaleLowerCase("nl") === gezocht);
+}
 
 /**
  * Namen die in de kassa als categorie staan maar er geen zijn: leveranciers

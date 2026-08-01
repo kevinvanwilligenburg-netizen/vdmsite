@@ -180,12 +180,26 @@ export interface MenuCategory extends Category {
 export async function getMenu(): Promise<MenuCategory[]> {
   const [categories, products] = await Promise.all([getCategories(), getProducts()]);
 
-  return categories
-    // Ook het uitklapmenu ("Alle categorieën") is een wegwijzer, en daar hoort
-    // een leveranciersnaam niet in: "Euromat 3" naast "Verf en Beits 1.891"
-    // belooft een rubriek die geen rubriek is. De artikelen blijven gewoon
-    // vindbaar via zoeken en /categorieen.
-    .filter((category) => toonbareRubriek(category.name) && toonbareRubriek(category.slug))
+  // Ook het uitklapmenu ("Alle categorieën") is een wegwijzer, en daar hoort
+  // een leveranciersnaam niet in: "Euromat 3" naast "Verf en Beits 1.891"
+  // belooft een rubriek die geen rubriek is. De artikelen blijven gewoon
+  // vindbaar via zoeken en /categorieen.
+  const bruikbaar = categories.filter(
+    (category) => toonbareRubriek(category.name) && toonbareRubriek(category.slug),
+  );
+
+  // Tilroy kent "Gereedschap" twee keer (code 5 met 12 artikelen én 8000 met
+  // 195). Twee identieke knoppen onder elkaar is een raadsel voor de klant;
+  // de grootste wint, net als in de menubalk. Het kleine groepje blijft
+  // bereikbaar via /categorieen.
+  const perNaam = new Map<string, Category>();
+  for (const category of [...bruikbaar].sort((a, b) => b.count - a.count)) {
+    const sleutel = rubriekNaamSleutel(category);
+    if (!perNaam.has(sleutel)) perNaam.set(sleutel, category);
+  }
+
+  return [...perNaam.values()]
+    .sort((a, b) => b.count - a.count)
     .map((category) => {
     const inCategory = products.filter((product) => product.category === category.slug);
 
