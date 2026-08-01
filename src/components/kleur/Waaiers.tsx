@@ -67,13 +67,17 @@ export function Waaiers({ collections }: { collections: WaaierOverzichtItem[] })
     const kop = document.getElementById(`waaier-letter-${letter}`);
     if (!kop) return;
     // "instant" is niet hetzelfde als weglaten: globals.css zet
-    // scroll-behavior smooth op <html>, en dat geldt óók voor
-    // window.scrollTo zonder opties. Alleen een expliciete behavior wint
-    // van de CSS — precies de valkuil die Klus=r al had gevonden.
-    window.scrollTo({
-      top: window.scrollY + kop.getBoundingClientRect().top - 176,
-      behavior: "instant",
-    });
+    // scroll-behavior smooth op <html>, en dit paginadeel scrollt via de
+    // root — dus zonder expliciete behavior wordt de sprong smooth (en
+    // scroll-behavior erft niet: Klus=r's geneste dialoogkolom had er
+    // daarom geen last van). Kent een oude browser "instant" niet, dan is
+    // een TypeError hier een dode knop; dan liever de smooth-variant.
+    const top = window.scrollY + kop.getBoundingClientRect().top - 176;
+    try {
+      window.scrollTo({ top, behavior: "instant" });
+    } catch {
+      window.scrollTo(0, top);
+    }
   };
 
   const kaart = (collection: WaaierOverzichtItem) => (
