@@ -967,6 +967,12 @@ function buildProduct(
           : {}),
         sku: item.id,
         size: item.maat,
+        // Voorraad per maat: 250 ml kan uitverkocht zijn terwijl 2,5 L er
+        // staat. Zonder dit gold de voorraad van het product als geheel en
+        // kon de klant een maat in de wagen leggen die nergens ligt.
+        inStock:
+          Number(item.voorraad ?? 0) > 0 ||
+          (item.availability ?? "").trim() === "in stock",
         ...(verpakking ? { packaging: verpakking } : {}),
         ...(base ? { base } : {}),
         ...(afhalen.reden ? { pickupOnly: afhalen.reden } : {}),
@@ -1247,7 +1253,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v35";
+const KV_KEY = "catalog:products:v36";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

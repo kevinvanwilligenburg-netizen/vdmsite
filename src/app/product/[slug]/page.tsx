@@ -11,6 +11,8 @@ import { VloerRekenhulp } from "@/components/product/VloerRekenhulp";
 import { pakInhoudVan } from "@/lib/vloer";
 import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
+import { getWhatsappNummer } from "@/lib/contact";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { GekozenVariantProvider } from "@/components/product/GekozenVariant";
 import { StockList } from "@/components/StockList";
 import { getInitialColors } from "@/lib/colors";
@@ -104,7 +106,17 @@ export default async function ProductPage({ params }: Props) {
     }
   }
   if (!product) notFound();
-  const [category, related, companions, colors, stores, rating, seo] = await Promise.all([
+  const [
+    category,
+    related,
+    companions,
+    colors,
+    stores,
+    rating,
+    seo,
+    testersActief,
+    whatsappNummer,
+  ] = await Promise.all([
     getCategory(product.category),
     getRelatedProducts(product),
     getCompanions(product),
@@ -113,6 +125,8 @@ export default async function ProductPage({ params }: Props) {
     getTrustpilotRating(),
     // Alleen ophalen, nooit maken: een paginabezoek wacht niet op het model.
     haalSeoTekst(product),
+    kleurtestersActief(),
+    getWhatsappNummer(),
   ]);
 
   // Vloeren worden per pak van een paar vierkante meter verkocht. Weten we hoe
@@ -284,7 +298,11 @@ export default async function ProductPage({ params }: Props) {
               van alle maten. */}
           <GekozenVariantProvider>
             <div id="koopblok" className="scroll-mt-32">
-              <PurchasePanel product={product} colors={colors} />
+              <PurchasePanel
+                product={product}
+                colors={colors}
+                testersActief={testersActief}
+              />
             </div>
             {perPak && <VloerRekenhulp perPak={perPak} />}
             <StockList
@@ -292,6 +310,7 @@ export default async function ProductPage({ params }: Props) {
               stores={stores}
               fallbackInStock={product.inStock !== false}
               alleenAfhalen={product.pickupOnly}
+              whatsappNummer={whatsappNummer}
               product={{ sku: product.sku, slug: product.slug, naam: product.name }}
             />
           </GekozenVariantProvider>

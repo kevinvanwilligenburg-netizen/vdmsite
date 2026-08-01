@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { getWhatsappNummer } from "@/lib/contact";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { getBrands, getNavCategories, getStores } from "@/lib/tilroy";
@@ -20,11 +21,12 @@ const SERVICE_LINKS = [
 ];
 
 export async function Footer() {
-  const [categories, brands, stores, whatsappNummer] = await Promise.all([
+  const [categories, brands, stores, whatsappNummer, testers] = await Promise.all([
     getNavCategories(10),
     getBrands(10),
     getStores(),
     getWhatsappNummer(),
+    kleurtestersActief(),
   ]);
   return (
     <footer className="mt-14 bg-ink text-white sm:mt-16">
@@ -84,14 +86,16 @@ export async function Footer() {
                 Alle kleuren &amp; RAL
               </Link>
             </li>
-            <li>
-              <Link
-                href="/kleurstalen"
-                className="text-white/80 transition hover:text-brand-bright"
-              >
-                Kleurtesters
-              </Link>
-            </li>
+            {testers && (
+              <li>
+                <Link
+                  href="/kleurstalen"
+                  className="text-white/80 transition hover:text-brand-bright"
+                >
+                  Kleurtesters
+                </Link>
+              </li>
+            )}
             <li>
               <Link
                 href="/klusadvies"

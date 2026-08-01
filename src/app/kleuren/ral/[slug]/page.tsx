@@ -13,6 +13,7 @@ import {
   ralSlug,
   verwanteRalKleuren,
 } from "@/lib/kleurpaginas";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { STAAL_PRIJS_TEKST } from "@/lib/stalen";
 import { getProducts } from "@/lib/tilroy";
 
@@ -55,7 +56,7 @@ export default async function RalKleurPage({ params }: Props) {
   const canoniek = ralSlug(kleur);
   if (params.slug !== canoniek) permanentRedirect(`/kleuren/ral/${canoniek}`);
 
-  const products = await getProducts();
+  const [products, testers] = await Promise.all([getProducts(), kleurtestersActief()]);
   const mengbaar = mengproductenPerSoort(products);
   const verwant = verwanteRalKleuren(kleur);
   const rgb = hexNaarRgb(kleur.hex);
@@ -129,14 +130,24 @@ export default async function RalKleurPage({ params }: Props) {
             </div>
           </dl>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link href={`/kleurstalen?kleur=${encodeURIComponent(kleurKey)}`} className="btn btn-primary">
-              <Icon name="palette" className="h-5 w-5" /> Kleurtester bestellen · {STAAL_PRIJS_TEKST}
-            </Link>
+            {testers && (
+              <Link
+                href={`/kleurstalen?kleur=${encodeURIComponent(kleurKey)}`}
+                className="btn btn-primary"
+              >
+                <Icon name="palette" className="h-5 w-5" /> Kleurtester bestellen ·{" "}
+                {STAAL_PRIJS_TEKST}
+              </Link>
+            )}
             <Link
               href="/kleurkiezer"
-              className="btn border-2 border-ink/10 text-ink hover:border-brand hover:text-brand"
+              className={
+                testers
+                  ? "btn border-2 border-ink/10 text-ink hover:border-brand hover:text-brand"
+                  : "btn btn-primary"
+              }
             >
-              Andere kleur zoeken
+              {testers ? "Andere kleur zoeken" : "Zoek je kleur in de kleurkiezer"}
             </Link>
           </div>
           <p className="mt-2 text-xs text-ink-soft">

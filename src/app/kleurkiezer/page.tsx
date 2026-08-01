@@ -7,6 +7,7 @@ import { KleurTrechter } from "@/components/kleur/KleurTrechter";
 import { Waaiers } from "@/components/kleur/Waaiers";
 import { MyColors } from "@/components/MyColors";
 import { getInitialColors, getWaaierOverzicht } from "@/lib/colors";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { getProducts } from "@/lib/tilroy";
 
 export const revalidate = 3600;
@@ -19,10 +20,11 @@ export const metadata: Metadata = {
 };
 
 export default async function KleurkiezerPage() {
-  const [products, colors, collections] = await Promise.all([
+  const [products, colors, collections, testers] = await Promise.all([
     getProducts(),
     getInitialColors(),
     getWaaierOverzicht(),
+    kleurtestersActief(),
   ]);
   const totalColors = collections.reduce((sum, entry) => sum + entry.count, 0);
 
@@ -39,11 +41,19 @@ export default async function KleurkiezerPage() {
           <strong className="text-ink">gratis</strong> aan — daarna bezorgen we
           hem of zet je hem zelf even op. De kleuren op je scherm zijn een
           indicatie; twijfel je, leg dan de officiële waaier ernaast in de
-          winkel of{" "}
-          <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
-            bestel een kleurtester
-          </Link>{" "}
-          — het bedrag krijg je terug als voucher bij je verf.
+          winkel
+          {testers ? (
+            <>
+              {" "}
+              of{" "}
+              <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
+                bestel een kleurtester
+              </Link>{" "}
+              — het bedrag krijg je terug als voucher bij je verf.
+            </>
+          ) : (
+            " — onze verfspecialist denkt gratis met je mee."
+          )}
         </p>
       </header>
       <MyColors />

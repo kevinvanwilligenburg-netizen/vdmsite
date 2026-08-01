@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -7,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
 import { StaalBestellen } from "@/components/stalen/StaalBestellen";
 import { getInitialColors, getColorCollections } from "@/lib/colors";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { GRATIS_VANAF_TEKST, tariefTekst } from "@/lib/shipping";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { STAAL_NAAM, STAAL_PRIJS, STAAL_PRIJS_TEKST } from "@/lib/stalen";
@@ -21,6 +23,12 @@ export const metadata: Metadata = {
 };
 
 export default async function KleurstalenPage() {
+  // Kevin zet de kleurtesters aan in het dashboard, niet met een deploy.
+  // Tot dat moment bestaat deze pagina niet: het Tilroy-artikel is er nog
+  // niet, dus een bestelling zou een belofte zijn die de winkel niet kan
+  // waarmaken.
+  if (!(await kleurtestersActief())) notFound();
+
   const [colors, collections] = await Promise.all([
     getInitialColors(),
     getColorCollections(),

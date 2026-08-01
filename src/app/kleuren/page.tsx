@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { Waaiers } from "@/components/kleur/Waaiers";
 import { getWaaierOverzicht, populairPaintColors } from "@/lib/colors";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { alleRalKleuren, ralSlug } from "@/lib/kleurpaginas";
 import { RAL_GROUPS } from "@/lib/ral";
 
@@ -18,7 +19,10 @@ export const metadata: Metadata = {
 };
 
 export default async function KleurenPage() {
-  const [collections] = await Promise.all([getWaaierOverzicht()]);
+  const [collections, testers] = await Promise.all([
+    getWaaierOverzicht(),
+    kleurtestersActief(),
+  ]);
   const ral = alleRalKleuren();
   const populair = populairPaintColors();
   const totaalKleuren = collections.reduce((som, entry) => som + entry.count, 0);
@@ -38,11 +42,18 @@ export default async function KleurenPage() {
             {totaalKleuren.toLocaleString("nl-NL")} kleuren
           </strong>{" "}
           uit {collections.length} waaiers, gratis en in de verf die jij kiest.
-          Twijfel je tussen twee tinten? Bestel eerst een{" "}
-          <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
-            kleurtester
-          </Link>{" "}
-          — het bedrag krijg je terug als voucher bij je verf.
+          {testers ? (
+            <>
+              {" "}
+              Twijfel je tussen twee tinten? Bestel eerst een{" "}
+              <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
+                kleurtester
+              </Link>{" "}
+              — het bedrag krijg je terug als voucher bij je verf.
+            </>
+          ) : (
+            " Twijfel je tussen twee tinten? Leg de officiële waaier ernaast in een van onze winkels; onze verfspecialist denkt gratis met je mee."
+          )}
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/kleurkiezer" className="btn btn-primary">

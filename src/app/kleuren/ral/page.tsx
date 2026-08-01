@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { alleRalKleuren, ralSlug } from "@/lib/kleurpaginas";
 import { RAL_GROUPS } from "@/lib/ral";
 import { absoluteUrl } from "@/lib/site";
@@ -16,8 +17,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/kleuren/ral" },
 };
 
-export default function RalOverzichtPage() {
+export default async function RalOverzichtPage() {
   const kleuren = alleRalKleuren();
+  const testers = await kleurtestersActief();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -58,10 +60,18 @@ export default function RalOverzichtPage() {
           op elke kleurpagina zie je in welke verfsoorten we hem mengen — gratis,
           klaar terwijl je wacht of bezorgd. De kleuren op je scherm zijn een
           indicatie; RAL kent geen officiële schermwaarden, dus leg bij twijfel
-          de officiële waaier ernaast in de winkel of bestel een{" "}
-          <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
-            kleurtester
-          </Link>
+          de officiële waaier ernaast in de winkel
+          {testers ? (
+            <>
+              {" "}
+              of bestel een{" "}
+              <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
+                kleurtester
+              </Link>
+            </>
+          ) : (
+            ", waar onze verfspecialist gratis met je meedenkt"
+          )}
           .
         </p>
       </header>

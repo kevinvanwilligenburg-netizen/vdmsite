@@ -19,6 +19,7 @@ import {
   STAAL_PRIJS,
   staalOrderItem,
 } from "@/lib/stalen";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { beoordeelVoucher, normaliseerVoucherCode } from "@/lib/vouchers";
 import { baseUrlFromRequest } from "@/lib/site";
 import { getProductById, getStockForSkus, getStockPerSku, getStore } from "@/lib/tilroy";
@@ -221,6 +222,13 @@ export async function POST(request: Request) {
     // Kleurtesters zijn een virtueel artikel: ze staan niet in de catalogus,
     // dus prijs en naam komen uit lib/stalen.ts — nooit uit het verzoek.
     if (isStaalRegel(entry)) {
+      // Staat de kleurtester in het dashboard uit, dan kan hij ook niet via
+      // een oude winkelwagen alsnog besteld worden.
+      if (!(await kleurtestersActief())) {
+        return badRequest(
+          `${STAAL_NAAM} is nu niet te bestellen. Haal hem uit je winkelwagen; onze winkels helpen je graag met de officiële kleurwaaier.`,
+        );
+      }
       const qty = Math.floor(Number(entry.qty));
       if (!Number.isFinite(qty) || qty < 1 || qty > MAX_STALEN_PER_ORDER) {
         return badRequest(`Ongeldig aantal voor ${STAAL_NAAM}.`);

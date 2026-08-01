@@ -25,9 +25,12 @@ import type { PaintColor, Product } from "@/lib/types";
 export function PurchasePanel({
   product,
   colors,
+  testersActief = false,
 }: {
   product: Product;
   colors: PaintColor[];
+  /** Staat de kleurtester open? Kevin zet die aan in het dashboard. */
+  testersActief?: boolean;
 }) {
   const { addItem } = useCart();
 
@@ -95,6 +98,16 @@ export function PurchasePanel({
     : undefined;
   const wit = witVariant?.wit && witVariant.wit.inStock ? witVariant.wit : undefined;
   const wit100 = Boolean(wit && witGekozen && !color);
+
+  // Uitverkocht op het niveau waar de klant naar kijkt: de gekozen maat als
+  // de feed die per maat kent, anders het product als geheel. Uitverkochte
+  // maten blijven in de lijst staan — wie op "2,5 L" zoekt moet zien dat we
+  // hem voeren — maar zijn niet bestelbaar.
+  const maatUitverkocht = wit100
+    ? !wit
+    : activeVariant
+      ? activeVariant.inStock === false
+      : product.inStock === false;
 
   // Vertel het voorraadblok welk exact artikel de klant nu voor zich heeft:
   // dezelfde sku die straks in de winkelwagen belandt. Zonder dit toonde de
@@ -242,26 +255,44 @@ export function PurchasePanel({
             <fieldset>
               <legend className="mb-2 text-sm font-bold text-ink">{maatLabel}</legend>
               <div className="flex flex-wrap gap-2">
-                {maten.map((maat) => (
-                  <button
-                    key={maat}
-                    type="button"
-                    onClick={() => {
-                      // Bij het wisselen van maat de eerste verpakking van die
-                      // maat kiezen; de vorige bestaat er misschien niet in.
-                      const eerste = variants.find((variant) => (variant.size ?? variant.name) === maat);
-                      if (eerste) setVariantId(eerste.id);
-                    }}
-                    aria-pressed={maat === actieveMaat}
-                    className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
-                      maat === actieveMaat
-                        ? "border-brand bg-brand-light text-brand"
-                        : "border-ink/10 text-ink hover:border-ink/30"
-                    }`}
-                  >
-                    {maat}
-                  </button>
-                ))}
+                {maten.map((maat) => {
+                  // Uitverkochte maten blijven staan en blijven aanklikbaar:
+                  // de klant mag zien dat we die maat voeren, en krijgt er dan
+                  // een seintje op. Alleen doorstrepen zonder uitleg maakt de
+                  // pagina stiller dan nodig.
+                  const vanMaat = variants.filter(
+                    (variant) => (variant.size ?? variant.name) === maat,
+                  );
+                  const uitverkocht =
+                    vanMaat.length > 0 && vanMaat.every((variant) => variant.inStock === false);
+                  return (
+                    <button
+                      key={maat}
+                      type="button"
+                      onClick={() => {
+                        // Bij het wisselen van maat de eerste verpakking van die
+                        // maat kiezen; de vorige bestaat er misschien niet in.
+                        const eerste = vanMaat[0];
+                        if (eerste) setVariantId(eerste.id);
+                      }}
+                      aria-pressed={maat === actieveMaat}
+                      className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
+                        maat === actieveMaat
+                          ? "border-brand bg-brand-light text-brand"
+                          : uitverkocht
+                            ? "border-ink/10 text-ink-soft hover:border-ink/30"
+                            : "border-ink/10 text-ink hover:border-ink/30"
+                      }`}
+                    >
+                      {maat}
+                      {uitverkocht && (
+                        <span className="ml-1.5 text-xs font-semibold text-ink-soft">
+                          uitverkocht
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </fieldset>
 
@@ -415,20 +446,31 @@ export function PurchasePanel({
           />
 
           {/* Kleurtwijfel is dé reden om níét te bestellen; de tester haalt
-              die weg en kost per saldo niets (bedrag terug als voucher). */}
+              die weg en kost per saldo niets (bedrag terug als voucher).
+              Staat de tester in het dashboard uit, dan wijzen we naar de
+              waaier in de winkel — geen link naar een pagina die er niet is. */}
           <p className="mt-3 border-t border-black/5 pt-3 text-xs text-ink-soft">
-            Twijfel je over de kleur?{" "}
-            <Link
-              href={
-                color
-                  ? `/kleurstalen?kleur=${encodeURIComponent(color.key)}`
-                  : "/kleurstalen"
-              }
-              className="font-bold text-brand hover:underline"
-            >
-              Bestel eerst een kleurtester ({STAAL_PRIJS_TEKST})
-            </Link>{" "}
-            — het bedrag krijg je terug als voucher bij je verf.
+            {testersActief ? (
+              <>
+                Twijfel je over de kleur?{" "}
+                <Link
+                  href={
+                    color
+                      ? `/kleurstalen?kleur=${encodeURIComponent(color.key)}`
+                      : "/kleurstalen"
+                  }
+                  className="font-bold text-brand hover:underline"
+                >
+                  Bestel eerst een kleurtester ({STAAL_PRIJS_TEKST})
+                </Link>{" "}
+                — het bedrag krijg je terug als voucher bij je verf.
+              </>
+            ) : (
+              <>
+                Twijfel je over de kleur? In onze vijf winkels liggen de
+                officiële waaiers, en onze verfspecialist denkt gratis met je mee.
+              </>
+            )}
           </p>
         </div>
       )}
@@ -464,15 +506,16 @@ export function PurchasePanel({
         </div>
         {/* Nul-voorraad is niet bestelbaar (beslissing Kevin). De pagina zei
             al "Nu even uitverkocht", maar de knop werkte gewoon door — en de
-            checkout rekende af voor iets dat nergens ligt. */}
+            checkout rekende af voor iets dat nergens ligt. Dit hangt aan de
+            gekozen maat: 250 ml kan op zijn terwijl 2,5 L er staat. */}
         <button
           type="button"
           id="koop-knop"
           onClick={handleAdd}
-          disabled={product.inStock === false}
+          disabled={maatUitverkocht}
           className="btn btn-primary flex-1 scroll-mt-32 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
         >
-          {product.inStock === false ? "Tijdelijk uitverkocht" : "In winkelwagen"}
+          {maatUitverkocht ? "Tijdelijk uitverkocht" : "In winkelwagen"}
         </button>
       </div>
 

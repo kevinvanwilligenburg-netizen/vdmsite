@@ -19,6 +19,12 @@ export interface ProductVariant {
   /** Inhoud of maat (bv. "2,5 L", "70 MM"); bij mengverf los van de basis. */
   size?: string;
   /**
+   * Ligt déze maat ergens op voorraad? Uitverkochte maten blijven zichtbaar
+   * (de klant zoekt op maat en moet zien dát we hem voeren), maar zijn niet
+   * bestelbaar — hij krijgt er een seintje op.
+   */
+  inStock?: boolean;
+  /**
    * Verpakkingsaantal ("3 stuks", "per stuk), als hetzelfde artikel in
    * dezelfde maat in meerdere verpakkingen bestaat. Maat en verpakking zijn
    * twee losse keuzes; als één lijst gecombineerd levert dat tientallen

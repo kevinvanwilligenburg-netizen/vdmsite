@@ -25,6 +25,7 @@ export function StockList({
   stores,
   fallbackInStock,
   alleenAfhalen,
+  whatsappNummer,
   product,
 }: {
   skus: string[];
@@ -32,6 +33,8 @@ export function StockList({
   fallbackInStock: boolean;
   /** Reden waarom dit artikel niet verzonden kan worden, als dat zo is. */
   alleenAfhalen?: string;
+  /** Ons WhatsApp-nummer, voor wie liever appt dan mailt. */
+  whatsappNummer?: string;
   /** Voor de "hou me op de hoogte"-melding bij uitverkocht. */
   product: { sku: string; slug: string; naam: string };
 }) {
@@ -101,6 +104,7 @@ export function StockList({
           sku={gekozenSku ?? product.sku}
           slug={product.slug}
           naam={product.naam}
+          whatsappNummer={whatsappNummer}
         />
       )}
       {/*
