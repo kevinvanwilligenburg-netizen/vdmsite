@@ -22,6 +22,8 @@
  * logica deterministisch te testen is.
  */
 
+import { bezorgdagMogelijk } from "@/lib/feestdagen";
+
 export const SAME_DAY_CUTOFF_HOUR = 9;
 
 /** Toeslag voor vandaag bezorgen, in centen. */
@@ -66,12 +68,19 @@ function addDays(d: Date, days: number): Date {
   return copy;
 }
 
-/** Eerstvolgende werkdag (PostNL bezorgt niet op zondag). */
+/** Eerstvolgende werkdag (PostNL bezorgt niet op zondag en niet op feestdagen). */
 function nextWorkday(from: Date): Date {
   let date = addDays(startOfDay(from), 1);
-  while (date.getDay() === 0) date = addDays(date, 1);
+  while (date.getDay() === 0 || !bezorgdagMogelijk(date)) date = addDays(date, 1);
   return date;
 }
+
+/**
+ * DHL hanteert dezelfde kalender: morgen, tenzij dat een zondag of feestdag
+ * is. Rond Pasen schuift "morgen" zo twee dagen op — op paaszaterdag is de
+ * eerstvolgende bezorgdag dinsdag, en dat moet het label ook zeggen.
+ */
+const eerstvolgendeBezorgdag = nextWorkday;
 
 function msUntilCutoffFrom(now: Date): number {
   const cutoff = startOfDay(now);
@@ -93,7 +102,9 @@ export function bezorgBelofte(now: Date = new Date()): {
   badge: string;
   usp: string;
 } {
-  const werkdag = now.getDay() >= 1 && now.getDay() <= 5;
+  // "Vandaag verzonden" alleen op een gewone werkdag: op een feestdag rijdt
+  // DHL niet, ook al is het magazijn (verkort) open.
+  const werkdag = now.getDay() >= 1 && now.getDay() <= 5 && bezorgdagMogelijk(now);
   if (werkdag && now.getHours() < SAME_DAY_CUTOFF_HOUR) {
     return {
       vandaagKan: true,
@@ -101,10 +112,12 @@ export function bezorgBelofte(now: Date = new Date()): {
       usp: "Vóór 09:00 besteld? Vandaag bezorgd mogelijk",
     };
   }
-  // DHL bezorgt niet op zondag: op zaterdag is de eerstvolgende bezorgdag
-  // maandag, elke andere dag gewoon morgen.
+  // DHL bezorgt niet op zondag en niet op feestdagen: op zaterdag is de
+  // eerstvolgende bezorgdag maandag, op paaszaterdag pas dinsdag.
+  const bezorgdag = eerstvolgendeBezorgdag(now);
   const morgen = addDays(startOfDay(now), 1);
-  const wanneer = morgen.getDay() === 0 ? "maandag" : "morgen";
+  const wanneer =
+    bezorgdag.getTime() === morgen.getTime() ? "morgen" : DAGNAMEN[bezorgdag.getDay()];
   return {
     vandaagKan: false,
     badge: `Voor 23:59 besteld, ${wanneer} in huis`,
@@ -129,10 +142,10 @@ export function deliveryPromise(
   land: "NL" | "BE" = "NL",
 ): DeliveryPromise {
   const msUntilCutoff = msUntilCutoffFrom(now);
-  // Same-day alleen op werkdagen vóór de cutoff: in het weekend rijdt de
-  // spoeddienst niet, en een zaterdagklant die € 1,25 betaalt voor "vandaag"
-  // krijgt anders gewoon maandag zijn pakket.
-  const werkdag = now.getDay() >= 1 && now.getDay() <= 5;
+  // Same-day alleen op gewone werkdagen vóór de cutoff: in het weekend en op
+  // feestdagen rijdt de spoeddienst niet, en een klant die € 1,25 betaalt
+  // voor "vandaag" krijgt anders gewoon later zijn pakket.
+  const werkdag = now.getDay() >= 1 && now.getDay() <= 5 && bezorgdagMogelijk(now);
   const beforeCutoff = werkdag && now.getHours() < SAME_DAY_CUTOFF_HOUR;
 
   // België: DHL doet er een dag langer over en het spoednetwerk (same-day)
@@ -164,18 +177,20 @@ export function deliveryPromise(
     // klant in de checkout maakt en betaalt — daarom staat hier nooit
     // "same-day" als type: dat veld stuurt het DHL-spoedlabel aan.
     //
-    // Op zaterdag is "morgen" zondag, en dan bezorgt DHL niet: dan is de
-    // eerstvolgende bezorgdag maandag en moet het label dat ook zeggen.
-    const bezorgdag =
-      addDays(startOfDay(now), 1).getDay() === 0
-        ? addDays(startOfDay(now), 2)
-        : addDays(startOfDay(now), 1);
+    // "Morgen" kan een zondag óf feestdag zijn, en dan bezorgt DHL niet:
+    // dan verschuift de bezorgdag en moet het label die dag bij naam noemen
+    // (op paaszaterdag: "Dinsdag bezorgd").
+    const bezorgdag = eerstvolgendeBezorgdag(now);
+    const isMorgen = bezorgdag.getTime() === addDays(startOfDay(now), 1).getTime();
+    const dagnaam = DAGNAMEN[bezorgdag.getDay()];
     return {
       type: "next-day",
       carrier: "dhl",
       deliveryDate: bezorgdag,
       msUntilCutoff,
-      label: bezorgdag.getDay() === 1 && now.getDay() === 6 ? "Maandag bezorgd" : "Morgen bezorgd",
+      label: isMorgen
+        ? "Morgen bezorgd"
+        : `${dagnaam.charAt(0).toUpperCase() + dagnaam.slice(1)} bezorgd`,
       sameDayAvailable: beforeCutoff,
       sameDaySurcharge: SAME_DAY_SURCHARGE_CENTS,
       ...(beforeCutoff ? { sameDayDate: startOfDay(now) } : {}),
@@ -267,11 +282,16 @@ export function deliveryExplanation(
         return `Op voorraad in ons webshopmagazijn. DHL bezorgt ${dag}, of vandaag nog als je daar bij het afrekenen voor kiest (bestel dan vóór ${SAME_DAY_CUTOFF_HOUR}:00).`;
       }
       // Waaróm vandaag niet meer kan verschilt: doordeweeks is de cutoff
-      // voorbij, in het weekend rijdt de spoeddienst simpelweg niet.
+      // voorbij, in het weekend en op feestdagen rijdt de spoeddienst
+      // simpelweg niet.
       const weekend = now.getDay() === 0 || now.getDay() === 6;
-      return weekend
-        ? `Op voorraad in ons webshopmagazijn — in het weekend rijdt DHL niet, dus je hebt het ${dag} in huis.`
-        : `Op voorraad in ons webshopmagazijn — na ${SAME_DAY_CUTOFF_HOUR}:00 besteld, dus DHL bezorgt ${dag}.`;
+      if (weekend) {
+        return `Op voorraad in ons webshopmagazijn — in het weekend rijdt DHL niet, dus je hebt het ${dag} in huis.`;
+      }
+      if (!bezorgdagMogelijk(now)) {
+        return `Op voorraad in ons webshopmagazijn — op feestdagen rijdt DHL niet, dus je hebt het ${dag} in huis.`;
+      }
+      return `Op voorraad in ons webshopmagazijn — na ${SAME_DAY_CUTOFF_HOUR}:00 besteld, dus DHL bezorgt ${dag}.`;
     }
     case "next-workday":
       return "Dit artikel ligt in een van onze winkels; die verstuurt het met PostNL, binnen één werkdag bij je thuis.";

@@ -1,3 +1,4 @@
+import { feestdagWinkelUren } from "@/lib/feestdagen";
 import type { Store } from "@/lib/types";
 
 /**
@@ -50,24 +51,38 @@ function hoursFor(store: Store, dayIndex: number): DayHours | null {
   };
 }
 
+/**
+ * Uren op een concrete DATUM: eerst de feestdagregels (2e Paasdag verkort,
+ * Koningsdag tot 14:00, Kerst dicht — zie lib/feestdagen), anders het gewone
+ * weekschema. Zonder deze laag beloofde de klok "morgen rond 10:00 klaar"
+ * terwijl morgen 2e Paasdag was en de deur tot 12:00 dicht blijft.
+ */
+function urenOp(store: Store, datum: Date): DayHours | null {
+  const feestdag = feestdagWinkelUren(datum);
+  if (feestdag === "gesloten") return null;
+  if (feestdag) return feestdag;
+  return hoursFor(store, datum.getDay());
+}
+
 function formatMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-/** Wanneer gaat deze winkel weer open? Kijkt maximaal een week vooruit. */
+/** Wanneer gaat deze winkel weer open? Kijkt maximaal tien dagen vooruit
+ *  (een week plus de feestdagen die erachteraan kunnen komen). */
 function nextOpening(store: Store, now: Date): { dayIndex: number; opens: number } | null {
-  const today = now.getDay();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  for (let offset = 0; offset < 8; offset++) {
-    const dayIndex = (today + offset) % 7;
-    const hours = hoursFor(store, dayIndex);
+  for (let offset = 0; offset < 10; offset++) {
+    const datum = new Date(now);
+    datum.setDate(datum.getDate() + offset);
+    const hours = urenOp(store, datum);
     if (!hours) continue;
     // Vandaag telt alleen als de winkel nog moet opengaan.
     if (offset === 0 && nowMinutes >= hours.opens) continue;
-    return { dayIndex, opens: hours.opens };
+    return { dayIndex: datum.getDay(), opens: hours.opens };
   }
   return null;
 }
@@ -75,7 +90,7 @@ function nextOpening(store: Store, now: Date): { dayIndex: number; opens: number
 /** Bepaal de afhaalbelofte voor deze winkel op dit moment. */
 export function pickupPromise(store: Store, now: Date = new Date()): PickupPromise {
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const today = hoursFor(store, now.getDay());
+  const today = urenOp(store, now);
   const readyAt = nowMinutes + PICKUP_READY_HOURS * 60;
 
   // Open én genoeg tijd voor sluitingstijd: dan halen we de twee uur.
@@ -120,9 +135,9 @@ export function pickupPromise(store: Store, now: Date = new Date()): PickupPromi
   };
 }
 
-/** Is de winkel op dit moment open? */
+/** Is de winkel op dit moment open? (Inclusief feestdagregels.) */
 export function isOpenNow(store: Store, now: Date = new Date()): boolean {
-  const hours = hoursFor(store, now.getDay());
+  const hours = urenOp(store, now);
   if (!hours) return false;
   const minutes = now.getHours() * 60 + now.getMinutes();
   return minutes >= hours.opens && minutes < hours.closes;
