@@ -1,4 +1,5 @@
 import { bezorgbaarheid, type TeBezorgenArtikel } from "@/lib/bezorgbaarheid";
+import { toonbareRubriek } from "@/lib/rubrieken";
 import { isKvEnabled, kvGetRaw, kvSetEx } from "@/lib/kv";
 import { isGeloofwaardigeKluspasPrijs } from "@/lib/kluspas";
 import { parseBase } from "@/lib/paint-bases";
@@ -497,7 +498,10 @@ function buildSpecs(item: FeedItem, group: FeedItem[]): { label: string; value: 
 
   add("Merk", item.brand);
   add("Productlijn", item.productlijn);
-  add("Type", item.subtitel);
+  // "Type" komt uit de subtitel, en die is bij een handvol artikelen gevuld
+  // met de leveranciersnaam waaronder ze in de kassa staan ("Type: Euromat").
+  // Dat is geen productkenmerk; die regel laten we dan weg.
+  add("Type", toonbareRubriek(item.subtitel ?? "") ? item.subtitel : undefined);
 
   // Alle maten van de groep, niet alleen die van het eerste artikel: na het
   // samenvoegen van maatvarianten dekt "maat_range" de rest niet meer.
@@ -1292,7 +1296,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v38";
+const KV_KEY = "catalog:products:v39";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

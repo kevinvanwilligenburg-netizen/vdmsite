@@ -219,7 +219,9 @@ export default async function ProductPage({ params }: Props) {
     ...(product.ean ? { gtin13: product.ean } : {}),
     description: korteTekst,
     brand: { "@type": "Brand", name: product.brand },
-    category: category?.name,
+    // Alleen een echte rubriek: "category: Euromat" naar Google sturen is een
+    // leveranciersnaam doorgeven als productgroep.
+    ...(category && toonbareRubriek(category.name) ? { category: category.name } : {}),
     ...(product.image ? { image: [product.image] } : {}),
     url: absoluteUrl(`/product/${product.slug}`),
     // Winkelbeoordelingen van Trustpilot; alleen als er echte reviews zijn.

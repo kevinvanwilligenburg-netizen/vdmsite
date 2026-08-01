@@ -1,6 +1,7 @@
 import { demoCategories, demoProducts, demoStockFor } from "@/lib/catalog";
 import { isEchtMerk, merknaam } from "@/lib/merken";
 import { categorieenUit, loadFeedProducts } from "@/lib/product-feed";
+import { toonbareRubriek } from "@/lib/rubrieken";
 import { scoreProducts, suggestTerms } from "@/lib/search";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import { demoStores } from "@/lib/stores";
@@ -101,15 +102,6 @@ const MIN_ARTIKELEN_IN_NAVIGATIE = 8;
  * De artikelen blijven in de webshop staan en op /categorieen vindbaar — er
  * staat alleen geen wegwijzer in menu en footer naartoe.
  */
-const GEEN_RUBRIEK = new Set([
-  "euromat",
-  "partij-verf",
-  "partijhandel",
-  "diversen",
-  "toebehoren",
-  "verf",
-]);
-
 function rubriekNaamSleutel(category: Category): string {
   return category.name.trim().toLocaleLowerCase("nl");
 }
@@ -117,14 +109,14 @@ function rubriekNaamSleutel(category: Category): string {
 /**
  * Hoort deze rubriek in navigatie en op merkpagina's?
  *
- * Zelfde lijst als het menu gebruikt. Eén Sikkens-artikel staat in Tilroy nog
- * in het restgroepje "Verf" (code 1); zonder deze regel kreeg de merkpagina
- * een knop "Verf 1" naast "Verf en Beits 59" — twee knoppen die hetzelfde
- * beloven, waarvan er één bijna leeg is.
+ * De lijst zelf staat in lib/rubrieken, zodat ook de catalogusopbouw en
+ * client-componenten hem kunnen gebruiken zonder de Redis-client mee te
+ * slepen. Eén Sikkens-artikel staat in Tilroy nog in het restgroepje "Verf"
+ * (code 1); zonder deze regel kreeg de merkpagina een knop "Verf 1" naast
+ * "Verf en Beits 59" — twee knoppen die hetzelfde beloven, waarvan er één
+ * bijna leeg is.
  */
-export function toonbareRubriek(naam: string): boolean {
-  return !GEEN_RUBRIEK.has(naam.trim().toLocaleLowerCase("nl"));
-}
+export { toonbareRubriek };
 
 /**
  * De rubrieken die in menu en footer horen: groot genoeg om een rubriek te
@@ -137,8 +129,8 @@ export async function getNavCategories(limit = 12): Promise<Category[]> {
   const groot = categories.filter(
     (category) =>
       category.count >= MIN_ARTIKELEN_IN_NAVIGATIE &&
-      !GEEN_RUBRIEK.has(category.slug) &&
-      !GEEN_RUBRIEK.has(rubriekNaamSleutel(category)),
+      toonbareRubriek(category.slug) &&
+      toonbareRubriek(rubriekNaamSleutel(category)),
   );
   // Valt alles onder de grens (demo-catalogus, lege feed), dan liever de
   // volledige lijst dan een leeg menu.

@@ -24,3 +24,25 @@ export const HOOFDRUBRIEKEN = [
   "bevestigingsmaterialen",
   "handgereedschap",
 ];
+
+/**
+ * Namen die in de kassa als categorie staan maar er geen zijn: leveranciers
+ * (Euromat), inkoopsoorten (Partijhandel) en vergaarbakken (Diversen). Ze
+ * horen niet in het menu, niet in het kruimelpad en niet als "Type" in de
+ * specificaties — "Home › Euromat › Glitsa vloerlak" zegt een klant niets.
+ *
+ * Staat hier en niet bij de catalogus, om dezelfde reden als de lijst
+ * hierboven: dit wordt ook vanuit de browser gebruikt.
+ */
+const GEEN_RUBRIEK = new Set([
+  "euromat",
+  "partij-verf",
+  "partijhandel",
+  "diversen",
+  "toebehoren",
+  "verf",
+]);
+
+export function toonbareRubriek(naam: string): boolean {
+  return !GEEN_RUBRIEK.has(naam.trim().toLocaleLowerCase("nl"));
+}
