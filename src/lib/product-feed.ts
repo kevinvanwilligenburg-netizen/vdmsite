@@ -286,6 +286,17 @@ const PASTA_IN_DE_NAAM = /\b(mengpasta|kleurpasta|colorpaste|colorant)\b/i;
 const KASSAREGEL_IN_DE_NAAM = /^borg\b|foutief gemengd/i;
 
 /**
+ * "Partijhandel" is een inkoopkanaal, geen merk en geen productkenmerk.
+ * Alle 65 titels beginnen ermee ("Partijhandel Strooizout 25 KG") en dat is
+ * precies het woord waar niemand op zoekt — weg ermee, de productnaam begint
+ * dan gewoon met het product. Slugs verschuiven mee; oude links vangt de
+ * productpagina op via het groepsnummer.
+ */
+function zonderPartijhandel(titel: string): string {
+  return titel.replace(/^\s*partijhandel\s+/i, "").trim() || titel;
+}
+
+/**
  * De witte Sikkens-artikelen: echte producten, gekoppeld aan hun mengbare broer.
  *
  * Voor elke Sikkens-lak staat er in Tilroy een apart artikel "… Wit". Dat is
@@ -401,6 +412,7 @@ function parseItems(xml: string): FeedItem[] {
     while ((fieldMatch = fieldPattern.exec(body)) !== null) {
       fields[fieldMatch[1]] = decodeXml(fieldMatch[2]);
     }
+    if (fields.title) fields.title = zonderPartijhandel(fields.title);
     if (fields.id) items.push(fields);
   }
   return items;
@@ -1123,6 +1135,7 @@ async function fetchJsonFeed(): Promise<FeedItem[] | null> {
         if (value == null) continue;
         fields[key] = Array.isArray(value) ? value.join("|") : String(value);
       }
+      if (fields.title) fields.title = zonderPartijhandel(fields.title);
       if (fields.id) items.push(fields);
     }
 
@@ -1194,7 +1207,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v31";
+const KV_KEY = "catalog:products:v32";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

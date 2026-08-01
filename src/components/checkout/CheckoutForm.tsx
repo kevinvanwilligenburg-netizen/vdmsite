@@ -129,10 +129,16 @@ export function CheckoutForm({
   };
 
   // Waar de korting op dit moment op staat; de server toetst dit opnieuw.
+  // Regels Kevin: een Nederlands bedrijf legitimeert zich met KvK (acht
+  // cijfers), een buitenlands bedrijf met een VIES-bevestigd BTW-nummer.
+  const zakelijkGecontroleerd =
+    country === "NL"
+      ? kvkNummer.replace(/[^0-9]/g, "").length === 8
+      : viesStatus === "geldig";
   const kortingActief = Boolean(
     ingelogdAls ||
       (klantType === "particulier" && accountAanmaken) ||
-      (klantType === "zakelijk" && profpas && viesStatus === "geldig"),
+      (klantType === "zakelijk" && profpas && zakelijkGecontroleerd),
   );
 
   // Apple Pay alleen tonen waar het ook echt werkt (Safari op een Apple-
@@ -610,17 +616,23 @@ export function CheckoutForm({
                 <div>
                   <label htmlFor="kvk" className="mb-1 block text-sm font-bold text-ink">
                     KvK-nummer
+                    {country !== "NL" && (
+                      <span className="font-normal text-ink-soft"> (niet verplicht)</span>
+                    )}
                   </label>
                   <input
                     id="kvk"
                     inputMode="numeric"
+                    required={country === "NL"}
                     value={kvkNummer}
                     onChange={(event) => setKvkNummer(event.target.value)}
                     className="input"
                     placeholder="12345678"
                   />
                 </div>
-                <div>
+                {/* BTW + VIES alleen voor buitenlandse bedrijven; een
+                    Nederlands bedrijf legitimeert zich met zijn KvK-nummer. */}
+                <div className={country === "NL" ? "hidden" : undefined}>
                   <label htmlFor="btw" className="mb-1 block text-sm font-bold text-ink">
                     BTW-nummer
                   </label>
@@ -667,8 +679,9 @@ export function CheckoutForm({
                       Ik wil een Profpas — korting direct verrekend
                     </span>
                     <span className="block text-ink-soft">
-                      Geldt zodra je BTW-nummer door het EU-register (VIES) is
-                      bevestigd. Zo blijft de korting bij échte bedrijven.
+                      {country === "NL"
+                        ? "Geldt zodra je KvK-nummer is ingevuld. Zo blijft de korting bij échte bedrijven."
+                        : "Geldt zodra je BTW-nummer door het EU-register (VIES) is bevestigd. Zo blijft de korting bij échte bedrijven."}
                     </span>
                   </span>
                 </label>

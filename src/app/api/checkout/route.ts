@@ -136,37 +136,53 @@ export async function POST(request: Request) {
   const accountAanmaken = klantType === "particulier" && input.accountAanmaken === true;
   const kvk = (input.kvk ?? "").replace(/[^0-9]/g, "");
   const btw = normaliseerBtw(input.btw ?? "");
+  const land = shippingCountry(input.customer?.country);
 
+  /*
+   * Zakelijke controle per land (regels Kevin):
+   * - Nederland: alleen een KvK-nummer nodig. Acht cijfers is de lat.
+   * - Buitenland (België): een BTW-nummer dat VIES écht bevestigt — dat is
+   *   de enige controle die wij op afstand kunnen doen, en het nummer komt
+   *   ook op de factuur, dus fout invullen blokkeert.
+   */
   if (klantType === "zakelijk") {
     if (!company) return badRequest("Vul je bedrijfsnaam in.");
-    if (kvk && !kvkGeldig(kvk)) return badRequest("Een KvK-nummer heeft acht cijfers.");
     if (input.bedrijfsType && !isBedrijfsType(input.bedrijfsType)) {
       return badRequest("Ongeldig bedrijfstype.");
     }
+    if (land === "NL") {
+      if (!kvkGeldig(kvk)) {
+        return badRequest("Vul je KvK-nummer in (acht cijfers).");
+      }
+    } else {
+      if (!btwFormaatGeldig(btw)) {
+        return badRequest("Vul een geldig BTW-nummer in (bijv. BE0123456789).");
+      }
+      const vies = await controleerBtw(btw);
+      if (vies.status === "ongeldig") {
+        return badRequest(
+          "Dit BTW-nummer wordt niet herkend in het EU-register (VIES). Controleer het nummer.",
+        );
+      }
+      if (vies.status === "onbeslist" && input.profpas === true) {
+        return badRequest(
+          "De BTW-controle (VIES) is tijdelijk niet bereikbaar. Probeer het zo weer, of bestel zonder Profpas-korting — die schrijven we dan later bij.",
+        );
+      }
+      if (vies.status === "geldig") {
+        console.log(
+          `[checkout] VIES bevestigt ${btw}${vies.naam ? ` (${vies.naam})` : ""}`,
+        );
+      }
+    }
   }
 
+  // Korting: ingelogd, account aanmaken, of een gecontroleerd bedrijf met
+  // Profpas-vinkje (NL: geldige KvK; buitenland: VIES-bevestigde BTW —
+  // hierboven al afgedwongen, anders was de bestelling geweigerd).
   let kluspas = Boolean(sessieEmail) || accountAanmaken;
   if (klantType === "zakelijk" && input.profpas === true) {
-    if (!btwFormaatGeldig(btw)) {
-      return badRequest(
-        "Voor de Profpas-korting is een geldig BTW-nummer nodig (bijv. NL123456789B01).",
-      );
-    }
-    const vies = await controleerBtw(btw);
-    if (vies.status === "geldig") {
-      kluspas = true;
-      console.log(
-        `[checkout] VIES bevestigt ${btw}${vies.naam ? ` (${vies.naam})` : ""}`,
-      );
-    } else if (vies.status === "ongeldig") {
-      return badRequest(
-        "Dit BTW-nummer wordt niet herkend in het EU-register (VIES). Controleer het nummer, of bestel zonder Profpas-korting.",
-      );
-    } else {
-      return badRequest(
-        "De BTW-controle (VIES) is tijdelijk niet bereikbaar. Probeer het zo weer, of bestel zonder Profpas-korting — die kunnen we dan later bijschrijven.",
-      );
-    }
+    kluspas = true;
   }
 
   // Het pasnummer zetten we alleen in de order als de klant er echt een heeft;
@@ -338,7 +354,6 @@ export async function POST(request: Request) {
   }
 
   const subtotal = subtotalCents / 100;
-  const land = shippingCountry(input.customer?.country);
   // Afhalen is altijd gratis; bij bezorgen gelden de landtarieven, tenzij er
   // een merk in het mandje ligt dat we franco versturen (Sikkens). Dat
   // bepalen we hier en niet op de client: anders kan iemand het meesturen.
