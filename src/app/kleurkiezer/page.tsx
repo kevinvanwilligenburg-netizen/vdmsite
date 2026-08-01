@@ -5,7 +5,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { KleurTrechter } from "@/components/kleur/KleurTrechter";
 import { Waaiers } from "@/components/kleur/Waaiers";
 import { MyColors } from "@/components/MyColors";
-import { getColorCollections, getInitialColors } from "@/lib/colors";
+import { getInitialColors, getWaaierOverzicht } from "@/lib/colors";
 import { getProducts } from "@/lib/tilroy";
 
 export const revalidate = 3600;
@@ -21,7 +21,7 @@ export default async function KleurkiezerPage() {
   const [products, colors, collections] = await Promise.all([
     getProducts(),
     getInitialColors(),
-    getColorCollections(),
+    getWaaierOverzicht(),
   ]);
   const totalColors = collections.reduce((sum, entry) => sum + entry.count, 0);
 

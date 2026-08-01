@@ -152,6 +152,42 @@ export async function getColorCollections(): Promise<ColorCollection[]> {
   ];
 }
 
+export interface WaaierOverzichtItem extends ColorCollection {
+  /** Zes kleurstalen als voorproefje — een waaier herken je eerder aan zijn
+   *  kleuren dan aan zijn naam. */
+  preview: string[];
+}
+
+/**
+ * Alle collecties mét kleurpreview, in één doorloop over de geladen kleuren.
+ * Voor het bladeroverzicht op /kleurkiezer; volgorde gelijk aan
+ * getColorCollections (Populair en RAL voorop, rest op grootte — het
+ * alfabetiseren doet de bladcomponent zelf).
+ */
+export async function getWaaierOverzicht(): Promise<WaaierOverzichtItem[]> {
+  const [collections, colors] = await Promise.all([
+    getColorCollections(),
+    loadAllColors(),
+  ]);
+  const previews = new Map<string, string[]>();
+  for (const color of colors) {
+    const id = color.collectionId ?? "overig";
+    const lijst = previews.get(id);
+    if (!lijst) previews.set(id, [color.hex]);
+    else if (lijst.length < 6) lijst.push(color.hex);
+  }
+  // Populair bestaat niet als echte collectie; de preview komt uit de eigen
+  // selectie.
+  previews.set(
+    POPULAIR_COLLECTION_ID,
+    populairPaintColors().slice(0, 6).map((kleur) => kleur.hex),
+  );
+  return collections.map((collection) => ({
+    ...collection,
+    preview: previews.get(collection.id) ?? [],
+  }));
+}
+
 export interface ColorQuery {
   q?: string;
   collectionId?: string;
