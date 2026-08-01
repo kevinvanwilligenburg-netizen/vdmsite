@@ -37,10 +37,10 @@ import {
 import "./globals.css";
 
 /**
- * Roboto Condensed staat als lopende tekst in de huisstijlgids. Muller Black
- * is daar het letterype voor koppen, maar dat is commercieel en zit niet bij
- * Google Fonts; zolang we de webfont-licentie niet hebben, zetten we de koppen
- * in dezelfde familie op het zwaarste gewicht.
+ * Roboto Condensed staat als lopende tekst in de huisstijlgids. De koppen
+ * staan in Muller Black — weblicentie gekocht (1 aug 2026), zelf gehost via
+ * public/fonts + @font-face in globals.css, en toegepast op h1–h3 via de
+ * tailwind-familie `font-kop`.
  */
 const robotoCondensed = Roboto_Condensed({
   subsets: ["latin"],

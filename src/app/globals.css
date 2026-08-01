@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Muller Black — het koppen-lettertype uit de huisstijlgids. Weblicentie
+ * gekocht (bevestigd door Kevin, 1 aug 2026); het bestand komt uit het
+ * huisstijlpakket op SharePoint. De tailwind-familie `font-kop` had "Muller"
+ * al vooraan staan in afwachting van dit moment.
+ */
+@font-face {
+  font-family: "Muller";
+  src: url("/fonts/MullerBlack.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -9,6 +23,13 @@
   }
   body {
     @apply bg-[#F4F6F8] text-ink antialiased;
+  }
+  /* Koppen in Muller, zoals de huisstijlgids voorschrijft; de lopende tekst
+     blijft Roboto Condensed. */
+  h1,
+  h2,
+  h3 {
+    @apply font-kop;
   }
   /* Voorkomt inzoomen op iOS bij het focussen van een invoerveld. */
   input,

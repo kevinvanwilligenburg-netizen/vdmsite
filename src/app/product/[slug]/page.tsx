@@ -241,7 +241,7 @@ export default async function ProductPage({ params }: Props) {
   // vindbaarheid én voor AI-assistenten die productvragen beantwoorden.
   // Opgebouwd uit de échte specificaties (rendement, glans, ondergrond, maten):
   // een vraag verschijnt alleen als de feed het antwoord levert.
-  const productFaqs = bouwProductFaqs(product);
+  const productFaqs = bouwProductFaqs(product, { testers: testersActief });
 
   const productFaqJsonLd = {
     "@context": "https://schema.org",

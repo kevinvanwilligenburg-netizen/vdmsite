@@ -70,11 +70,17 @@ export default async function RalKleurPage({ params }: Props) {
     },
     {
       q: `Klopt de kleur op mijn scherm?`,
-      a: `Schermkleuren zijn een indicatie: RAL kent geen officiële schermwaarden en elk beeldscherm wijkt af. Leg bij twijfel de officiële RAL-waaier ernaast in een van onze winkels, of bestel eerst een kleurtester voor ${STAAL_PRIJS_TEKST} — dat bedrag krijg je als voucher terug bij aankoop van je verf.`,
+      // De kleurtester alleen beloven als de schakelaar aan staat — anders
+      // verwijst de tekst naar een pagina die niet bestaat.
+      a: testers
+        ? `Schermkleuren zijn een indicatie: RAL kent geen officiële schermwaarden en elk beeldscherm wijkt af. Leg bij twijfel de officiële RAL-waaier ernaast in een van onze winkels, of bestel eerst een kleurtester voor ${STAAL_PRIJS_TEKST} — dat bedrag krijg je als voucher terug bij aankoop van je verf.`
+        : `Schermkleuren zijn een indicatie: RAL kent geen officiële schermwaarden en elk beeldscherm wijkt af. Leg bij twijfel de officiële RAL-waaier ernaast in een van onze winkels — onze verfspecialist denkt gratis met je mee.`,
     },
     {
       q: `Kan op kleur gemengde verf retour?`,
-      a: `Nee — verf die speciaal voor jou in ${naam} is gemengd, is maatwerk en valt buiten het herroepingsrecht. Twijfel je over de kleur, bestel dan eerst een kleurtester of kom langs in de winkel.`,
+      a: testers
+        ? `Nee — verf die speciaal voor jou in ${naam} is gemengd, is maatwerk en valt buiten het herroepingsrecht. Twijfel je over de kleur, bestel dan eerst een kleurtester of kom langs in de winkel.`
+        : `Nee — verf die speciaal voor jou in ${naam} is gemengd, is maatwerk en valt buiten het herroepingsrecht. Twijfel je over de kleur, leg dan eerst de officiële waaier ernaast in de winkel.`,
     },
   ];
 
@@ -150,9 +156,11 @@ export default async function RalKleurPage({ params }: Props) {
               {testers ? "Andere kleur zoeken" : "Zoek je kleur in de kleurkiezer"}
             </Link>
           </div>
-          <p className="mt-2 text-xs text-ink-soft">
-            Het testerbedrag krijg je terug als voucher zodra je de verf koopt.
-          </p>
+          {testers && (
+            <p className="mt-2 text-xs text-ink-soft">
+              Het testerbedrag krijg je terug als voucher zodra je de verf koopt.
+            </p>
+          )}
         </div>
       </header>
 

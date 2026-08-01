@@ -19,7 +19,10 @@ export interface ProductFaq {
   a: string;
 }
 
-export function bouwProductFaqs(product: Product): ProductFaq[] {
+export function bouwProductFaqs(
+  product: Product,
+  opties: { testers?: boolean } = {},
+): ProductFaq[] {
   const attr = product.attributes ?? {};
   const faqs: ProductFaq[] = [];
 
@@ -46,7 +49,13 @@ export function bouwProductFaqs(product: Product): ProductFaq[] {
   if (product.colorMixable) {
     faqs.push({
       q: "Kan ik dit in elke kleur krijgen?",
-      a: `Ja. Kies je kleur met de kleurkiezer op deze pagina — je hebt keuze uit meer dan 18.000 kleuren. Onze verfspecialist mengt de verf gratis aan en kiest automatisch de juiste mengbasis bij jouw kleur. Twijfel je over de kleur? Bestel eerst een kleurtester van 30 ml (${STAAL_PRIJS_TEKST}); dat bedrag krijg je terug als voucher bij je verf.`,
+      // De kleurtester alleen noemen als de dashboard-schakelaar aan staat;
+      // anders belooft de FAQ een pagina die niet bestaat.
+      a: `Ja. Kies je kleur met de kleurkiezer op deze pagina — je hebt keuze uit meer dan 18.000 kleuren. Onze verfspecialist mengt de verf gratis aan en kiest automatisch de juiste mengbasis bij jouw kleur. ${
+        opties.testers
+          ? `Twijfel je over de kleur? Bestel eerst een kleurtester van 30 ml (${STAAL_PRIJS_TEKST}); dat bedrag krijg je terug als voucher bij je verf.`
+          : "Twijfel je over de kleur? Leg de officiële waaier ernaast in een van onze winkels — onze verfspecialist denkt gratis met je mee."
+      }`,
     });
   }
 

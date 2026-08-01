@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { getProducts } from "@/lib/tilroy";
 import { getVergelijking, sectieProducten, VERGELIJKINGEN } from "@/lib/vergelijk";
 
@@ -33,12 +34,18 @@ export default async function VergelijkPage({ params }: Props) {
   const vergelijking = getVergelijking(params.slug);
   if (!vergelijking) notFound();
 
-  const products = await getProducts();
+  const [products, testers] = await Promise.all([getProducts(), kleurtestersActief()]);
+
+  // De kleurtester-variant van een antwoord alleen als de schakelaar aan staat.
+  const faqs = vergelijking.faqs.map((faq) => ({
+    q: faq.q,
+    a: testers && faq.aMetTesters ? faq.aMetTesters : faq.a,
+  }));
 
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: vergelijking.faqs.map((faq) => ({
+    mainEntity: faqs.map((faq) => ({
       "@type": "Question",
       name: faq.q,
       acceptedAnswer: { "@type": "Answer", text: faq.a },
@@ -105,7 +112,7 @@ export default async function VergelijkPage({ params }: Props) {
           Veelgestelde vragen
         </h2>
         <div className="mt-4 space-y-3">
-          {vergelijking.faqs.map((faq) => (
+          {faqs.map((faq) => (
             <details key={faq.q} className="card group p-5">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold text-ink">
                 {faq.q}

@@ -43,7 +43,7 @@ export const GIDSEN: Gids[] = [
       "Welke muurverf kies je voor je woonkamer, slaapkamer of plafond? Onze top 10 muurverf met het hoogste voordeel, gratis gemengd in elke kleur.",
     intro: [
       "Muurverf is de snelste manier om een kamer een ander gezicht te geven — maar in het schap staan tientallen bussen die allemaal wit lijken. Deze gids zet de toppers uit ons assortiment op een rij, met het voordeel van dit moment, en legt uit waar je op let bij het kiezen.",
-      "Alles hieronder mengen we gratis in elke kleur die je wilt: RAL, Sikkens, Flexa of een van de andere waaiers. Twijfel je over de kleur? Bestel eerst een kleurtester — het bedrag krijg je terug als voucher bij je verf.",
+      "Alles hieronder mengen we gratis in elke kleur die je wilt: RAL, Sikkens, Flexa of een van de andere waaiers.",
     ],
     hoortErbij: (product) => {
       const tekst = tekstVan(product);

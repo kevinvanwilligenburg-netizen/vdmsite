@@ -31,7 +31,12 @@ export interface Vergelijking {
   metaOmschrijving: string;
   intro: string[];
   secties: VergelijkSectie[];
-  faqs: { q: string; a: string }[];
+  /**
+   * `a` is het veilige antwoord (zonder kleurtester-belofte); `aMetTesters`
+   * de variant mét, alleen getoond als de dashboard-schakelaar aan staat.
+   * Zo belooft een vergeten schakelaar nooit te veel.
+   */
+  faqs: { q: string; a: string; aMetTesters?: string }[];
 }
 
 function naam(product: Product): string {
@@ -81,7 +86,9 @@ export const VERGELIJKINGEN: Vergelijking[] = [
       },
       {
         q: "Kan ik een Sigma-kleur bij jullie laten mengen?",
-        a: "Vrijwel altijd: we mengen uit ruim 140 waaiers met meer dan 18.000 kleuren, waaronder alle RAL-kleuren. Neem je kleurcode mee of zoek hem op in de kleurkiezer; twijfel je, dan is er de kleurtester van € 2,99 — dat bedrag krijg je terug als voucher bij je verf.",
+        a: "Vrijwel altijd: we mengen uit ruim 140 waaiers met meer dan 18.000 kleuren, waaronder alle RAL-kleuren. Neem je kleurcode mee of zoek hem op in de kleurkiezer; bij twijfel legt onze verfspecialist in de winkel de officiële waaier ernaast.",
+        aMetTesters:
+          "Vrijwel altijd: we mengen uit ruim 140 waaiers met meer dan 18.000 kleuren, waaronder alle RAL-kleuren. Neem je kleurcode mee of zoek hem op in de kleurkiezer; twijfel je, dan is er de kleurtester van € 2,99 — dat bedrag krijg je terug als voucher bij je verf.",
       },
     ],
   },
@@ -125,7 +132,9 @@ export const VERGELIJKINGEN: Vergelijking[] = [
       },
       {
         q: "Kan ik een Wijzonol-kleur bij jullie laten mengen?",
-        a: "Vrijwel altijd: we mengen meer dan 18.000 kleuren uit ruim 140 waaiers, waaronder alle RAL-kleuren. Twijfel je over de exacte tint, bestel dan eerst een kleurtester van € 2,99 — het bedrag krijg je terug als voucher bij je verf.",
+        a: "Vrijwel altijd: we mengen meer dan 18.000 kleuren uit ruim 140 waaiers, waaronder alle RAL-kleuren. Twijfel je over de exacte tint, leg dan de officiële waaier ernaast in een van onze winkels.",
+        aMetTesters:
+          "Vrijwel altijd: we mengen meer dan 18.000 kleuren uit ruim 140 waaiers, waaronder alle RAL-kleuren. Twijfel je over de exacte tint, bestel dan eerst een kleurtester van € 2,99 — het bedrag krijg je terug als voucher bij je verf.",
       },
     ],
   },
@@ -155,7 +164,9 @@ export const VERGELIJKINGEN: Vergelijking[] = [
       },
       {
         q: "Kan ik de kleur van mijn oude Sigma-lak laten namengen?",
-        a: "Vrijwel altijd: neem de kleurcode of een gelakt deel mee naar de winkel, of zoek de kleur op in onze kleurkiezer met ruim 18.000 kleuren. Bij twijfel bestel je eerst een kleurtester van € 2,99 — dat bedrag krijg je terug als voucher bij je verf.",
+        a: "Vrijwel altijd: neem de kleurcode of een gelakt deel mee naar de winkel, of zoek de kleur op in onze kleurkiezer met ruim 18.000 kleuren. Bij twijfel legt onze verfspecialist de officiële waaier ernaast.",
+        aMetTesters:
+          "Vrijwel altijd: neem de kleurcode of een gelakt deel mee naar de winkel, of zoek de kleur op in onze kleurkiezer met ruim 18.000 kleuren. Bij twijfel bestel je eerst een kleurtester van € 2,99 — dat bedrag krijg je terug als voucher bij je verf.",
       },
       {
         q: "Wat kost verzenden?",

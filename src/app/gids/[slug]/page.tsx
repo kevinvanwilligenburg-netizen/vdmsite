@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
 import { getGids, GIDSEN, gidsProducten } from "@/lib/gidsen";
+import { kleurtestersActief } from "@/lib/instellingen";
 import { absoluteUrl } from "@/lib/site";
 import { getProducts } from "@/lib/tilroy";
 
@@ -34,7 +35,8 @@ export default async function GidsPage({ params }: Props) {
   const gids = getGids(params.slug);
   if (!gids) notFound();
 
-  const producten = gidsProducten(gids, await getProducts());
+  const [alleProducten, testers] = await Promise.all([getProducts(), kleurtestersActief()]);
+  const producten = gidsProducten(gids, alleProducten);
 
   const itemListJsonLd = {
     "@context": "https://schema.org",
@@ -74,6 +76,16 @@ export default async function GidsPage({ params }: Props) {
             {alinea}
           </p>
         ))}
+        {/* De kleurtester alleen beloven als de dashboard-schakelaar aan staat. */}
+        {testers && (
+          <p className="mt-3 leading-relaxed text-ink-soft">
+            Twijfel je over de kleur? Bestel eerst een{" "}
+            <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
+              kleurtester
+            </Link>{" "}
+            — het bedrag krijg je terug als voucher bij je verf.
+          </p>
+        )}
       </header>
 
       {producten.length > 0 && (
