@@ -232,14 +232,47 @@ export function combinePromises(promises: DeliveryPromise[]): DeliveryPromise {
 }
 
 /** Korte uitleg onder de belofte. */
-export function deliveryExplanation(promise: DeliveryPromise): string {
+const DAGNAMEN = [
+  "zondag",
+  "maandag",
+  "dinsdag",
+  "woensdag",
+  "donderdag",
+  "vrijdag",
+  "zaterdag",
+] as const;
+
+/** "morgen" als dat de bezorgdag is, anders de dag bij naam ("maandag"). */
+function bezorgdagWoord(promise: DeliveryPromise, now: Date): string {
+  const dag = promise.deliveryDate;
+  if (!dag) return "morgen";
+  const morgen = addDays(startOfDay(now), 1);
+  return dag.getTime() === morgen.getTime() ? "morgen" : DAGNAMEN[dag.getDay()];
+}
+
+export function deliveryExplanation(
+  promise: DeliveryPromise,
+  now: Date = new Date(),
+): string {
   switch (promise.type) {
     case "same-day":
       return "Op voorraad in ons webshopmagazijn — DHL bezorgt het vandaag nog.";
-    case "next-day":
-      return promise.sameDayAvailable
-        ? `Op voorraad in ons webshopmagazijn. DHL bezorgt morgen, of vandaag nog als je daar bij het afrekenen voor kiest (bestel dan vóór ${SAME_DAY_CUTOFF_HOUR}:00).`
-        : `Op voorraad in ons webshopmagazijn — na ${SAME_DAY_CUTOFF_HOUR}:00 besteld, dus DHL bezorgt morgen.`;
+    case "next-day": {
+      // De uitleg moet dezelfde dag noemen als het label erboven. Die stond
+      // hier hard op "morgen", zodat op zaterdag "Maandag bezorgd" boven
+      // "DHL bezorgt morgen" kwam te staan — en morgen is dan zondag, als er
+      // niemand rijdt.
+      const dag = bezorgdagWoord(promise, now);
+      if (promise.sameDayAvailable) {
+        return `Op voorraad in ons webshopmagazijn. DHL bezorgt ${dag}, of vandaag nog als je daar bij het afrekenen voor kiest (bestel dan vóór ${SAME_DAY_CUTOFF_HOUR}:00).`;
+      }
+      // Waaróm vandaag niet meer kan verschilt: doordeweeks is de cutoff
+      // voorbij, in het weekend rijdt de spoeddienst simpelweg niet.
+      const weekend = now.getDay() === 0 || now.getDay() === 6;
+      return weekend
+        ? `Op voorraad in ons webshopmagazijn — in het weekend rijdt DHL niet, dus je hebt het ${dag} in huis.`
+        : `Op voorraad in ons webshopmagazijn — na ${SAME_DAY_CUTOFF_HOUR}:00 besteld, dus DHL bezorgt ${dag}.`;
+    }
     case "next-workday":
       return "Dit artikel ligt in een van onze winkels; die verstuurt het met PostNL, binnen één werkdag bij je thuis.";
     default:

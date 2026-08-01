@@ -14,7 +14,7 @@ import { usePrijsModus } from "@/components/prijs/PrijsWeergave";
 import { betaalmethodenVoor } from "@/lib/betaalmethoden";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
 import { BTW_TARIEF } from "@/lib/factuur";
-import { CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
+import { CONTACT_PHONE, WHATSAPP_NUMMER, WHATSAPP_TIJDEN } from "@/lib/site";
 import { BEDRIJFSTYPEN } from "@/lib/zakelijk";
 import { euro } from "@/lib/format";
 
@@ -1322,7 +1322,8 @@ export function CheckoutForm({
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-ink transition hover:text-brand"
               >
-                <Icon name="chat" className="h-4 w-4 shrink-0 text-brand" /> App met de winkel
+                <Icon name="chat" className="h-4 w-4 shrink-0 text-brand" /> App met de
+                winkel <span className="text-xs text-ink-soft">({WHATSAPP_TIJDEN})</span>
               </a>
             )}
           </div>

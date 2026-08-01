@@ -4,7 +4,7 @@ import { Icon } from "@/components/icons";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { getWhatsappNummer } from "@/lib/contact";
 import { kleurtestersActief } from "@/lib/instellingen";
-import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
+import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_TIJDEN } from "@/lib/site";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { getBrands, getNavCategories, getStores } from "@/lib/tilroy";
 
@@ -189,6 +189,7 @@ export async function Footer() {
                   className="inline-flex items-center gap-2 transition hover:text-brand-bright"
                 >
                   <Icon name="chat" className="h-4 w-4 shrink-0" /> Appen met de winkel
+                  <span className="text-xs text-white/60">({WHATSAPP_TIJDEN})</span>
                 </a>
               </li>
             )}

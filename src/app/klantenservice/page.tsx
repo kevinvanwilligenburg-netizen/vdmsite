@@ -5,7 +5,13 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
 import { Mark } from "@/components/Mark";
-import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site";
+import { getWhatsappNummer } from "@/lib/contact";
+import {
+  CONTACT_EMAIL,
+  CONTACT_PHONE,
+  WHATSAPP_TIJDEN,
+  WHATSAPP_WEERGAVE,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Klantenservice – veelgestelde vragen en contact",
@@ -62,7 +68,9 @@ const faqJsonLd = {
   })),
 };
 
-export default function CustomerServicePage() {
+export default async function CustomerServicePage() {
+  // Nummer uit het dashboard, met de omgevingsvariabele als terugval.
+  const whatsappNummer = await getWhatsappNummer();
   return (
     <div className="space-y-8">
       <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Klantenservice" }]} />
@@ -83,7 +91,10 @@ export default function CustomerServicePage() {
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="Contact">
+      <section
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        aria-label="Contact"
+      >
         <a href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, "")}`} className="card group p-5">
           <span className="inline-flex text-brand" aria-hidden>
             <Icon name="phone" className="h-7 w-7" />
@@ -92,6 +103,25 @@ export default function CustomerServicePage() {
           <p className="text-sm text-ink-soft">{CONTACT_PHONE}</p>
           <p className="text-xs text-ink-soft">ma t/m za tijdens winkeltijden</p>
         </a>
+        {/* WhatsApp staat voor veel mensen dichter bij dan een telefoontje:
+            even een foto van je kozijn sturen en vragen welke lak erop moet.
+            De bereikbaarheid staat erbij, zodat niemand zaterdagavond op
+            antwoord zit te wachten. */}
+        {whatsappNummer && (
+          <a
+            href={`https://wa.me/${whatsappNummer}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card group p-5"
+          >
+            <span className="inline-flex text-brand" aria-hidden>
+              <Icon name="chat" className="h-7 w-7" />
+            </span>
+            <p className="mt-2 font-black text-ink group-hover:text-brand">App ons</p>
+            <p className="text-sm text-ink-soft">{WHATSAPP_WEERGAVE(whatsappNummer)}</p>
+            <p className="text-xs text-ink-soft">{WHATSAPP_TIJDEN}</p>
+          </a>
+        )}
         <a href={`mailto:${CONTACT_EMAIL}`} className="card group p-5">
           <span className="inline-flex text-brand" aria-hidden>
             <Icon name="mail" className="h-7 w-7" />

@@ -689,6 +689,22 @@ function schoneNaam(naam: string): string {
   );
 }
 
+/**
+ * Zet de enige maat achter de naam, als het artikel er maar één heeft.
+ *
+ * Netjes geschreven zoals de klant het leest: "2,5 L", niet "2,5 L 2,5L".
+ * Staat de maat al ergens in de naam, dan blijft het bij één vermelding.
+ */
+function metEnigeMaat(naam: string, variants: ProductVariant[]): string {
+  if (variants.length !== 1) return naam;
+  const maat = variants[0].size?.trim();
+  if (!maat) return naam;
+  const genormaliseerd = (tekst: string) =>
+    tekst.toLowerCase().replace(/[\s.,]/g, "");
+  if (genormaliseerd(naam).includes(genormaliseerd(maat))) return naam;
+  return `${naam} ${maat}`;
+}
+
 /** Zet de glansgraad achter de naam, als die er nog niet in staat. */
 function metGlans(naam: string, glans: string | undefined): string {
   const waarde = glans?.trim();
@@ -1048,7 +1064,12 @@ function buildProduct(
   // daar al met de hand opgeschoond. De slug verandert dan mee — de
   // productpagina vangt oude slugs op via het groepsnummer aan het eind.
   const webNaam = webNaamUit(leader);
-  const definitieveNaam = webNaam ? schoneNaam(metGlans(webNaam, leader.glans)) : name;
+  const basisNaam = webNaam ? schoneNaam(metGlans(webNaam, leader.glans)) : name;
+  // Heeft een artikel maar één maat, dan is er geen maatkiezer en zegt de
+  // pagina nergens hoeveel je koopt: "Glitsa vloerlak — € 84,85" kan net zo
+  // goed een literblik als een emmer zijn. Bij meerdere maten hoort de maat
+  // er juist níét in; die kiest de klant zelf.
+  const definitieveNaam = metEnigeMaat(basisNaam, variants);
   const webTekst = webTekstUit(leader);
 
   return {
@@ -1253,7 +1274,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v36";
+const KV_KEY = "catalog:products:v37";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

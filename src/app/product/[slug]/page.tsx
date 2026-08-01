@@ -31,6 +31,7 @@ import {
   getRelatedProducts,
   getStores,
   skusFor,
+  toonbareRubriek,
 } from "@/lib/tilroy";
 
 export const revalidate = 3600;
@@ -258,7 +259,12 @@ export default async function ProductPage({ params }: Props) {
       <Breadcrumbs
         items={[
           { name: "Home", href: "/" },
-          ...(category
+          // Niet elke "categorie" uit de kassa is een rubriek: een handvol
+          // artikelen staat onder een leveranciersnaam (Euromat, Anza) of
+          // onder een vergaarbak als "Diversen". Die horen niet in het
+          // kruimelpad — "Home › Euromat › Glitsa vloerlak" zegt de klant
+          // niets en Google evenmin. Menu en footer filterden ze al weg.
+          ...(category && toonbareRubriek(category.name)
             ? [{ name: category.name, href: `/categorie/${category.slug}` }]
             : []),
           { name: product.name },

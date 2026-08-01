@@ -30,6 +30,23 @@ export const BEDRIJF = {
  */
 export const WHATSAPP_NUMMER = (process.env.NEXT_PUBLIC_WHATSAPP ?? "").replace(/[^\d]/g, "");
 
+/**
+ * Wanneer er iemand meeleest op WhatsApp. Erbij zetten is geen slag om de arm
+ * maar een belofte: wie zaterdagavond appt weet dat maandag het antwoord komt
+ * en gaat niet zitten wachten.
+ */
+export const WHATSAPP_TIJDEN = "ma t/m vr 9:00–17:00";
+
+/** 31631231915 → +31 6 31231915, zodat het nummer leesbaar op de pagina staat. */
+export function WHATSAPP_WEERGAVE(nummer: string): string {
+  const cijfers = nummer.replace(/[^\d]/g, "");
+  const nl = cijfers.startsWith("31") ? cijfers.slice(2) : cijfers;
+  if (nl.startsWith("6") && nl.length === 9) {
+    return `+31 6 ${nl.slice(1)}`;
+  }
+  return cijfers ? `+${cijfers}` : "";
+}
+
 /** Basis-URL van het VDM-dashboard (voorraad-hub, kleurenfeed, fulfilment). */
 export const DASHBOARD_API_URL = (
   process.env.DASHBOARD_API_URL ?? "https://dashboardvdm.vercel.app"
