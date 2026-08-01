@@ -1249,6 +1249,71 @@ export function catalogusBron(): "json" | "xml" | "onbekend" {
   return laatsteBron;
 }
 
+/**
+ * Dezelfde rubriek, één schrijfwijze.
+ *
+ * De kassa kent "Schildersger. en Schuurpapier" (497×), "Schildersger. en
+ * schuurpapier" (80×) en "SCHILDERSGER. EN SCHUURPAPIER" (5×) als drie losse
+ * waarden. Alles wat op die naam groepeert — het uitklapmenu, de filters op de
+ * categoriepagina, de tellingen — zag daardoor drie rubrieken naast elkaar,
+ * met de artikelen verdeeld over alle drie. Vijf subrubrieken en vier
+ * hoofdrubrieken hebben dit; bij "Lijmen en kitten" is de grootste variant
+ * zelfs de geschreeuwde.
+ *
+ * Een variant in kapitalen verliest altijd, ook als hij het vaakst voorkomt:
+ * "LIJMEN, KITTEN EN VULMIDDELEN" is met 136 regels de grootste, maar
+ * schreeuwen in een menu is geen keuze die iemand bewust heeft gemaakt.
+ * Daarbinnen wint de meest voorkomende schrijfwijze. Bestaat een rubriek
+ * alléén in kapitalen, dan maken we er een gewone zin van. We schrijven de
+ * gekozen vorm terug op de feedregels, zodat alles er verderop mee klopt.
+ */
+function gelijkTrekkenRubrieknamen(items: FeedItem[]): void {
+  const velden = ["categorie_hoofd", "categorie_sub"] as const;
+  for (const veld of velden) {
+    const tellingen = new Map<string, Map<string, number>>();
+    for (const item of items) {
+      const waarde = (item[veld] ?? "").trim();
+      if (!waarde) continue;
+      const sleutel = waarde.toLocaleLowerCase("nl");
+      const varianten = tellingen.get(sleutel) ?? new Map<string, number>();
+      varianten.set(waarde, (varianten.get(waarde) ?? 0) + 1);
+      tellingen.set(sleutel, varianten);
+    }
+
+    const winnaars = new Map<string, string>();
+    for (const [sleutel, varianten] of tellingen) {
+      const alle = [...varianten.entries()].sort((a, b) => b[1] - a[1]);
+      const gewoon = alle.filter(([naam]) => !schreeuwt(naam));
+      const beste = gewoon[0]?.[0] ?? zonderKapitalen(alle[0][0]);
+      if (varianten.size > 1 || beste !== alle[0][0]) winnaars.set(sleutel, beste);
+    }
+    if (winnaars.size === 0) continue;
+
+    for (const item of items) {
+      const waarde = (item[veld] ?? "").trim();
+      if (!waarde) continue;
+      const winnaar = winnaars.get(waarde.toLocaleLowerCase("nl"));
+      if (winnaar && winnaar !== waarde) item[veld] = winnaar;
+    }
+  }
+}
+
+/** Staat er geen enkele kleine letter in? Dan is het geroep. */
+function schreeuwt(naam: string): boolean {
+  return /\p{Lu}/u.test(naam) && naam === naam.toLocaleUpperCase("nl");
+}
+
+/**
+ * "LIJMEN, KITTEN EN VULMIDDELEN" → "Lijmen, kitten en vulmiddelen".
+ *
+ * Als zin, niet als titel: in het Nederlands krijgen alleen het eerste woord
+ * en namen een hoofdletter, en "Lijmen, Kitten En Vulmiddelen" leest Engels.
+ */
+function zonderKapitalen(naam: string): string {
+  const klein = naam.toLocaleLowerCase("nl");
+  return klein.charAt(0).toLocaleUpperCase("nl") + klein.slice(1);
+}
+
 async function fetchFeed(): Promise<Product[]> {
   const viaJson = await fetchJsonFeed().catch((error) => {
     console.error("[catalogus] JSON-feed mislukt, val terug op XML:", error);
@@ -1265,6 +1330,9 @@ async function fetchFeed(): Promise<Product[]> {
     items = parseItems(await res.text());
     laatsteBron = "xml";
   }
+
+  // Eén schrijfwijze per rubriek, vóór al het andere.
+  gelijkTrekkenRubrieknamen(items);
 
   // Fabriekswit aan de mengbare broer hangen vóór het groeperen; de
   // gekoppelde wit-artikelen worden zelf geen product meer.
@@ -1296,7 +1364,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v39";
+const KV_KEY = "catalog:products:v40";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
