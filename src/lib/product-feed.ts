@@ -633,6 +633,35 @@ function naamZonderMaat(titel: string, group: FeedItem[]): string {
 /** Losse maataanduidingen die vaak los in een titel staan. */
 const MAAT_PATRONEN_BRON: string[] = [];
 
+function escapeRegex(tekst: string): string {
+  return tekst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Haalt de maat-echo van het titeleinde.
+ *
+ * Tilroy plakt de kassamaat achter titels die de maat zelf al noemen:
+ * "… 5 stuks 5,0 x 80 mm 5,0 X 80 MM 5 ST". Voor producten die niet met
+ * andere maten samensmelten bleef die dubbeling in H1, paginatitel en URL
+ * staan. We knippen de staart (de maat, eventueel gevolgd door een
+ * stuks-aantal) alléén weg als exact dezelfde maat eerder in de titel
+ * voorkomt — "Behanglijm 2,25 KG" noemt zijn maat één keer en blijft heel.
+ */
+function zonderMaatEcho(titel: string, maat: string | undefined): string {
+  const m = maat?.trim();
+  if (!m || !heeftEchteMaat(m)) return titel;
+  // De echo mag beginnen met het diameterdeel ("M6 x" of "5,3 x") — anders
+  // bleef juist dát als wees achter: "… M6 x 40 mm M6".
+  const staart = new RegExp(
+    `(?:\\s+m?\\d+(?:[.,]\\d+)?\\s*x)?\\s+${escapeRegex(m)}(?:\\s+\\d+\\s*st)?\\s*$`,
+    "i",
+  );
+  const match = titel.match(staart);
+  if (match?.index === undefined || match.index <= 0) return titel;
+  if (!titel.slice(0, match.index).toLowerCase().includes(m.toLowerCase())) return titel;
+  return titel.slice(0, match.index);
+}
+
 /**
  * Ruimt de productnaam op.
  *
@@ -1006,7 +1035,7 @@ function buildProduct(
       // ook 90, 100 en 120 leest als een fout.
       group.length > 1 && heeftEchteMaat(leader.maat)
       ? naamZonderMaat(leader.title, group)
-      : leader.title,
+      : zonderMaatEcho(leader.title, leader.maat),
   );
 
   // De commerciële webnaam uit Tilroy wint van wat wij zelf afleiden; die is
@@ -1218,7 +1247,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v34";
+const KV_KEY = "catalog:products:v35";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
