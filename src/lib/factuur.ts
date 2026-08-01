@@ -100,6 +100,18 @@ export function maakFactuur(order: Order): Factuur {
     });
   }
 
+  // Een verzilverde staal-voucher staat als minregel op de factuur; zonder die
+  // regel telt de kolom niet op tot het afgeschreven bedrag.
+  if (order.voucherKorting) {
+    const korting = splitsBtw(-order.voucherKorting);
+    regels.push({
+      omschrijving: `Staal-voucher${order.voucherCode ? ` ${order.voucherCode}` : ""}`,
+      aantal: 1,
+      stukprijsExcl: korting.exclusief,
+      totaalExcl: korting.exclusief,
+    });
+  }
+
   const totaal = splitsBtw(order.total);
   const subtotaalExcl = regels.reduce((som, regel) => som + regel.totaalExcl, 0);
 

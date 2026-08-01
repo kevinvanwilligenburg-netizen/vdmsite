@@ -18,6 +18,7 @@ import {
   sizesOf,
 } from "@/lib/paint-bases";
 import { euro } from "@/lib/format";
+import { STAAL_PRIJS_TEKST } from "@/lib/stalen";
 import type { PaintColor, Product } from "@/lib/types";
 
 export function PurchasePanel({
@@ -401,6 +402,23 @@ export function PurchasePanel({
               setError(null);
             }}
           />
+
+          {/* Kleurtwijfel is dé reden om níét te bestellen; de tester haalt
+              die weg en kost per saldo niets (bedrag terug als voucher). */}
+          <p className="mt-3 border-t border-black/5 pt-3 text-xs text-ink-soft">
+            Twijfel je over de kleur?{" "}
+            <Link
+              href={
+                color
+                  ? `/kleurstalen?kleur=${encodeURIComponent(color.key)}`
+                  : "/kleurstalen"
+              }
+              className="font-bold text-brand hover:underline"
+            >
+              Bestel eerst een kleurtester ({STAAL_PRIJS_TEKST})
+            </Link>{" "}
+            — het bedrag krijg je terug als voucher bij je verf.
+          </p>
         </div>
       )}
 

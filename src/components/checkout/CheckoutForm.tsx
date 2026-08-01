@@ -305,6 +305,41 @@ export function CheckoutForm({
   // bezorgopties-effect gedeclareerd, want dat rekent ermee.
   const kluspasKorting = useKorting(items);
 
+  // Staal-voucher: code invullen, server beoordeelt. Het bedrag hier is de
+  // spiegel; bij het afrekenen beoordeelt de checkout-route opnieuw.
+  const [voucherInvoer, setVoucherInvoer] = useState("");
+  const [voucher, setVoucher] = useState<{ code: string; bedrag: number } | null>(null);
+  const [voucherMelding, setVoucherMelding] = useState<string | null>(null);
+  const [voucherBezig, setVoucherBezig] = useState(false);
+
+  const pasVoucherToe = () => {
+    const code = voucherInvoer.trim();
+    if (!code) return;
+    setVoucherBezig(true);
+    setVoucherMelding(null);
+    fetch("/api/voucher", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { status?: string; code?: string; bedrag?: number; melding?: string } | null) => {
+        if (data?.status === "geldig" && data.code && typeof data.bedrag === "number") {
+          setVoucher({ code: data.code, bedrag: data.bedrag });
+        } else {
+          setVoucher(null);
+          setVoucherMelding(data?.melding ?? "De voucher kon niet gecontroleerd worden.");
+        }
+      })
+      .catch(() => setVoucherMelding("De voucher kon niet gecontroleerd worden."))
+      .finally(() => setVoucherBezig(false));
+  };
+
+  // Nooit meer korting dan er te betalen valt.
+  const voucherKorting = voucher
+    ? Math.min(voucher.bedrag, Math.max(0, subtotal - (kortingActief ? kluspasKorting : 0)))
+    : 0;
+
   // Bezorgopties bij de server opvragen: die kent de voorraad en de klok.
   useEffect(() => {
     if (fulfilment !== "delivery" || items.length === 0) return;
@@ -318,7 +353,10 @@ export function CheckoutForm({
         // rekent: mét korting als die geldt. Op het kale subtotaal rekenen
         // liet de klant "Gratis" zien terwijl Mollie € 4,95 meer inde —
         // korting aanvinken kon de betaling zo duurder maken.
-        subtotal: kortingActief ? Math.max(0, subtotal - kluspasKorting) : subtotal,
+        subtotal: Math.max(
+          0,
+          (kortingActief ? subtotal - kluspasKorting : subtotal) - voucherKorting,
+        ),
         country,
       }),
     })
@@ -334,7 +372,7 @@ export function CheckoutForm({
     return () => {
       actief = false;
     };
-  }, [fulfilment, items, subtotal, country, kortingActief, kluspasKorting]);
+  }, [fulfilment, items, subtotal, country, kortingActief, kluspasKorting, voucherKorting]);
 
   // Bedragen die op meerdere plekken in het overzicht terugkomen.
   const verzendkosten = fulfilment === "pickup" ? 0 : (opties?.verzending.kosten ?? 0);
@@ -342,7 +380,8 @@ export function CheckoutForm({
 
   // Zonder account geen korting: de server rekent hem ook alleen door voor
   // een ingelogde klant.
-  const totaal = subtotal - (kortingActief ? kluspasKorting : 0) + verzendkosten + toeslag;
+  const totaal =
+    subtotal - (kortingActief ? kluspasKorting : 0) - voucherKorting + verzendkosten + toeslag;
   const tekortVoorGratis = fulfilment === "delivery" ? (opties?.verzending.tekort ?? 0) : 0;
 
   // Wie de site op excl. btw heeft staan, moet die lijn hier niet kwijtraken:
@@ -355,7 +394,8 @@ export function CheckoutForm({
   const btwRegel =
     totaal -
     (exclVan(subtotal) -
-      (kortingActief ? exclVan(kluspasKorting) : 0) +
+      (kortingActief ? exclVan(kluspasKorting) : 0) -
+      exclVan(voucherKorting) +
       exclVan(verzendkosten) +
       exclVan(toeslag));
 
@@ -409,6 +449,7 @@ export function CheckoutForm({
           },
           ...(fulfilment === "pickup" ? { storeId } : {}),
           ...(fulfilment === "delivery" && sameDay ? { sameDay: true } : {}),
+          ...(voucher ? { voucherCode: voucher.code } : {}),
           betaalmethode,
           items: items.map((item) => ({
             productId: item.productId,
@@ -1058,6 +1099,66 @@ export function CheckoutForm({
           </div>
         )}
 
+        {/* Staal-voucher: het tegoed uit een testerbestelling. De code komt
+            per mail; de server beoordeelt hem hier én bij het afrekenen. */}
+        <div className="mt-4 border-t border-ink/10 pt-4">
+          {voucher ? (
+            <p className="flex items-start gap-2 rounded-lg bg-green-50 px-3 py-2.5 text-sm font-semibold text-green-800 ring-1 ring-green-200">
+              <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={3} />
+              <span>
+                Voucher {voucher.code} toegepast: − {euro(voucherKorting)}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVoucher(null);
+                    setVoucherInvoer("");
+                  }}
+                  className="ml-2 font-bold underline"
+                >
+                  Verwijderen
+                </button>
+              </span>
+            </p>
+          ) : (
+            <>
+              <label htmlFor="voucher" className="mb-1 block text-sm font-bold text-ink">
+                Kleurtester gekocht?{" "}
+                <span className="font-normal text-ink-soft">Vul je vouchercode in</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="voucher"
+                  value={voucherInvoer}
+                  onChange={(event) => {
+                    setVoucherInvoer(event.target.value.toUpperCase());
+                    setVoucherMelding(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      pasVoucherToe();
+                    }
+                  }}
+                  className="input flex-1"
+                  placeholder="STAAL-AB12CD"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={pasVoucherToe}
+                  disabled={voucherBezig || !voucherInvoer.trim()}
+                  className="shrink-0 rounded-lg border-2 border-ink/10 px-3 py-2 text-sm font-bold text-ink transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {voucherBezig ? "…" : "Toepassen"}
+                </button>
+              </div>
+              {voucherMelding && (
+                <p className="mt-1.5 text-xs font-semibold text-brand-dark">{voucherMelding}</p>
+              )}
+            </>
+          )}
+        </div>
+
         {/* Bezorgsnelheid: morgen is gratis, vandaag kost een toeslag en kan
             alleen vóór de cutoff met voorraad in ons magazijn. Wat hier staat
             komt van de server, zodat de klant nooit iets kiest wat niet kan. */}
@@ -1122,6 +1223,12 @@ export function CheckoutForm({
                 Jouw korting
               </dt>
               <dd className="font-bold text-green-700">− {toon(kluspasKorting)}</dd>
+            </div>
+          )}
+          {voucherKorting > 0 && (
+            <div className="flex justify-between">
+              <dt className="font-semibold text-green-700">Staal-voucher</dt>
+              <dd className="font-bold text-green-700">− {toon(voucherKorting)}</dd>
             </div>
           )}
           <div className="flex justify-between">

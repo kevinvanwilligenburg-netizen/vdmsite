@@ -12,6 +12,7 @@ import { usePrijsModus } from "@/components/prijs/PrijsWeergave";
 import { euro } from "@/lib/format";
 import { BTW_TARIEF } from "@/lib/factuur";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
+import { STAAL_PRODUCT_ID } from "@/lib/stalen";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 
 export function CartPageClient() {
@@ -81,7 +82,9 @@ export function CartPageClient() {
             </span>
             <div className="min-w-0 sm:flex-1">
               <Link
-                href={`/product/${item.slug}`}
+                // Kleurtesters zijn een virtueel artikel zonder productpagina;
+                // hun regel wijst terug naar de stalenpagina.
+                href={item.productId === STAAL_PRODUCT_ID ? "/kleurstalen" : `/product/${item.slug}`}
                 className="font-bold text-ink hover:text-brand"
               >
                 {item.name}

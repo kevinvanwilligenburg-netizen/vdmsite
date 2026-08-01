@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -37,7 +38,12 @@ export default async function KleurkiezerPage() {
           {collections.length} waaiers. Onze verfspecialist mengt jouw kleur{" "}
           <strong className="text-ink">gratis</strong> aan — daarna bezorgen we
           hem of zet je hem zelf even op. De kleuren op je scherm zijn een
-          indicatie; twijfel je, leg dan de officiële waaier ernaast in de winkel.
+          indicatie; twijfel je, leg dan de officiële waaier ernaast in de
+          winkel of{" "}
+          <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
+            bestel een kleurtester
+          </Link>{" "}
+          — het bedrag krijg je terug als voucher bij je verf.
         </p>
       </header>
       <MyColors />

@@ -5,7 +5,10 @@ import path from "node:path";
 import { isKvEnabled, kvGetJSON, kvSAdd, kvSetJSON, kvSMembers } from "@/lib/kv";
 import { getMolliePayment } from "@/lib/mollie";
 import { stuurOrderbevestiging } from "@/lib/orderbevestiging";
+import { isStaalOrderItem } from "@/lib/stalen";
 import { getProductById, getProductBySku } from "@/lib/tilroy";
+import { maakStaalVoucher, verzilverVoucher } from "@/lib/vouchers";
+import { stuurVoucherMail } from "@/lib/vouchermail";
 import {
   isPaidStatus,
   type CartItem,
@@ -354,6 +357,9 @@ export interface CreateOrderInput {
   delivery?: Order["delivery"];
   kluspasNumber?: string;
   kluspasSavings?: number;
+  /** Verzilverde staal-voucher; de korting zit al in `total`. */
+  voucherCode?: string;
+  voucherKorting?: number;
   isTest?: boolean;
 }
 
@@ -371,6 +377,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     isTest: input.isTest,
     ...(input.kluspasNumber ? { kluspasNumber: input.kluspasNumber } : {}),
     ...(input.kluspasSavings ? { kluspasSavings: input.kluspasSavings } : {}),
+    ...(input.voucherCode ? { voucherCode: input.voucherCode } : {}),
+    ...(input.voucherKorting ? { voucherKorting: input.voucherKorting } : {}),
     channel: "web",
     fulfilment: input.fulfilment,
     ...(input.fulfilment === "pickup"
@@ -418,11 +426,27 @@ export async function applyPaymentResult(
   // stempel meteen mee te schrijven is er maar één aanroep die 'm daarna ook
   // echt verstuurt.
   const magMailen = outcome === "paid" && !order.confirmationSentAt;
+
+  // Kleurtesters in de bestelling leveren een voucher op. Aanmaken vóór de
+  // schrijfactie, zodat code én status in dezelfde write staan — hetzelfde
+  // patroon als het mailstempel hierboven.
+  let nieuweVoucher: Awaited<ReturnType<typeof maakStaalVoucher>> = null;
+  if (magMailen && !order.staalVoucher && order.items.some(isStaalOrderItem)) {
+    try {
+      nieuweVoucher = await maakStaalVoucher(order);
+    } catch (error) {
+      console.error(`[voucher] aanmaken voor ${order.reference} mislukt:`, error);
+    }
+  }
+
   const bijgewerkt =
     (await updateOrder(order.id, {
       paymentStatus: outcome,
       paymentMethod: info?.method ?? order.paymentMethod,
       ...(magMailen ? { confirmationSentAt: new Date().toISOString() } : {}),
+      ...(nieuweVoucher
+        ? { staalVoucher: { code: nieuweVoucher.code, bedrag: nieuweVoucher.bedrag / 100 } }
+        : {}),
     })) ?? order;
 
   if (magMailen) {
@@ -430,6 +454,15 @@ export async function applyPaymentResult(
     // antwoord doorloopt zonder pardon afgekapt, en dan komt de bevestiging
     // nooit aan.
     await stuurOrderbevestiging(bijgewerkt);
+
+    // Een bij het afrekenen ingezette voucher wordt pas nu opgemaakt: een
+    // mislukte betaling mag het tegoed niet kosten.
+    if (order.voucherCode) {
+      await verzilverVoucher(order.voucherCode, order.reference);
+    }
+    if (nieuweVoucher) {
+      await stuurVoucherMail(bijgewerkt, nieuweVoucher);
+    }
   }
 
   return bijgewerkt;

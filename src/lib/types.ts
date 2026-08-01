@@ -270,6 +270,15 @@ export interface Order {
   total: number; // euro's
   /** Kluspas-nummer van de klant; de korting zit al in de bedragen. */
   kluspasNumber?: string;
+  /** Verzilverde staal-voucher: code en korting (euro's) op deze bestelling. */
+  voucherCode?: string;
+  voucherKorting?: number;
+  /**
+   * Voucher die deze bestelling heeft opgeleverd (kleurtesters): code en
+   * waarde in euro's. Gezet zodra de betaling binnen is; de mail met de code
+   * gaat in dezelfde stap de deur uit.
+   */
+  staalVoucher?: { code: string; bedrag: number };
   /** Wanneer de orderbevestiging is verstuurd; voorkomt een tweede mail. */
   confirmationSentAt?: string;
   /** Wanneer de verzendmail is verstuurd; het dashboard mag opnieuw aankloppen. */
@@ -350,5 +359,7 @@ export interface CheckoutInput {
   sameDay?: boolean;
   /** Optioneel Kluspas-nummer; levert 5% korting op het hele mandje. */
   kluspasNumber?: string;
+  /** Staal-vouchercode ("STAAL-AB12CD"); de server beoordeelt geldigheid. */
+  voucherCode?: string;
   items: CheckoutItemInput[];
 }

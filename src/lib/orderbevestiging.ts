@@ -76,6 +76,9 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     `${order.fulfilment === "delivery" ? "Bezorging" : "Afhalen"}: ${
       order.shipping > 0 ? euros(order.shipping) : "gratis"
     }`,
+    ...(order.voucherKorting
+      ? [`Staal-voucher${order.voucherCode ? ` ${order.voucherCode}` : ""}: − ${euros(order.voucherKorting)}`]
+      : []),
     `Totaal betaald: ${euros(order.total)} (incl. btw)`,
     "",
     levering(order),
@@ -97,6 +100,10 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     "</ul>",
     `<p>${order.fulfilment === "delivery" ? "Bezorging" : "Afhalen"}: ${
       order.shipping > 0 ? euros(order.shipping) : "gratis"
+    }${
+      order.voucherKorting
+        ? `<br>Staal-voucher${order.voucherCode ? ` ${order.voucherCode}` : ""}: − ${euros(order.voucherKorting)}`
+        : ""
     }<br><strong>Totaal betaald: ${euros(order.total)}</strong> (incl. btw)</p>`,
     `<p>${levering(order)}</p>`,
     `<p><a href="${orderUrl}">Volg je bestelling</a> · <a href="${factuurUrl}">Bekijk je factuur</a></p>`,

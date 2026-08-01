@@ -11,6 +11,15 @@ import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import { kluspasUnitPrice } from "@/lib/kluspas";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
+import {
+  isStaalOrderItem,
+  isStaalRegel,
+  MAX_STALEN_PER_ORDER,
+  STAAL_NAAM,
+  STAAL_PRIJS,
+  staalOrderItem,
+} from "@/lib/stalen";
+import { beoordeelVoucher, normaliseerVoucherCode } from "@/lib/vouchers";
 import { baseUrlFromRequest } from "@/lib/site";
 import { getProductById, getStockForSkus, getStockPerSku, getStore } from "@/lib/tilroy";
 import type { CheckoutInput, OrderItem } from "@/lib/types";
@@ -204,8 +213,45 @@ export async function POST(request: Request) {
   const nietVerzendbaar: string[] = [];
   let subtotalCents = 0;
   let kluspasSavingCents = 0;
+  // Zit er mengverf in het mandje? Bepaalt of een staal-voucher geldt.
+  let bevatMengverf = false;
+  let aantalStalen = 0;
   meet("validatie");
   for (const entry of input.items) {
+    // Kleurtesters zijn een virtueel artikel: ze staan niet in de catalogus,
+    // dus prijs en naam komen uit lib/stalen.ts — nooit uit het verzoek.
+    if (isStaalRegel(entry)) {
+      const qty = Math.floor(Number(entry.qty));
+      if (!Number.isFinite(qty) || qty < 1 || qty > MAX_STALEN_PER_ORDER) {
+        return badRequest(`Ongeldig aantal voor ${STAAL_NAAM}.`);
+      }
+      aantalStalen += qty;
+      if (aantalStalen > MAX_STALEN_PER_ORDER) {
+        return badRequest(
+          `Maximaal ${MAX_STALEN_PER_ORDER} kleurtesters per bestelling. Voor meer kleuren helpt de winkel je graag met de officiële waaier.`,
+        );
+      }
+      if (!entry.colorKey || entry.colorKey === "wit") {
+        return badRequest(`Kies een kleur voor je ${STAAL_NAAM.toLowerCase()}.`);
+      }
+      const paint = await resolvePaintColor(String(entry.colorKey));
+      if (!paint) return badRequest(`Onbekende kleur voor ${STAAL_NAAM.toLowerCase()}.`);
+      items.push(
+        staalOrderItem(
+          {
+            key: paint.key,
+            code: paint.code,
+            name: paint.name,
+            hex: paint.hex,
+            collection: paint.group,
+          },
+          qty,
+        ),
+      );
+      subtotalCents += STAAL_PRIJS * qty;
+      continue;
+    }
+
     const product = await getProductById(String(entry.productId ?? ""));
     if (!product) return badRequest("Een van de artikelen bestaat niet (meer).");
 
@@ -226,6 +272,8 @@ export async function POST(request: Request) {
     if (variant?.pickupOnly ?? product.pickupOnly) {
       nietVerzendbaar.push([product.name, variant?.name].filter(Boolean).join(" "));
     }
+
+    if (product.colorMixable) bevatMengverf = true;
 
     let color: OrderItem["color"];
     // 100% wit is geen mengkleur maar een eigen artikel: de variant draagt de
@@ -330,6 +378,8 @@ export async function POST(request: Request) {
   if (fulfilment === "pickup" && store) {
     const tekort: { naam: string; elders: string[] }[] = [];
     for (const item of items) {
+      // Kleurtesters worden ter plekke gemengd; elke winkel kan dat.
+      if (isStaalOrderItem(item)) continue;
       const stock = await getStockForSkus([item.sku ?? item.productId]);
       if (!stock.live) break; // voorraad onbekend: niet blokkeren op een gok
       const hier = stock.stores.find((row) => row.storeId === store.slug);
@@ -362,12 +412,41 @@ export async function POST(request: Request) {
   }
 
   const subtotal = subtotalCents / 100;
+
+  /*
+   * Staal-voucher: het testerbedrag terug, maar alleen op een bestelling mét
+   * mengverf — de voucher is een aanbetaling op de klus, geen kortingscode
+   * voor het hele assortiment. Beoordeling en bedrag komen uit de opslag;
+   * het verzoek levert alleen de code aan. Opgemaakt wordt hij pas als de
+   * betaling binnen is (applyPaymentResult), zodat een afgebroken betaling
+   * het tegoed niet kost.
+   */
+  let voucherKortingCents = 0;
+  let voucherCode: string | undefined;
+  const gevraagdeVoucher = normaliseerVoucherCode(input.voucherCode ?? "");
+  if (gevraagdeVoucher) {
+    const oordeel = await beoordeelVoucher(gevraagdeVoucher);
+    if (oordeel.status !== "geldig") {
+      return badRequest(oordeel.melding);
+    }
+    if (!bevatMengverf) {
+      return badRequest(
+        "Je staal-voucher geldt bij een bestelling met mengverf. Voeg de verf toe waarvoor je de kleur hebt getest, dan gaat het tegoed er direct af.",
+      );
+    }
+    voucherKortingCents = Math.min(oordeel.voucher.bedrag, subtotalCents);
+    voucherCode = oordeel.voucher.code;
+  }
+
   // Afhalen is altijd gratis; bij bezorgen gelden de landtarieven, tenzij er
   // een merk in het mandje ligt dat we franco versturen (Sikkens). Dat
   // bepalen we hier en niet op de client: anders kan iemand het meesturen.
+  // De gratis-grens rekent over wat de klant écht betaalt, dus ná de voucher.
   const gratisOngeachtBedrag = franco(items.map((item) => item.brand));
   const verzendkostenCents =
-    fulfilment === "pickup" ? 0 : shippingCost(subtotalCents, land, gratisOngeachtBedrag);
+    fulfilment === "pickup"
+      ? 0
+      : shippingCost(subtotalCents - voucherKortingCents, land, gratisOngeachtBedrag);
 
   const orderInput: CreateOrderInput = {
     customer: {
@@ -391,13 +470,16 @@ export async function POST(request: Request) {
     items,
     subtotal,
     shipping: verzendkostenCents / 100,
-    total: (subtotalCents + verzendkostenCents) / 100,
+    total: (subtotalCents - voucherKortingCents + verzendkostenCents) / 100,
     fulfilment,
     ...(kluspas
       ? {
           kluspasNumber: kluspasInput,
           kluspasSavings: kluspasSavingCents / 100,
         }
+      : {}),
+    ...(voucherCode
+      ? { voucherCode, voucherKorting: voucherKortingCents / 100 }
       : {}),
     isTest: mollieTestMode() || undefined,
   };
@@ -412,21 +494,29 @@ export async function POST(request: Request) {
     // scenario in plaats van iets wat we niet waar kunnen maken.
     const promises = [];
     let fulfilStoreId: string | undefined;
+    // Kleurtesters staan niet in de voorraad-hub: het webshopmagazijn mengt
+    // ze zelf, dus ze zijn altijd leverbaar en tellen niet mee in de check.
+    const voorraadItems = items.filter((item) => !isStaalOrderItem(item));
+    let voorraadBekend = false;
     try {
       // Eén voorraadaanvraag voor het hele mandje. Regel voor regel de hub
       // bevragen — ná elkaar — was waarom "Je wordt doorgestuurd…" bij vijf
       // artikelen tientallen seconden bleef staan.
-      const perSku = await getStockPerSku(
-        items.map((item) => item.sku ?? item.productId),
-        8_000,
-      );
+      const perSku =
+        voorraadItems.length > 0
+          ? await getStockPerSku(
+              voorraadItems.map((item) => item.sku ?? item.productId),
+              8_000,
+            )
+          : null;
       if (perSku) {
+        voorraadBekend = true;
         // Nul-voorraad is niet bestelbaar (beslissing Kevin). Zonder deze
         // weigering betaalde een klant gewoon voor een artikel dat nergens
         // ligt, met "binnen 1 werkdag" als valse belofte erbij. Alleen
         // weigeren als de hub écht antwoordde — bij een storing liever de
         // voorzichtige belofte dan een dichte winkel.
-        for (const item of items) {
+        for (const item of voorraadItems) {
           const voorraad = perSku.get(item.sku ?? item.productId);
           if (voorraad && voorraad.webshopQty <= 0 && voorraad.otherStoresQty <= 0) {
             return badRequest(
@@ -434,7 +524,7 @@ export async function POST(request: Request) {
             );
           }
         }
-        for (const item of items) {
+        for (const item of voorraadItems) {
           const voorraad = perSku.get(item.sku ?? item.productId) ?? {
             webshopQty: 0,
             otherStoresQty: 0,
@@ -443,13 +533,26 @@ export async function POST(request: Request) {
         }
         // Verstuurt een andere winkel? Eén aparte blik op de rijen volstaat.
         if (promises.some((p) => p.carrier === "postnl") && !fulfilStoreId) {
-          const stock = await getStockForSkus(items.map((item) => item.sku ?? item.productId));
+          const stock = await getStockForSkus(
+            voorraadItems.map((item) => item.sku ?? item.productId),
+          );
           const from = stock.stores.find((row) => row.qty > 0 && row.storeId !== "nijverdal");
           if (from) fulfilStoreId = from.storeId;
         }
       }
     } catch (error) {
       console.error("[checkout] voorraadcheck voor de bezorgbelofte mislukt:", error);
+    }
+
+    // De testers zelf: het webshopmagazijn mengt en verstuurt ze. Alleen
+    // meetellen als de rest van het mandje een betrouwbare belofte heeft
+    // (of er geen rest is) — anders zou een tester een snelle belofte doen
+    // voor artikelen waarvan de voorraad onbekend is.
+    if (
+      items.some((item) => isStaalOrderItem(item)) &&
+      (voorraadItems.length === 0 || voorraadBekend)
+    ) {
+      promises.push(deliveryPromise({ webshopQty: 99, otherStoresQty: 0 }, undefined, land));
     }
 
     const promise =

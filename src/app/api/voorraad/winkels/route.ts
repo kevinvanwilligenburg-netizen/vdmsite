@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { STAAL_SKU } from "@/lib/stalen";
 import { getStockForSkus, getStores } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
@@ -27,17 +28,22 @@ export async function POST(request: Request) {
       sku: String(item.sku ?? "").trim(),
       quantity: Math.max(1, Math.floor(Number(item.quantity) || 1)),
     }))
-    .filter((item) => item.sku)
+    // Kleurtesters mengt elke winkel ter plekke; ze staan niet in de hub en
+    // horen een winkel dus nooit als "niet compleet" te laten afvallen.
+    .filter((item) => item.sku && item.sku !== STAAL_SKU)
     .slice(0, 50);
 
   const stores = await getStores();
   if (items.length === 0) {
+    // Bestond het mandje alleen uit kleurtesters, dan kan élke winkel de
+    // bestelling maken — dat is geen onbekende voorraad maar een volmondig ja.
+    const alleenStalen = (body.items ?? []).length > 0;
     return NextResponse.json({
-      live: false,
+      live: alleenStalen,
       stores: stores.map((store) => ({
         storeId: store.slug,
         city: store.city,
-        complete: false,
+        complete: alleenStalen,
         missing: [],
       })),
     });

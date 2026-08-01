@@ -247,6 +247,29 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
         </section>
       )}
 
+      {/* De verdiende staal-voucher: code groot in beeld, want de mail kan in
+          de spam belanden en dit is de pagina die de klant nu voor zich heeft. */}
+      {paid && order.staalVoucher && (
+        <section className="card overflow-hidden">
+          <div className="bg-ink p-6 text-center text-white">
+            <p className="text-sm font-bold uppercase tracking-wide text-white/70">
+              Jouw kleurvoucher · t.w.v. {euros(order.staalVoucher.bedrag)}
+            </p>
+            <p className="mt-1 text-3xl font-black tracking-[0.15em]">
+              {order.staalVoucher.code}
+            </p>
+          </div>
+          <div className="p-6 text-sm text-ink-soft">
+            <p>
+              Test je kleur rustig uit. Bestel je daarna de echte verf bij ons,
+              vul dan deze code in bij het afrekenen — het testerbedrag gaat er
+              direct af. We hebben de code ook gemaild naar{" "}
+              <strong className="text-ink">{order.customer.email}</strong>.
+            </p>
+          </div>
+        </section>
+      )}
+
       {/* Gemengde kleuren bewaren voor bijbestellen */}
       {paid && (
         <ReorderColor
@@ -321,6 +344,14 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           ))}
         </ul>
         <dl className="mt-2 space-y-1.5 border-t border-ink/10 pt-4 text-sm">
+          {order.voucherKorting ? (
+            <div className="flex justify-between">
+              <dt className="font-semibold text-green-700">
+                Staal-voucher{order.voucherCode ? ` (${order.voucherCode})` : ""}
+              </dt>
+              <dd className="font-bold text-green-700">− {euros(order.voucherKorting)}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between">
             <dt className="text-ink-soft">
               {isDelivery ? "Bezorging (DHL)" : "Afhalen in de winkel"}

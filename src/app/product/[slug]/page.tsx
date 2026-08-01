@@ -13,6 +13,7 @@ import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
 import { StockList } from "@/components/StockList";
 import { getInitialColors } from "@/lib/colors";
+import { bouwProductFaqs } from "@/lib/product-faq";
 import { haalSeoTekst } from "@/lib/seo-tekst";
 import { euro } from "@/lib/format";
 import { GRATIS_VANAF_TEKST, verzendtarief } from "@/lib/shipping";
@@ -223,38 +224,9 @@ export default async function ProductPage({ params }: Props) {
 
   // Vragen die klanten bij dit soort artikelen stellen — goed voor de
   // vindbaarheid én voor AI-assistenten die productvragen beantwoorden.
-  const productFaqs = [
-    {
-      q: `Wat kost ${product.name}?`,
-      a: `${product.name} kost ${euro(product.price)}${
-        product.compareAtPrice
-          ? ` in plaats van de adviesprijs van ${euro(product.compareAtPrice)}`
-          : ""
-      }. ${
-        product.pickupOnly
-          ? "Afhalen in de winkel is altijd gratis."
-          : `Bezorgen is gratis vanaf ${GRATIS_VANAF_TEKST}; afhalen in de winkel is dat altijd.`
-      }`,
-    },
-    {
-      q: "Hoe snel heb ik dit in huis?",
-      a: product.pickupOnly
-        ? "Dit artikel halen we niet door de brievenbus: je haalt het af in een van onze winkels. Reken online af en het ligt vandaag nog voor je klaar zodra de winkel open is. Op deze pagina zie je in welke winkels het op voorraad ligt."
-        : "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het de volgende dag. Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor bezorging vandaag nog, tegen een toeslag van € 1,25. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
-    },
-    ...(product.colorMixable
-      ? [
-          {
-            q: "Kan ik dit in elke kleur krijgen?",
-            a: "Ja. Kies je kleur met de kleurkiezer op deze pagina — je hebt keuze uit meer dan 18.000 kleuren. Onze verfspecialist mengt de verf gratis aan en kiest automatisch de juiste mengbasis bij jouw kleur. Bezorgen of ophalen, wat jij wilt.",
-          },
-        ]
-      : []),
-    {
-      q: "Kan ik dit artikel retourneren?",
-      a: "Je hebt 14 dagen bedenktijd. Ongebruikte artikelen kun je gratis terugbrengen naar elke winkel. Op kleur gemengde verf is maatwerk en daarvan uitgezonderd.",
-    },
-  ];
+  // Opgebouwd uit de échte specificaties (rendement, glans, ondergrond, maten):
+  // een vraag verschijnt alleen als de feed het antwoord levert.
+  const productFaqs = bouwProductFaqs(product);
 
   const productFaqJsonLd = {
     "@context": "https://schema.org",

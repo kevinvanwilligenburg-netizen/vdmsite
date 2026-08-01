@@ -9,6 +9,7 @@ import {
   tekortVoorGratis,
   verzendtarief,
 } from "@/lib/shipping";
+import { STAAL_SKU } from "@/lib/stalen";
 import { getProductBySku, getStockPerSku } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
@@ -35,17 +36,27 @@ export async function POST(request: Request) {
 
   const land = shippingCountry(body.country);
   const subtotalCents = Math.max(0, Math.round(Number(body.subtotal ?? 0)));
-  const regels = (body.items ?? []).filter((item) => item.sku).slice(0, 50);
+  const alleRegels = (body.items ?? []).filter((item) => item.sku).slice(0, 50);
+  // Kleurtesters staan niet in de voorraad-hub: het webshopmagazijn mengt ze
+  // zelf. Zonder deze splitsing telde een tester als "nergens op voorraad" en
+  // verdween de bezorgknop voor een mandje dat we gewoon kunnen leveren.
+  const regels = alleRegels.filter((regel) => regel.sku !== STAAL_SKU);
+  const metStalen = alleRegels.length > regels.length;
 
   const promises = [];
+  let voorraadBekend = false;
   try {
     // Eén voorraadaanvraag voor alle regels tegelijk; per regel de hub
     // bevragen was een van de redenen dat de checkout zo traag aanvoelde.
-    const perSku = await getStockPerSku(
-      regels.map((regel) => regel.sku!),
-      8_000,
-    );
+    const perSku =
+      regels.length > 0
+        ? await getStockPerSku(
+            regels.map((regel) => regel.sku!),
+            8_000,
+          )
+        : null;
     if (perSku) {
+      voorraadBekend = true;
       for (const regel of regels) {
         const voorraad = perSku.get(regel.sku!) ?? { webshopQty: 0, otherStoresQty: 0 };
         promises.push(deliveryPromise(voorraad, undefined, land));
@@ -53,6 +64,12 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error("[bezorgopties] voorraadcheck mislukt:", error);
+  }
+
+  // Zelfde regel als de checkout: de testerbelofte telt alleen mee als de
+  // rest van het mandje een betrouwbare belofte heeft, of er geen rest is.
+  if (metStalen && (regels.length === 0 || voorraadBekend)) {
+    promises.push(deliveryPromise({ webshopQty: 99, otherStoresQty: 0 }, undefined, land));
   }
 
   // Zonder betrouwbare voorraad beloven we het voorzichtige scenario: liever

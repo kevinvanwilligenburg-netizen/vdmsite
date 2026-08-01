@@ -1,8 +1,11 @@
 import type { MetadataRoute } from "next";
 
 import { listPublishedPages } from "@/lib/content";
+import { GIDSEN } from "@/lib/gidsen";
+import { alleRalKleuren, ralSlug } from "@/lib/kleurpaginas";
 import { absoluteUrl } from "@/lib/site";
 import { getBrands, getCategories, getProducts, getStores } from "@/lib/tilroy";
+import { VERGELIJKINGEN } from "@/lib/vergelijk";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, categories, stores, pages, brands] = await Promise.all([
@@ -17,6 +20,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: { path: string; priority: number; changeFrequency: "daily" | "weekly" | "monthly" | "yearly" }[] = [
     { path: "/", priority: 1, changeFrequency: "daily" },
     { path: "/kleurkiezer", priority: 0.9, changeFrequency: "weekly" },
+    { path: "/kleuren", priority: 0.8, changeFrequency: "weekly" },
+    { path: "/kleuren/ral", priority: 0.8, changeFrequency: "monthly" },
+    { path: "/kleurstalen", priority: 0.8, changeFrequency: "monthly" },
+    ...GIDSEN.map((gids) => ({
+      path: `/gids/${gids.slug}`,
+      priority: 0.8,
+      changeFrequency: "weekly" as const,
+    })),
+    ...VERGELIJKINGEN.map((vergelijking) => ({
+      path: `/vergelijk/${vergelijking.slug}`,
+      priority: 0.7,
+      changeFrequency: "monthly" as const,
+    })),
     { path: "/klusadvies", priority: 0.9, changeFrequency: "monthly" },
     { path: "/merken", priority: 0.8, changeFrequency: "weekly" },
     { path: "/categorieen", priority: 0.7, changeFrequency: "weekly" },
@@ -57,6 +73,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified,
       changeFrequency: "weekly" as const,
       priority: 0.7,
+    })),
+    // Elke RAL-kleur heeft een eigen landingspagina (213 stuks).
+    ...alleRalKleuren().map((kleur) => ({
+      url: absoluteUrl(`/kleuren/ral/${ralSlug(kleur)}`),
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
     ...stores.map((store) => ({
       url: absoluteUrl(`/winkels/${store.slug}`),

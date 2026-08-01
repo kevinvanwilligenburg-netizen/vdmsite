@@ -78,6 +78,22 @@ export async function Footer() {
             </li>
             <li>
               <Link
+                href="/kleuren"
+                className="text-white/80 transition hover:text-brand-bright"
+              >
+                Alle kleuren &amp; RAL
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/kleurstalen"
+                className="text-white/80 transition hover:text-brand-bright"
+              >
+                Kleurtesters
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/klusadvies"
                 className="text-white/80 transition hover:text-brand-bright"
               >

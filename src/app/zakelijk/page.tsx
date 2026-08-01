@@ -11,9 +11,9 @@ import { getStores } from "@/lib/tilroy";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Zakelijk inkopen — voor schilders en klusbedrijven",
+  title: "Zakelijk inkopen — binnen 2 minuten besteld, ook op rekening",
   description:
-    "Professioneel inkopen bij De Voordeelmarkt: scherpe staffelprijzen op verf, gratis mengen in elke kleur, snel afhalen in vijf winkels en op rekening bestellen.",
+    "Zakelijk verf inkopen zonder wachten op een accountmanager: KvK-nummer invullen, Profpas-korting direct verrekend, op rekening betalen via Billie en altijd gratis bezorgd.",
   alternates: { canonical: "/zakelijk" },
 };
 
@@ -70,21 +70,23 @@ export default async function BusinessPage() {
 
       <section className="overflow-hidden rounded-2xl bg-ink p-8 text-white sm:p-12">
         <p className="inline-block rounded-md bg-brand px-3 py-1.5 text-sm font-black uppercase">
-          Profpas
+          Zakelijk
         </p>
         <h1 className="mt-4 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">
-          Met de Profpas koop je scherper in
+          Binnen 2 minuten zakelijk bestellen — zonder wachten op een
+          accountmanager
         </h1>
         <p className="mt-4 max-w-2xl text-lg font-semibold text-white/80">
-          Schilder, klusser of zzp'er? Met de Profpas krijg je altijd 5%
-          korting op het hele assortiment, wordt elke online bestelling gratis
-          bezorgd en kun je op rekening kopen. Verf mengen we gratis in elke
-          kleur, terwijl je wacht.
+          Geen aanvraagformulier, geen offerte afwachten. Vul je mandje, kies{" "}
+          <strong className="text-white">Zakelijk</strong> bij het afrekenen en
+          vul je KvK-nummer in: je Profpas-korting wordt direct verrekend en je
+          betaalt desgewenst op rekening. Verf mengen we gratis in elke kleur,
+          terwijl je wacht.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
-          <a href={`mailto:${CONTACT_EMAIL}?subject=Aanvraag%20Profpas`} className="btn btn-primary">
-            Profpas aanvragen
-          </a>
+          <Link href="/categorieen" className="btn btn-primary">
+            Bestel direct zakelijk
+          </Link>
           <a
             href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, "")}`}
             className="btn border-2 border-white/25 text-white hover:border-brand hover:text-brand-bright"
@@ -92,6 +94,10 @@ export default async function BusinessPage() {
             <Icon name="phone" className="h-5 w-5" /> {CONTACT_PHONE}
           </a>
         </div>
+        <p className="mt-4 text-sm text-white/60">
+          Prijzen liever exclusief btw? Zet de btw-schakelaar om — rechtsboven
+          in de balk, of hieronder.
+        </p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -128,20 +134,20 @@ export default async function BusinessPage() {
       </section>
 
       <section className="card p-6 sm:p-8">
-        <h2 className="text-xl font-black text-ink">Hoe werkt het?</h2>
+        <h2 className="text-xl font-black text-ink">Zo bestel je vandaag nog zakelijk</h2>
         <ol className="mt-4 space-y-4">
           {[
             {
-              t: "Vraag een zakelijk account aan",
-              d: "Mail of bel ons met je bedrijfsgegevens en KvK-nummer. We nemen dezelfde werkdag contact op.",
+              t: "Vul je mandje en kies 'Zakelijk' bij het afrekenen",
+              d: "Gewoon in de webshop, wanneer het jou uitkomt — geen apart account nodig vooraf.",
             },
             {
-              t: "Ontvang je prijzen",
-              d: "Je krijgt prijzen die passen bij wat je afneemt, inclusief staffels op de artikelen die je vaak koopt.",
+              t: "Vul je KvK-nummer in — wij checken het direct",
+              d: "Een Nederlands bedrijf legitimeert zich met zijn KvK-nummer; een Belgisch bedrijf met een btw-nummer dat we live bij het EU-register (VIES) controleren. Vink Profpas aan en je korting wordt meteen verrekend.",
             },
             {
-              t: "Bestel online of in de winkel",
-              d: "Bestel wanneer het uitkomt en haal op in de dichtstbijzijnde vestiging, of laat het bezorgen op de klus.",
+              t: "Betaal zoals het jou past — ook op rekening",
+              d: "iDEAL, creditcard, of op rekening met 30 dagen betaaltermijn via Billie zodra je bedrijfsnaam is ingevuld. Bezorging is voor zakelijke klanten gratis; afhalen kan binnen 2 uur in vijf winkels.",
             },
           ].map((stap, index) => (
             <li key={stap.t} className="flex gap-4">
@@ -155,6 +161,17 @@ export default async function BusinessPage() {
             </li>
           ))}
         </ol>
+        <p className="mt-5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
+          Grotere volumes of vaste afname? Voor staffelprijzen op de artikelen
+          die je vaak koopt mail je{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=Zakelijke%20staffelprijzen`}
+            className="font-bold text-brand hover:underline"
+          >
+            {CONTACT_EMAIL}
+          </a>{" "}
+          — we nemen dezelfde werkdag contact op.
+        </p>
       </section>
 
       <section className="rounded-2xl bg-brand-light p-6 sm:p-8">
