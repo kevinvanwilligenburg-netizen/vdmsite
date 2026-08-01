@@ -56,19 +56,23 @@ export interface ProductFilters {
  * enige bruikbare filter bij kit, lijm, elektra en bevestiging — categorieën
  * die daarvóór met één filter of helemaal zonder in beeld stonden.
  */
+// De volgorde is de volgorde in de filterkolom. Voor verf staan de vragen
+// die een koper zichzelf écht stelt bovenaan — waar ga ik verven (binnen of
+// buiten), welke glans, welke ondergrond — in plaats van de kleurcodes.
+// Zelfde opbouw als bij verfwinkel.nl, de maat waar Kevin ons aan meet.
 const FACET_KEYS = [
   "subcategorie",
   "soort",
-  "kleur",
-  "glans",
-  "verfsoort",
   "toepassing",
+  "glans",
   "ondergrond",
+  "verfsoort",
   "materiaal",
   "dessin",
   "kwaliteit",
   "houtsoort",
   "tint",
+  "kleur",
   "inhoud",
 ] as const;
 

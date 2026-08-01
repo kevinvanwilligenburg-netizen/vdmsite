@@ -179,14 +179,25 @@ const HOOFDGROEPEN_NIET_ONLINE = new Set([
  * De kassa kent geen aparte groep, dus die maken we hier, met een eigen
  * (codeloze) slug.
  */
-const EIGEN_RUBRIEKEN: { sub: RegExp; slug: string; naam: string }[] = [
+const EIGEN_RUBRIEKEN: { sub?: RegExp; titel?: RegExp; slug: string; naam: string }[] = [
   { sub: /^huishoudelijk$/i, slug: "schoonmaak", naam: "Schoonmaak en onderhoud" },
+  // De kassa las "Kruipolie" en dacht: olie. Acht WD-40-sprays stonden zo
+  // bovenaan in het beitsfilter — smeermiddel tussen de tuinbeits.
+  {
+    titel: /(wd-?40|kruipolie|slotspray|contactspray|siliconenspray|droogsmeerspray|multi-?use|smeerspray|teflonspray)/i,
+    slug: "schoonmaak",
+    naam: "Schoonmaak en onderhoud",
+  },
 ];
 
 function eigenRubriekVoor(item: FeedItem): { slug: string; naam: string } | undefined {
   const sub = (item.categorie_sub ?? "").trim();
-  if (!sub) return undefined;
-  return EIGEN_RUBRIEKEN.find((rubriek) => rubriek.sub.test(sub));
+  const titel = (item.title ?? "").trim();
+  return EIGEN_RUBRIEKEN.find(
+    (rubriek) =>
+      (rubriek.sub && sub && rubriek.sub.test(sub)) ||
+      (rubriek.titel && titel && rubriek.titel.test(titel)),
+  );
 }
 
 function categorySlugFor(item: FeedItem): string {
@@ -935,7 +946,23 @@ function verfijndeSoort(kassaSub: string, titel: string): string | undefined {
       "Overige schoonmaak"
     );
   }
+  // Smeermiddelen die op titel naar Schoonmaak en onderhoud verhuizen, krijgen
+  // daar hun eigen soort — niet de "Beits, olie en vernis" van de kassa.
+  if (/(wd-?40|kruipolie|slotspray|contactspray|siliconenspray|droogsmeerspray|multi-?use|smeerspray|teflonspray)/i.test(titel)) {
+    return "Smeermiddelen en sprays";
+  }
   return SOORT_ALIAS[kassaSub.trim().toLocaleLowerCase("nl")];
+}
+
+function binnenBuitenUit(item: FeedItem): string | undefined {
+  if (!/verf en beits/i.test(item.categorie_hoofd ?? "")) return undefined;
+  const tekst = `${item.title ?? ""} ${item.productlijn ?? ""} ${item.categorie_sub ?? ""}`.toLowerCase();
+  const buiten = /(buiten|exterior|tuinhout|tuinbeits|gevel|fassaden|boot|dakr|weerbestendig)/.test(tekst);
+  const binnen = /(binnen|interior|interieur|muurverf|plafond|latex|behangklaar)/.test(tekst);
+  // "Gevel & kozijn binnen en buiten" bestaat: bij twijfel niets beweren.
+  if (buiten && !binnen) return "Buiten";
+  if (binnen && !buiten) return "Binnen";
+  return undefined;
 }
 
 function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, string> {
@@ -955,7 +982,12 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
   add("subcategorie", verfijndeSoort(kassaSub, leader.title ?? "") || kassaSub);
   add("glans", leader.glans);
   add("verfsoort", leader.verfsoort);
-  add("toepassing", leader.toepassing);
+  // Binnen/buiten is hét eerste filter waar een verfkoper op klikt (zo ook
+  // bij verfwinkel.nl), maar de kassa vult het veld op nog geen vijf procent
+  // van de verf. De productlijnen zeggen het zelf: Exterior, tuinbeits en
+  // gevel zijn buiten; interieurlak, muurverf en plafond zijn binnen. Alleen
+  // afgeleid als de kassa niets zegt, en alleen bij een eenduidig woord.
+  add("toepassing", leader.toepassing || binnenBuitenUit(leader));
   add("ondergrond", leader.ondergrond);
   add("kwaliteit", leader.kwaliteit);
   // Mengverf krijgt bewust géén kleurkenmerk. Het blik is "Transparant" in de
@@ -1472,7 +1504,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v42";
+const KV_KEY = "catalog:products:v43";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
