@@ -51,7 +51,12 @@ export async function getProductBySku(sku: string): Promise<Product | undefined>
     (product) =>
       product.sku === gezocht ||
       product.id === gezocht ||
-      (product.variants ?? []).some((variant) => variant.sku === gezocht),
+      (product.variants ?? []).some(
+        // Ook de fabriekswit-sku telt: de winkelwagenregel van "100% Wit"
+        // draagt díé sku, en wie hem hier niet vindt kent het merk niet —
+        // waardoor Sikkens-wit zijn franco-verzending kwijtraakte.
+        (variant) => variant.sku === gezocht || variant.wit?.sku === gezocht,
+      ),
   );
 }
 

@@ -106,10 +106,12 @@ export function CartUpsell() {
                   {product.name}
                 </Link>
                 <p className="line-clamp-1 text-xs text-ink-soft">{product.waarom}</p>
-                <p className="text-sm font-black text-brand">
-                  {euro(product.kluspasPrice ?? product.price)}
-                  {product.kluspasPrice && (
-                    <span className="ml-1 text-[10px] font-bold uppercase">Kluspas</span>
+                <p className="text-sm font-black text-ink">
+                  {euro(product.price)}
+                  {product.kluspasPrice != null && product.kluspasPrice < product.price && (
+                    <span className="ml-1.5 text-[10px] font-bold text-brand">
+                      Kluspas {euro(product.kluspasPrice)}
+                    </span>
                   )}
                 </p>
               </div>

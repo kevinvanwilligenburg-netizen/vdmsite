@@ -157,8 +157,15 @@ export function AddedToCart() {
                       </Link>
                       <p className="line-clamp-1 text-xs text-ink-soft">{product.waarom}</p>
                     </div>
-                    <span className="shrink-0 text-sm font-black text-brand">
-                      {euro(product.kluspasPrice ?? product.price)}
+                    <span className="shrink-0 text-right">
+                      <span className="block text-sm font-black text-ink">
+                        {euro(product.price)}
+                      </span>
+                      {product.kluspasPrice != null && product.kluspasPrice < product.price && (
+                        <span className="block text-[10px] font-bold text-brand">
+                          Kluspas {euro(product.kluspasPrice)}
+                        </span>
+                      )}
                     </span>
                     <button
                       type="button"

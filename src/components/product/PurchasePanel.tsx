@@ -433,13 +433,17 @@ export function PurchasePanel({
             +
           </button>
         </div>
+        {/* Nul-voorraad is niet bestelbaar (beslissing Kevin). De pagina zei
+            al "Nu even uitverkocht", maar de knop werkte gewoon door — en de
+            checkout rekende af voor iets dat nergens ligt. */}
         <button
           type="button"
           id="koop-knop"
           onClick={handleAdd}
-          className="btn btn-primary flex-1 scroll-mt-32 sm:flex-none"
+          disabled={product.inStock === false}
+          className="btn btn-primary flex-1 scroll-mt-32 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
         >
-          In winkelwagen
+          {product.inStock === false ? "Tijdelijk uitverkocht" : "In winkelwagen"}
         </button>
       </div>
 

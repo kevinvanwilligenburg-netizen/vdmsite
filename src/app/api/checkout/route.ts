@@ -83,8 +83,16 @@ export async function POST(request: Request) {
     if (!/\d/.test(houseNumber) || houseNumber.length > 8) {
       return badRequest("Vul een geldig huisnummer in.");
     }
-    if (!POSTAL_CODE_PATTERN.test(postalCode)) {
-      return badRequest("Vul een geldige postcode in (bv. 1234 AB).");
+    // Elk land zijn eigen postcodevorm: Nederland 1234 AB, België vier
+    // cijfers. Eén NL-patroon voor beide weigerde élke Belgische klant —
+    // terwijl de site België expliciet belooft.
+    const bestemming = shippingCountry(input.customer?.country);
+    if (bestemming === "BE" ? !/^\d{4}$/.test(postalCode) : !POSTAL_CODE_PATTERN.test(postalCode)) {
+      return badRequest(
+        bestemming === "BE"
+          ? "Vul een geldige Belgische postcode in (vier cijfers, bv. 2000)."
+          : "Vul een geldige postcode in (bv. 1234 AB).",
+      );
     }
     if (city.length < 2) return badRequest("Vul je woonplaats in.");
     address = {
@@ -413,6 +421,19 @@ export async function POST(request: Request) {
         8_000,
       );
       if (perSku) {
+        // Nul-voorraad is niet bestelbaar (beslissing Kevin). Zonder deze
+        // weigering betaalde een klant gewoon voor een artikel dat nergens
+        // ligt, met "binnen 1 werkdag" als valse belofte erbij. Alleen
+        // weigeren als de hub écht antwoordde — bij een storing liever de
+        // voorzichtige belofte dan een dichte winkel.
+        for (const item of items) {
+          const voorraad = perSku.get(item.sku ?? item.productId);
+          if (voorraad && voorraad.webshopQty <= 0 && voorraad.otherStoresQty <= 0) {
+            return badRequest(
+              `${item.title} is tijdelijk uitverkocht en kan nu niet besteld worden. Haal het uit je winkelwagen, of zet er een voorraadmelding op.`,
+            );
+          }
+        }
         for (const item of items) {
           const voorraad = perSku.get(item.sku ?? item.productId) ?? {
             webshopQty: 0,

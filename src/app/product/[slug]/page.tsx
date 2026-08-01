@@ -130,35 +130,42 @@ export default async function ProductPage({ params }: Props) {
 
   // Verzendkosten en 14 dagen retour gelden voor het hele assortiment. Het
   // tarief moet hier kloppen met wat de klant afrekent: een "0" terwijl er
-  // onder de gratis-grens wordt gerekend leest Google als een onjuiste prijsopgave.
+  // onder de gratis-grens wordt gerekend leest Google als een onjuiste
+  // prijsopgave. Uitzondering: alleen-afhalen-artikelen krijgen géén
+  // shippingDetails — bezorging beloven op een product dat we niet versturen
+  // is misleidend richting Google én klant.
   const offerTerms = {
     availability: "https://schema.org/InStock",
     url: absoluteUrl(`/product/${product.slug}`),
     seller: { "@type": "Organization", name: SITE_NAME },
-    shippingDetails: {
-      "@type": "OfferShippingDetails",
-      shippingRate: {
-        "@type": "MonetaryAmount",
-        value: (verzendtarief("NL") / 100).toFixed(2),
-        currency: "EUR",
-      },
-      shippingDestination: { "@type": "DefinedRegion", addressCountry: "NL" },
-      deliveryTime: {
-        "@type": "ShippingDeliveryTime",
-        handlingTime: {
-          "@type": "QuantitativeValue",
-          minValue: 0,
-          maxValue: 1,
-          unitCode: "DAY",
-        },
-        transitTime: {
-          "@type": "QuantitativeValue",
-          minValue: 0,
-          maxValue: 1,
-          unitCode: "DAY",
-        },
-      },
-    },
+    ...(product.pickupOnly
+      ? {}
+      : {
+          shippingDetails: {
+            "@type": "OfferShippingDetails",
+            shippingRate: {
+              "@type": "MonetaryAmount",
+              value: (verzendtarief("NL") / 100).toFixed(2),
+              currency: "EUR",
+            },
+            shippingDestination: { "@type": "DefinedRegion", addressCountry: "NL" },
+            deliveryTime: {
+              "@type": "ShippingDeliveryTime",
+              handlingTime: {
+                "@type": "QuantitativeValue",
+                minValue: 0,
+                maxValue: 1,
+                unitCode: "DAY",
+              },
+              transitTime: {
+                "@type": "QuantitativeValue",
+                minValue: 0,
+                maxValue: 1,
+                unitCode: "DAY",
+              },
+            },
+          },
+        }),
     hasMerchantReturnPolicy: {
       "@type": "MerchantReturnPolicy",
       applicableCountry: "NL",
@@ -223,11 +230,17 @@ export default async function ProductPage({ params }: Props) {
         product.compareAtPrice
           ? ` in plaats van de adviesprijs van ${euro(product.compareAtPrice)}`
           : ""
-      }. Bezorgen is gratis vanaf ${GRATIS_VANAF_TEKST}; afhalen in de winkel is dat altijd.`,
+      }. ${
+        product.pickupOnly
+          ? "Afhalen in de winkel is altijd gratis."
+          : `Bezorgen is gratis vanaf ${GRATIS_VANAF_TEKST}; afhalen in de winkel is dat altijd.`
+      }`,
     },
     {
       q: "Hoe snel heb ik dit in huis?",
-      a: "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het de volgende dag. Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor bezorging vandaag nog, tegen een toeslag van € 1,25. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
+      a: product.pickupOnly
+        ? "Dit artikel halen we niet door de brievenbus: je haalt het af in een van onze winkels. Reken online af en het ligt vandaag nog voor je klaar zodra de winkel open is. Op deze pagina zie je in welke winkels het op voorraad ligt."
+        : "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het de volgende dag. Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor bezorging vandaag nog, tegen een toeslag van € 1,25. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
     },
     ...(product.colorMixable
       ? [

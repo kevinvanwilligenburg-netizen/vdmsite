@@ -10,8 +10,10 @@ import { Icon } from "@/components/icons";
 import { Mark } from "@/components/Mark";
 import { useStore } from "@/components/store/StoreProvider";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
+import { usePrijsModus } from "@/components/prijs/PrijsWeergave";
 import { betaalmethodenVoor } from "@/lib/betaalmethoden";
 import { SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
+import { BTW_TARIEF } from "@/lib/factuur";
 import { CONTACT_PHONE, WHATSAPP_NUMMER } from "@/lib/site";
 import { BEDRIJFSTYPEN } from "@/lib/zakelijk";
 import { euro } from "@/lib/format";
@@ -298,6 +300,11 @@ export function CheckoutForm({
     };
   }, [fulfilment, items]);
 
+  // Uit de catalogus, niet uit de winkelwagen: die bewaart een
+  // prijsmomentopname die kan verouderen. Zie /api/korting. Vóór het
+  // bezorgopties-effect gedeclareerd, want dat rekent ermee.
+  const kluspasKorting = useKorting(items);
+
   // Bezorgopties bij de server opvragen: die kent de voorraad en de klok.
   useEffect(() => {
     if (fulfilment !== "delivery" || items.length === 0) return;
@@ -307,7 +314,11 @@ export function CheckoutForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         items: items.map((item) => ({ sku: item.sku ?? item.productId, quantity: item.qty })),
-        subtotal,
+        // Hetzelfde bedrag als waar de server straks verzendkosten over
+        // rekent: mét korting als die geldt. Op het kale subtotaal rekenen
+        // liet de klant "Gratis" zien terwijl Mollie € 4,95 meer inde —
+        // korting aanvinken kon de betaling zo duurder maken.
+        subtotal: kortingActief ? Math.max(0, subtotal - kluspasKorting) : subtotal,
         country,
       }),
     })
@@ -323,20 +334,30 @@ export function CheckoutForm({
     return () => {
       actief = false;
     };
-  }, [fulfilment, items, subtotal, country]);
+  }, [fulfilment, items, subtotal, country, kortingActief, kluspasKorting]);
 
   // Bedragen die op meerdere plekken in het overzicht terugkomen.
   const verzendkosten = fulfilment === "pickup" ? 0 : (opties?.verzending.kosten ?? 0);
   const toeslag = fulfilment === "delivery" && sameDay ? (opties?.sameDay.toeslag ?? 0) : 0;
 
-  // Uit de catalogus, niet uit de winkelwagen: die bewaart een
-  // prijsmomentopname die kan verouderen. Zie /api/korting.
-  const kluspasKorting = useKorting(items);
-
   // Zonder account geen korting: de server rekent hem ook alleen door voor
   // een ingelogde klant.
   const totaal = subtotal - (kortingActief ? kluspasKorting : 0) + verzendkosten + toeslag;
   const tekortVoorGratis = fulfilment === "delivery" ? (opties?.verzending.tekort ?? 0) : 0;
+
+  // Wie de site op excl. btw heeft staan, moet die lijn hier niet kwijtraken:
+  // regels excl., btw als eigen regel, en het totaal inclusief — dat is wat
+  // Mollie straks int. De btw-regel is het exacte verschil, zodat de kolom
+  // ook na afronding per regel altijd optelt tot het totaal.
+  const { modus } = usePrijsModus();
+  const exclVan = (centen: number) => Math.round(centen / (1 + BTW_TARIEF));
+  const toon = (centen: number) => euro(modus === "excl" ? exclVan(centen) : centen);
+  const btwRegel =
+    totaal -
+    (exclVan(subtotal) -
+      (kortingActief ? exclVan(kluspasKorting) : 0) +
+      exclVan(verzendkosten) +
+      exclVan(toeslag));
 
   if (!hydrated) {
     return <p className="py-16 text-center text-ink-soft">Bestelgegevens laden…</p>;
@@ -456,18 +477,44 @@ export function CheckoutForm({
               <span>
                 <span className="flex items-center gap-2 font-bold text-ink">
                   <Icon name="truck" className="h-5 w-5 text-brand" /> Bezorgen
-                  <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-black text-green-800">
-                    Gratis
+                  {/* De badge zegt wat de server rekent — een vaste "Gratis"
+                      naast "Bezorging € 4,95" in het overzicht was drie
+                      tegenstrijdige beweringen op één scherm. */}
+                  {opties && (
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-xs font-black ${
+                        opties.verzending.kosten === 0
+                          ? "bg-green-100 text-green-800"
+                          : "bg-ink/5 text-ink"
+                      }`}
+                    >
+                      {opties.verzending.kosten === 0
+                        ? "Gratis"
+                        : euro(opties.verzending.kosten)}
+                    </span>
+                  )}
+                </span>
+                {opties?.standaard.type === "unavailable" ? (
+                  <span className="mt-0.5 block text-sm font-semibold text-amber-700">
+                    Tijdelijk niet leverbaar — dit mandje ligt nu nergens op
+                    voorraad.
                   </span>
-                </span>
-                <span className="mt-0.5 block text-sm font-semibold text-green-700">
-                  {beforeCutoff ? "Vandaag of binnen 1 werkdag" : "Binnen 1 werkdag"}
-                </span>
-                <span className="block text-xs text-ink-soft">
-                  {beforeCutoff
-                    ? `Ligt alles in ons webshopmagazijn, dan bezorgt DHL vandaag nog (vóór ${SAME_DAY_CUTOFF_HOUR}:00 besteld). Anders verstuurt de winkel met PostNL, binnen één werkdag.`
-                    : "DHL bezorgt morgen als alles in ons webshopmagazijn ligt; anders verstuurt de winkel met PostNL binnen één werkdag."}
-                </span>
+                ) : (
+                  <>
+                    <span className="mt-0.5 block text-sm font-semibold text-green-700">
+                      {/* Het serverlabel kent klok én kalender ("Maandag
+                          bezorgd" op zaterdag); hardcoded "morgen" beloofde op
+                          zaterdag een zondagbezorging die niet bestaat. */}
+                      {opties?.standaard.label ??
+                        (beforeCutoff ? "Vandaag of binnen 1 werkdag" : "Binnen 1 werkdag")}
+                    </span>
+                    <span className="block text-xs text-ink-soft">
+                      {opties?.sameDay.beschikbaar
+                        ? `Ligt alles in ons webshopmagazijn, dan bezorgt DHL vandaag nog (vóór ${SAME_DAY_CUTOFF_HOUR}:00 besteld). Anders verstuurt de winkel met PostNL.`
+                        : "DHL of PostNL bezorgt op de eerstvolgende bezorgdag als alles op voorraad ligt."}
+                    </span>
+                  </>
+                )}
               </span>
             </label>
             {/* Afhalen alleen aanbieden als het ook kan. Ligt de bestelling
@@ -500,9 +547,14 @@ export function CheckoutForm({
                     Binnen 2 uur klaar
                   </span>
                   <span className="block text-xs text-ink-soft">
-                    {afhaalwinkels.length === 1
-                      ? `Alles ligt klaar in ${afhaalwinkels[0].city}.`
-                      : `In ${afhaalwinkels.length} winkels ligt je hele bestelling.`}
+                    {/* Vóór de voorraadcheck niets claimen: "in 5 winkels ligt
+                        je hele bestelling" zonder één check was een belofte
+                        uit de duim. */}
+                    {availability === null
+                      ? "We controleren nu in welke winkels alles ligt…"
+                      : afhaalwinkels.length === 1
+                        ? `Alles ligt klaar in ${afhaalwinkels[0].city}.`
+                        : `In ${afhaalwinkels.length} winkels ligt je hele bestelling.`}
                   </span>
                 </span>
               </label>
@@ -773,12 +825,12 @@ export function CheckoutForm({
                   <input
                     id="postcode"
                     required
-                    pattern="\d{4}\s?[A-Za-z]{2}"
+                    pattern={country === "BE" ? "\\d{4}" : "\\d{4}\\s?[A-Za-z]{2}"}
                     autoComplete="postal-code"
                     value={postalCode}
                     onChange={(event) => setPostalCode(event.target.value)}
                     className="input"
-                    placeholder="1234 AB"
+                    placeholder={country === "BE" ? "2000" : "1234 AB"}
                   />
                 </div>
                 <div>
@@ -944,7 +996,7 @@ export function CheckoutForm({
                 )}
               </span>
               <span className="shrink-0 font-semibold">
-                {euro(item.unitPrice * item.qty)}
+                {toon(item.unitPrice * item.qty)}
               </span>
             </li>
           ))}
@@ -1059,15 +1111,17 @@ export function CheckoutForm({
 
         <dl className="mt-4 space-y-2 border-t border-ink/10 pt-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ink-soft">Subtotaal</dt>
-            <dd className="font-semibold text-ink">{euro(subtotal)}</dd>
+            <dt className="text-ink-soft">
+              Subtotaal{modus === "excl" && " (excl. btw)"}
+            </dt>
+            <dd className="font-semibold text-ink">{toon(subtotal)}</dd>
           </div>
           {kortingActief && kluspasKorting > 0 && (
             <div className="flex justify-between">
               <dt className="font-semibold text-green-700">
                 Jouw korting
               </dt>
-              <dd className="font-bold text-green-700">− {euro(kluspasKorting)}</dd>
+              <dd className="font-bold text-green-700">− {toon(kluspasKorting)}</dd>
             </div>
           )}
           <div className="flex justify-between">
@@ -1075,13 +1129,19 @@ export function CheckoutForm({
               {fulfilment === "delivery" ? "Bezorging" : "Afhalen in de winkel"}
             </dt>
             <dd className={verzendkosten === 0 ? "font-bold text-green-700" : "font-semibold text-ink"}>
-              {verzendkosten === 0 ? "Gratis" : euro(verzendkosten)}
+              {verzendkosten === 0 ? "Gratis" : toon(verzendkosten)}
             </dd>
           </div>
           {fulfilment === "delivery" && sameDay && opties?.sameDay.beschikbaar && (
             <div className="flex justify-between">
               <dt className="text-ink-soft">Vandaag bezorgd</dt>
-              <dd className="font-semibold text-ink">{euro(opties.sameDay.toeslag ?? 0)}</dd>
+              <dd className="font-semibold text-ink">{toon(opties.sameDay.toeslag ?? 0)}</dd>
+            </div>
+          )}
+          {modus === "excl" && (
+            <div className="flex justify-between">
+              <dt className="text-ink-soft">Btw ({Math.round(BTW_TARIEF * 100)}%)</dt>
+              <dd className="font-semibold text-ink">{euro(btwRegel)}</dd>
             </div>
           )}
           {fulfilment === "delivery" && opties?.verzending.franco && (
@@ -1107,7 +1167,14 @@ export function CheckoutForm({
         {/* Bedrag én methode in de knop: dan weet de klant precies wat er
             gebeurt als hij erop drukt, en dat scheelt twijfel op de laatste
             stap. "Bestellen en betalen" liet allebei open. */}
-        <button type="submit" disabled={submitting} className="btn btn-primary mt-5 w-full disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={
+            submitting ||
+            (fulfilment === "delivery" && opties?.standaard.type === "unavailable")
+          }
+          className="btn btn-primary mt-5 w-full disabled:opacity-60"
+        >
           {submitting
             ? "Je wordt doorgestuurd…"
             : `${euro(totaal)} betalen met ${gekozenMethode?.label ?? "iDEAL"} →`}

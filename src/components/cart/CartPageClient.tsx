@@ -8,12 +8,22 @@ import { BezorgBelofte } from "@/components/BezorgBelofte";
 import { Icon } from "@/components/icons";
 import { Mark } from "@/components/Mark";
 import { ProductArt } from "@/components/ProductArt";
+import { usePrijsModus } from "@/components/prijs/PrijsWeergave";
 import { euro } from "@/lib/format";
+import { BTW_TARIEF } from "@/lib/factuur";
 import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 
 export function CartPageClient() {
   const { items, subtotal, hydrated, setQty, removeItem } = useCart();
+
+  // Wie op de rest van de site excl. btw kijkt, moet hier niet ineens hogere
+  // bedragen zien — dat leest als een prijsverhoging bij het mandje. Regels
+  // volgen de gekozen modus; het totaal blijft inclusief, want dat is wat er
+  // wordt afgerekend, met de btw als eigen regel ertussen.
+  const { modus } = usePrijsModus();
+  const toon = (centen: number) =>
+    euro(modus === "excl" ? Math.round(centen / (1 + BTW_TARIEF)) : centen);
 
   // Wat de korting op dit mandje waard is; de server rekent het uit de
   // catalogus, niet uit de prijzen die in de winkelwagen zijn blijven staan.
@@ -92,7 +102,10 @@ export function CartPageClient() {
               {/* Bewust geen pasprijs per regel: die zou uit de opgeslagen
                   winkelwagen komen en dus kunnen verouderen. Het bedrag dat
                   telt staat onderaan, en dat komt van de server. */}
-              <p className="mt-1 text-sm text-ink-soft">{euro(item.unitPrice)} per stuk</p>
+              <p className="mt-1 text-sm text-ink-soft">
+                {toon(item.unitPrice)} per stuk
+                {modus === "excl" && " excl. btw"}
+              </p>
             </div>
             <div className="col-span-2 flex items-center justify-between gap-3 sm:contents">
             <div className="inline-flex items-center rounded-lg border-2 border-ink/10">
@@ -115,7 +128,7 @@ export function CartPageClient() {
               </button>
             </div>
             <p className="ml-auto font-black text-ink sm:ml-0 sm:w-24 sm:text-right">
-              {euro(item.unitPrice * item.qty)}
+              {toon(item.unitPrice * item.qty)}
             </p>
             <button
               type="button"
@@ -134,9 +147,19 @@ export function CartPageClient() {
         <h2 className="text-lg font-black text-ink">Overzicht</h2>
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ink-soft">Subtotaal</dt>
-            <dd className="font-semibold">{euro(subtotal)}</dd>
+            <dt className="text-ink-soft">
+              Subtotaal{modus === "excl" && " (excl. btw)"}
+            </dt>
+            <dd className="font-semibold">{toon(subtotal)}</dd>
           </div>
+          {modus === "excl" && (
+            <div className="flex justify-between">
+              <dt className="text-ink-soft">Btw ({Math.round(BTW_TARIEF * 100)}%)</dt>
+              <dd className="font-semibold">
+                {euro(subtotal - Math.round(subtotal / (1 + BTW_TARIEF)))}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-ink-soft">Afhalen in de winkel</dt>
             <dd className="font-bold text-green-700">Gratis</dd>
