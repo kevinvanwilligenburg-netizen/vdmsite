@@ -694,15 +694,33 @@ function schoneNaam(naam: string): string {
  *
  * Netjes geschreven zoals de klant het leest: "2,5 L", niet "2,5 L 2,5L".
  * Staat de maat al ergens in de naam, dan blijft het bij één vermelding.
+ *
+ * Alleen maten die als verpakking te lezen zijn. De kassa zet bij penselen
+ * de penseelmaat in hetzelfde veld mét liter-eenheid — "Anza Lyons Penseel
+ * Maat 20" heeft daar "20 ml" staan, en "SAM Stoffertje halve maan" zelfs
+ * "1 ml". Dat achter de naam plakken maakt van een kwast een flesje. Onder
+ * de 100 ml vertrouwen we die eenheid dus niet; millimeters, centimeters,
+ * grammen en kilo's zeggen wél iets echts over het artikel.
  */
 function metEnigeMaat(naam: string, variants: ProductVariant[]): string {
   if (variants.length !== 1) return naam;
   const maat = variants[0].size?.trim();
-  if (!maat) return naam;
-  const genormaliseerd = (tekst: string) =>
-    tekst.toLowerCase().replace(/[\s.,]/g, "");
+  if (!maat || !bruikbareVerpakkingsmaat(maat)) return naam;
+  const genormaliseerd = (tekst: string) => tekst.toLowerCase().replace(/[\s.,]/g, "");
   if (genormaliseerd(naam).includes(genormaliseerd(maat))) return naam;
   return `${naam} ${maat}`;
+}
+
+function bruikbareVerpakkingsmaat(maat: string): boolean {
+  const match = maat.match(/^(\d+(?:[.,]\d+)?)\s*(ml|l|liter|kg|gr|gram|mm|cm|m)\b/i);
+  if (!match) return false;
+  const waarde = Number(match[1].replace(",", "."));
+  const eenheid = match[2].toLowerCase();
+  if (!Number.isFinite(waarde) || waarde <= 0) return false;
+  // Alleen de milliliters zijn verdacht: dat is het veld waar de kassa
+  // penseelmaten in kwijt kan. Een echt flesje of koker is minstens 100 ml.
+  if (eenheid === "ml") return waarde >= 100;
+  return true;
 }
 
 /** Zet de glansgraad achter de naam, als die er nog niet in staat. */
@@ -1274,7 +1292,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v37";
+const KV_KEY = "catalog:products:v38";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
