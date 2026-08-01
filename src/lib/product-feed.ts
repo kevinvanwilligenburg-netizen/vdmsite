@@ -648,12 +648,13 @@ function schoneNaam(naam: string): string {
       .replace(/\s+/g, " ")
       // Na het wegknippen van de maat blijft er nogal eens een halve
       // koppeling achter: "Benson Afdekzeil 3 x", "Fischer DuoPower … 10 X",
-      // "Tafelcontactdoos 4-voudig + Randaarde +". Alleen die staarten — een
-      // losse x/×/+ of "met", eventueel met het weesgetal ervoor — knippen we
-      // weg. Kale eindgetallen blijven staan: "Leliewit 6213" en
-      // "Trendtime 6" zijn namen, geen restjes. 38 titels waren zo tot onzin
-      // afgekapt, tot in de H1 en de URL.
-      .replace(/(?:\s+(?:\d+(?:[.,]\d+)?\s*)?[x×+]|\s+met)+\s*$/gi, "")
+      // "Tafelcontactdoos 4-voudig + Randaarde +", "Schakelaar 1,5 met".
+      // Alleen die staarten — een losse x/×/+ of "met", eventueel met het
+      // weesgetal ervoor, plus een decimaal eindgetal ("1,5" is altijd een
+      // halve maat) — knippen we weg. Hele eindgetallen blijven staan:
+      // "Leliewit 6213" en "Trendtime 6" zijn namen, geen restjes. 38 titels
+      // waren zo tot onzin afgekapt, tot in de H1 en de URL.
+      .replace(/(?:\s+(?:\d+(?:[.,]\d+)?\s*)?[x×+]|\s+met|\s+\d+[.,]\d+)+\s*$/gi, "")
       .replace(/[\s\-–,|]+$/g, "")
       .trim()
   );
@@ -1217,7 +1218,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v33";
+const KV_KEY = "catalog:products:v34";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

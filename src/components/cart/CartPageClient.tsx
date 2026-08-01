@@ -232,6 +232,26 @@ export function CartPageClient() {
           <TrustpilotWidget variant="micro" />
         </div>
       </aside>
+
+      {/*
+        Op een telefoon staat het Overzicht-blok ónder de artikelen: wie drie
+        dingen in de wagen heeft, moet voorbij drie kaarten scrollen voordat
+        er ergens "Afrekenen" staat. Deze balk houdt totaal en knop in beeld;
+        vanaf lg staat de zijkolom naast de lijst en is hij overbodig.
+      */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-ink-soft">Totaal (incl. btw)</p>
+            <p className="text-lg font-black text-ink">{euro(subtotal)}</p>
+          </div>
+          <Link href="/afrekenen" className="btn btn-primary flex-1 max-w-56">
+            Afrekenen →
+          </Link>
+        </div>
+      </div>
+      {/* Ruimte zodat de vaste balk de Trustpilot-strook niet afdekt. */}
+      <div className="h-20 lg:hidden" aria-hidden />
     </div>
   );
 }
