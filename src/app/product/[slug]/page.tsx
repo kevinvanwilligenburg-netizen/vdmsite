@@ -11,6 +11,7 @@ import { VloerRekenhulp } from "@/components/product/VloerRekenhulp";
 import { pakInhoudVan } from "@/lib/vloer";
 import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
+import { GekozenVariantProvider } from "@/components/product/GekozenVariant";
 import { StockList } from "@/components/StockList";
 import { getInitialColors } from "@/lib/colors";
 import { bouwProductFaqs } from "@/lib/product-faq";
@@ -278,17 +279,22 @@ export default async function ProductPage({ params }: Props) {
             <h1 className="mt-1 text-2xl font-black text-ink sm:text-3xl">{product.name}</h1>
             <p className="mt-3 text-ink-soft">{korteTekst}</p>
           </div>
-          <div id="koopblok" className="scroll-mt-32">
-            <PurchasePanel product={product} colors={colors} />
-          </div>
-          {perPak && <VloerRekenhulp perPak={perPak} />}
-          <StockList
-            skus={skusFor(product)}
-            stores={stores}
-            fallbackInStock={product.inStock !== false}
-            alleenAfhalen={product.pickupOnly}
-            product={{ sku: product.sku, slug: product.slug, naam: product.name }}
-          />
+          {/* Koopblok en voorraadblok kijken naar dezelfde maatkeuze: de
+              voorraad per winkel is die van de gekozen sku, niet de optelsom
+              van alle maten. */}
+          <GekozenVariantProvider>
+            <div id="koopblok" className="scroll-mt-32">
+              <PurchasePanel product={product} colors={colors} />
+            </div>
+            {perPak && <VloerRekenhulp perPak={perPak} />}
+            <StockList
+              skus={skusFor(product)}
+              stores={stores}
+              fallbackInStock={product.inStock !== false}
+              alleenAfhalen={product.pickupOnly}
+              product={{ sku: product.sku, slug: product.slug, naam: product.name }}
+            />
+          </GekozenVariantProvider>
           <Companions items={companions} variant="kolom" />
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/icons";
+import { useGekozenVariant } from "@/components/product/GekozenVariant";
 import { Voorraadmelding } from "@/components/product/Voorraadmelding";
 import { useStore } from "@/components/store/StoreProvider";
 import { deliveryExplanation, deliveryPromise } from "@/lib/delivery";
@@ -38,10 +39,22 @@ export function StockList({
   const [stock, setStock] = useState<ProductStock | null>(null);
   const [failed, setFailed] = useState(false);
 
+  // Kiest de klant in het koopblok een maat, dan tonen we de voorraad van
+  // precies dát artikel — dezelfde sku die de checkout straks controleert.
+  // Zonder keuze (of buiten de productpagina) geldt de optelsom van alle
+  // maten, zoals voorheen.
+  const { sku: gekozenSku } = useGekozenVariant();
+  const actieveSkus = gekozenSku ? [gekozenSku] : skus;
+  const skusSleutel = actieveSkus.join(",");
+
   useEffect(() => {
-    if (skus.length === 0) return;
+    if (actieveSkus.length === 0) return;
     let active = true;
-    fetch(`/api/voorraad?skus=${encodeURIComponent(skus.join(","))}`)
+    // Terug naar "Laden…" bij een maatwissel; oude aantallen laten staan
+    // is precies de verwarring die we hier oplossen.
+    setStock(null);
+    setFailed(false);
+    fetch(`/api/voorraad?skus=${encodeURIComponent(skusSleutel)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data: ProductStock | null) => {
         if (!active) return;
@@ -54,7 +67,8 @@ export function StockList({
     return () => {
       active = false;
     };
-  }, [skus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skusSleutel]);
 
   const rows = stock?.stores ?? stores.map((store) => ({ storeId: store.slug, city: store.city, qty: -1 }));
   const availableCount = stock ? stock.stores.filter((entry) => entry.qty > 0).length : null;
@@ -83,7 +97,11 @@ export function StockList({
   return (
     <div className="space-y-3">
       {uitverkocht && (
-        <Voorraadmelding sku={product.sku} slug={product.slug} naam={product.naam} />
+        <Voorraadmelding
+          sku={gekozenSku ?? product.sku}
+          slug={product.slug}
+          naam={product.naam}
+        />
       )}
       {/*
         Bezorgen en afhalen naast elkaar, als twee keuzes.

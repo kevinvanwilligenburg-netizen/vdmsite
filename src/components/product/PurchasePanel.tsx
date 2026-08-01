@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { Icon } from "@/components/icons";
+import { useGekozenVariant } from "@/components/product/GekozenVariant";
 import { KleurVenster } from "@/components/kleur/KleurVenster";
 import { kleurLabel } from "@/components/kleur/waaier";
 import { Price } from "@/components/Price";
@@ -94,6 +95,16 @@ export function PurchasePanel({
     : undefined;
   const wit = witVariant?.wit && witVariant.wit.inStock ? witVariant.wit : undefined;
   const wit100 = Boolean(wit && witGekozen && !color);
+
+  // Vertel het voorraadblok welk exact artikel de klant nu voor zich heeft:
+  // dezelfde sku die straks in de winkelwagen belandt. Zonder dit toonde de
+  // voorraad de optelsom van alle maten samen — 2,5 L "op voorraad" terwijl
+  // alleen de 250 ml ergens lag.
+  const { zet: zetGekozenSku } = useGekozenVariant();
+  const gekozenSku = wit100 && wit ? wit.sku : activeVariant?.sku ?? product.sku;
+  useEffect(() => {
+    zetGekozenSku(gekozenSku ?? null);
+  }, [gekozenSku, zetGekozenSku]);
 
   // Maat en verpakking als twee keuzes: de unieke maten in de volgorde van de
   // feed (die staat al op grootte), en daarbinnen de verpakkingen.
