@@ -180,7 +180,13 @@ export interface MenuCategory extends Category {
 export async function getMenu(): Promise<MenuCategory[]> {
   const [categories, products] = await Promise.all([getCategories(), getProducts()]);
 
-  return categories.map((category) => {
+  return categories
+    // Ook het uitklapmenu ("Alle categorieën") is een wegwijzer, en daar hoort
+    // een leveranciersnaam niet in: "Euromat 3" naast "Verf en Beits 1.891"
+    // belooft een rubriek die geen rubriek is. De artikelen blijven gewoon
+    // vindbaar via zoeken en /categorieen.
+    .filter((category) => toonbareRubriek(category.name) && toonbareRubriek(category.slug))
+    .map((category) => {
     const inCategory = products.filter((product) => product.category === category.slug);
 
     const soortCounts = new Map<string, number>();
