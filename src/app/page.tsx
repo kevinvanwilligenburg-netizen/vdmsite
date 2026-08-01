@@ -7,7 +7,7 @@ import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { BezorgBelofte } from "@/components/BezorgBelofte";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
-import { getCategories, getDeals, getStores } from "@/lib/tilroy";
+import { getDeals, getNavCategories, getStores } from "@/lib/tilroy";
 
 export const revalidate = 3600;
 
@@ -37,7 +37,10 @@ const HIGHLIGHTS = [
 export default async function HomePage() {
   const [deals, categories, stores, banner] = await Promise.all([
     getDeals(8),
-    getCategories(),
+    // Dezelfde selectie als het menu: rubrieken die groot genoeg zijn en écht
+    // een rubriek. Op de volledige lijst stond "Euromat" — een leverancier —
+    // als kaart tussen Verf en Beits en Gereedschap.
+    getNavCategories(12),
     getStores(),
     getBanner("home-hero"),
   ]);
