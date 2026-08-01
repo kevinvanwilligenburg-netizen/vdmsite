@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { applyFilters, parseFilters } from "@/lib/facets";
+import { isEchtMerk, merknaam } from "@/lib/merken";
 import { HOOFDRUBRIEKEN, isHoofdrubriek, toonbareRubriek } from "@/lib/rubrieken";
 import { getMenu, getProducts, getProductsByCategory } from "@/lib/tilroy";
 
@@ -124,18 +125,19 @@ export async function GET() {
       }
     }
 
-    // 3. Merkknoppen: leiden ze naar artikelen van dat merk?
+    // 3. Merkknoppen: leiden ze naar artikelen van dat merk? De href is een
+    //    merkpagina zonder query — een filtercontrole zou daar altijd slagen.
+    //    Daarom tellen we zoals de merkpagina zelf: op de merknaam.
     for (const merk of categorie.merken) {
-      const query = new URL(merk.href, "https://x").searchParams;
-      const filters = parseFilters(Object.fromEntries(query.entries()));
-      const bron = merk.href.startsWith("/categorie/") ? producten : alleProducten;
-      const gevonden = applyFilters(bron, filters).length;
+      const gevonden = alleProducten.filter(
+        (product) => isEchtMerk(product.brand) && merknaam(product.brand!) === merk.label,
+      ).length;
       if (gevonden === 0) {
         bevindingen.push({
           soort: "leeg-merk",
           waar: `${categorie.name} → ${merk.label}`,
           href: merk.href,
-          detail: `Menu belooft ${merk.count} artikelen, het filter levert er 0.`,
+          detail: `De merkpagina zou 0 artikelen tonen.`,
         });
       }
     }
@@ -158,11 +160,21 @@ export async function GET() {
     }
   }
 
+  // Alle adressen waar het menu heen wijst, zodat een doorloopscript ze stuk
+  // voor stuk kan aanklikken — de laatste stap die een datacontrole niet doet.
+  const hrefs = new Set<string>(["/klusadvies", "/kleurkiezer", "/categorieen"]);
+  for (const categorie of menu) {
+    hrefs.add(`/categorie/${categorie.slug}`);
+    for (const soort of categorie.soorten) hrefs.add(soort.href);
+    for (const merk of categorie.merken) hrefs.add(merk.href);
+  }
+
   return NextResponse.json({
     ok: bevindingen.length === 0,
     aantalBevindingen: bevindingen.length,
     bevindingen,
     categorieen: regels,
+    hrefs: [...hrefs],
   });
 }
 
