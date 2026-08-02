@@ -351,30 +351,36 @@ export default async function ProductPage({ params }: Props) {
         )}
       </section>
 
-      <section aria-labelledby="product-faq-titel" className="max-w-3xl">
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <h2
-            id="product-faq-titel"
-            className="text-xl font-black uppercase text-ink sm:text-2xl"
-          >
-            Veelgestelde vragen
-          </h2>
-          <div className="hidden w-28 shrink-0 sm:block">
-            <Mark pose="vragend" hoogte="h-24" />
+      <section aria-labelledby="product-faq-titel">
+        <h2
+          id="product-faq-titel"
+          className="mb-4 text-xl font-black uppercase text-ink sm:text-2xl"
+        >
+          Veelgestelde vragen
+        </h2>
+        {/* Mark stond eerst op dezelfde regel als de kop. Die kop is kort, dus
+            hij kwam los in de witruimte erboven te hangen in plaats van ergens
+            bij te horen. Nu staat hij náást de vragen: de breedtebeperking zit
+            op de vragenkolom, niet meer op de hele sectie, zodat er rechts ook
+            echt ruimte voor hem is. Pas vanaf lg — daaronder is die ruimte er
+            niet en gaat hij ten koste van de vragen. */}
+        <div className="flex items-start gap-8">
+          <div className="min-w-0 max-w-3xl flex-1 space-y-3">
+            {productFaqs.map((faq) => (
+              <details key={faq.q} className="card group p-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold text-ink">
+                  {faq.q}
+                  <span className="shrink-0 transition group-open:rotate-180" aria-hidden>
+                    ▾
+                  </span>
+                </summary>
+                <p className="mt-3 leading-relaxed text-ink-soft">{faq.a}</p>
+              </details>
+            ))}
           </div>
-        </div>
-        <div className="space-y-3">
-          {productFaqs.map((faq) => (
-            <details key={faq.q} className="card group p-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold text-ink">
-                {faq.q}
-                <span className="shrink-0 transition group-open:rotate-180" aria-hidden>
-                  ▾
-                </span>
-              </summary>
-              <p className="mt-3 leading-relaxed text-ink-soft">{faq.a}</p>
-            </details>
-          ))}
+          <div className="hidden w-44 shrink-0 lg:block">
+            <Mark pose="vragend" hoogte="h-52" />
+          </div>
         </div>
       </section>
 
