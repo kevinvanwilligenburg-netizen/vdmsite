@@ -1079,31 +1079,54 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
  */
 /**
  * Rendement voor de rekenhulp. Eerste bron is het feedveld `rendement`
- * (gevuld door de Productkenmerken-import in het dashboard); de webtekst is
- * alleen een vangnet, want daar staat het vrijwel nooit in — gemeten op alle
- * Tilroy-webteksten noemen er maar 12 een m²-getal. Bij een bereik nemen we
- * het gemiddelde; de rekenhulp zegt er "circa" bij.
+ * (gevuld door de Productkenmerken-import in het dashboard), daarna de
+ * webtekst — hermeting dashboard-sessie over 6.855 NL-teksten: zo'n 105–150
+ * noemen het echt. Bij een bereik nemen we het gemiddelde; de rekenhulp zegt
+ * er "circa" bij.
+ *
+ * Niet elke m² in een webtekst is een rendement: laminaat noemt de
+ * pakinhoud ("Inhoud pak: 2,673 m²"), beglazingskit een maximum-maat
+ * ("enkel glas tot 0,6 m²"). Daarom eist elk patroon hier een label
+ * (verbruik/rendement/dekking) of een expliciete koppeling aan liters.
  */
 function rendementUit(item: FeedItem): number | undefined {
+  const getal = (s: string) => Number(s.replace(",", "."));
+  const geldig = (w: number) => (Number.isFinite(w) && w > 0 && w < 100 ? w : undefined);
+  const bereik = (a: string, b?: string) => (getal(a) + (b ? getal(b) : getal(a))) / 2;
+
   const veld = (item.rendement ?? "").trim();
   if (veld) {
-    const m = veld.match(/(\d+(?:[.,]\d+)?)\s*(?:-|–|tot\s+)?\s*(\d+(?:[.,]\d+)?)?/);
+    const m = veld.match(/(\d+(?:[.,]\d+)?)\s*(?:-|–|a|à|tot\s+)?\s*(\d+(?:[.,]\d+)?)?/);
     if (m) {
-      const laag = Number(m[1].replace(",", "."));
-      const hoog = m[2] ? Number(m[2].replace(",", ".")) : laag;
-      const waarde = (laag + hoog) / 2;
-      if (Number.isFinite(waarde) && waarde > 0 && waarde < 100) return waarde;
+      const waarde = geldig(bereik(m[1], m[2]));
+      if (waarde) return waarde;
     }
   }
+
   const tekst = (item.omschrijving_web ?? "").replace(/<[^>]+>/g, " ");
-  const match = tekst.match(
-    /(?:verbruik|rendement)[^0-9]{0,20}(\d+(?:[.,]\d+)?)\s*(?:-|–|tot\s+)?\s*(\d+(?:[.,]\d+)?)?\s*m[²2]\s*(?:per\s+liter|\/\s*l\b|per\s+l\b)/i,
+
+  // "Rendement: ca. 10 m² per liter", "Verbruik: 16-18 m²/l".
+  let m = tekst.match(
+    /(?:verbruik|rendement|dekking)[^0-9]{0,20}(\d+(?:[.,]\d+)?)\s*(?:-|–|a|à|tot\s+)?\s*(\d+(?:[.,]\d+)?)?\s*m[²2]\s*(?:per\s+liter|\/\s*l\b|per\s+l\b)/i,
   );
-  if (!match) return undefined;
-  const laag = Number(match[1].replace(",", "."));
-  const hoog = match[2] ? Number(match[2].replace(",", ".")) : laag;
-  const waarde = (laag + hoog) / 2;
-  return Number.isFinite(waarde) && waarde > 0 && waarde < 100 ? waarde : undefined;
+  if (m) return geldig(bereik(m[1], m[2]));
+
+  // "Verbruik per liter 25 - 40 m²" — de eenheid staat vóór het getal.
+  m = tekst.match(
+    /(?:verbruik|rendement|dekking)[^0-9]{0,30}per\s+liter[^0-9]{0,15}(\d+(?:[.,]\d+)?)\s*(?:-|–|a|à|tot\s+)?\s*(\d+(?:[.,]\d+)?)?\s*m[²2]/i,
+  );
+  if (m) return geldig(bereik(m[1], m[2]));
+
+  // "Een fles van 1 liter is goed voor ongeveer 25 a 50 m²" — delen door de
+  // liters. De punt-uitsluiting houdt het binnen één zin.
+  m = tekst.match(
+    /(\d+(?:[.,]\d+)?)\s*liter[^.]{0,40}?goed\s+voor\s+(?:ongeveer\s+|circa\s+|ca\.?\s*)?(\d+(?:[.,]\d+)?)\s*(?:-|–|a|à|tot\s+)?\s*(\d+(?:[.,]\d+)?)?\s*m[²2]/i,
+  );
+  if (m) {
+    const liters = getal(m[1]);
+    if (liters > 0) return geldig(bereik(m[2], m[3]) / liters);
+  }
+  return undefined;
 }
 
 /**
