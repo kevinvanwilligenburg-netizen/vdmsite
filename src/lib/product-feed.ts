@@ -1078,12 +1078,23 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
  * alineascheidingen en de rest van de tags verdwijnt.
  */
 /**
- * Rendement uit de webtekst: "Verbruik: ca. 10 m² per liter",
- * "Rendement: 16-18 m²/l". Gemeten op Tilroy: 99 producten noemen het zo.
- * Bij een bereik nemen we het gemiddelde; de rekenhulp zegt er "circa" bij.
- * Wacht net als de webtekst zelf op de feedvelden — geen veld, geen waarde.
+ * Rendement voor de rekenhulp. Eerste bron is het feedveld `rendement`
+ * (gevuld door de Productkenmerken-import in het dashboard); de webtekst is
+ * alleen een vangnet, want daar staat het vrijwel nooit in — gemeten op alle
+ * Tilroy-webteksten noemen er maar 12 een m²-getal. Bij een bereik nemen we
+ * het gemiddelde; de rekenhulp zegt er "circa" bij.
  */
 function rendementUit(item: FeedItem): number | undefined {
+  const veld = (item.rendement ?? "").trim();
+  if (veld) {
+    const m = veld.match(/(\d+(?:[.,]\d+)?)\s*(?:-|–|tot\s+)?\s*(\d+(?:[.,]\d+)?)?/);
+    if (m) {
+      const laag = Number(m[1].replace(",", "."));
+      const hoog = m[2] ? Number(m[2].replace(",", ".")) : laag;
+      const waarde = (laag + hoog) / 2;
+      if (Number.isFinite(waarde) && waarde > 0 && waarde < 100) return waarde;
+    }
+  }
   const tekst = (item.omschrijving_web ?? "").replace(/<[^>]+>/g, " ");
   const match = tekst.match(
     /(?:verbruik|rendement)[^0-9]{0,20}(\d+(?:[.,]\d+)?)\s*(?:-|–|tot\s+)?\s*(\d+(?:[.,]\d+)?)?\s*m[²2]\s*(?:per\s+liter|\/\s*l\b|per\s+l\b)/i,
@@ -1095,15 +1106,40 @@ function rendementUit(item: FeedItem): number | undefined {
   return Number.isFinite(waarde) && waarde > 0 && waarde < 100 ? waarde : undefined;
 }
 
+/**
+ * HTML-entiteiten naar tekst. Numeriek eerst, dan de namen die in de
+ * Tilroy-teksten voorkomen; &amp; als allerlaatste, anders wordt
+ * "&amp;eacute;" in twee stappen alsnog een é.
+ */
+function decodeEntities(tekst: string): string {
+  return tekst
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&eacute;/gi, "é")
+    .replace(/&egrave;/gi, "è")
+    .replace(/&euml;/gi, "ë")
+    .replace(/&iuml;/gi, "ï")
+    .replace(/&ouml;/gi, "ö")
+    .replace(/&uuml;/gi, "ü")
+    .replace(/&aacute;/gi, "á")
+    .replace(/&agrave;/gi, "à")
+    .replace(/&ccedil;/gi, "ç")
+    .replace(/&amp;/gi, "&");
+}
+
 function webTekstUit(item: FeedItem): string | undefined {
   const ruw = (item.omschrijving_web ?? "").trim();
   if (ruw.length < 60) return undefined;
-  const tekst = ruw
-    .replace(/<\s*(br|\/p|\/div|\/li|\/h[1-6])[^>]*>/gi, "\n\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&eacute;/gi, "é")
+  const tekst = decodeEntities(
+    ruw
+      .replace(/<\s*(br|\/p|\/div|\/li|\/h[1-6])[^>]*>/gi, "\n\n")
+      .replace(/<[^>]+>/g, " "),
+  )
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
