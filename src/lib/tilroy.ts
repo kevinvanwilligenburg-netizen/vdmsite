@@ -652,6 +652,8 @@ interface HubStockItem {
 interface HubStockResponse {
   configured: boolean;
   asOf?: string;
+  /** "live" of "snapshot" — snapshot is de nachtstand van ~05:00. */
+  bron?: string;
   items: HubStockItem[];
   missing: string[];
 }
@@ -677,6 +679,12 @@ async function fetchHubStock(skus: string[]): Promise<HubStockResponse | null> {
     if (!res.ok) return null;
     const data = (await res.json()) as HubStockResponse;
     if (!data || data.configured !== true || !Array.isArray(data.items)) return null;
+    // De hub hoort sinds de KV-cache + crawlslot (dashboard-PR #378) altijd
+    // "live" te serveren; valt hij terug op de nachtstand, dan willen we dat
+    // in de logs zien vóór een klant het aan de kassa merkt.
+    if (data.bron === "snapshot") {
+      console.warn("[voorraad] hub serveert snapshot (nachtstand) in plaats van live voorraad");
+    }
     return data;
   } catch (error) {
     console.error("[voorraad] hub niet bereikbaar:", error);

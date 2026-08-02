@@ -223,6 +223,54 @@ export async function kluspasNummerVan(email: string): Promise<string> {
   }
 }
 
+export interface Kluspunten {
+  punten: number;
+  /** Waarde van het saldo in euro's. */
+  waarde: number;
+  geldigTot?: string;
+  pashouder: boolean;
+}
+
+/**
+ * Het kluspunten-saldo, via het dashboard (bron: Tilroy loyalty).
+ *
+ * `null` betekent "onbekend" — storing, geen sleutel, klant niet gevonden —
+ * en dat is iets anders dan een saldo van 0. Het dashboard zoekt eerst de
+ * klant op voordat het Tilroy naar het saldo vraagt (Tilroy zelf antwoordt op
+ * een onbekende klant met 0 punten alsof dat klopt), dus een 0 die hier
+ * binnenkomt is écht nul. Toon "onbekend" dan ook nooit als "0 punten":
+ * iemand met een typefout in zijn adres zou zijn spaartegoed zien verdampen.
+ */
+export async function haalKluspunten(email: string): Promise<Kluspunten | null> {
+  const kop = dashboardKop();
+  if (!kop) return null;
+
+  try {
+    const res = await fetch(
+      `${DASHBOARD_API_URL}/api/klanten/kluspunten?email=${encodeURIComponent(normaliseerEmail(email))}`,
+      { headers: kop, signal: AbortSignal.timeout(8000), cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      punten?: number | null;
+      waarde?: number;
+      geldigTot?: string;
+      pashouder?: boolean;
+      onbekend?: boolean;
+    };
+    if (data.onbekend || typeof data.punten !== "number") return null;
+    return {
+      punten: data.punten,
+      waarde: typeof data.waarde === "number" ? data.waarde : 0,
+      ...(data.geldigTot ? { geldigTot: data.geldigTot } : {}),
+      pashouder: Boolean(data.pashouder),
+    };
+  } catch (error) {
+    console.error("[account] kluspunten ophalen mislukt:", error);
+    return null;
+  }
+}
+
 export async function haalKlant(email: string): Promise<Klant> {
   const adres = normaliseerEmail(email);
   const basis: Klant = { email: adres, inTilroy: false };

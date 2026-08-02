@@ -12,7 +12,9 @@ export async function getWhatsappNummer(): Promise<string> {
   try {
     const res = await fetch(`${DASHBOARD_API_URL}/api/instellingen`, {
       signal: AbortSignal.timeout(4000),
-      next: { revalidate: 3600 },
+      // Zelfde vijf minuten als de instellingen-cache: zet Kevin een nieuw
+      // nummer in het portaal, dan volgt de site binnen minuten.
+      next: { revalidate: 300 },
     });
     if (res.ok) {
       const data = (await res.json()) as { whatsapp?: string };

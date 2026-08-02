@@ -13,9 +13,11 @@ import {
   emailVanSessie,
   haalFavorieten,
   haalKlant,
+  haalKluspunten,
   type Aankoop,
   voorkeurWinkel,
 } from "@/lib/account";
+import { euros } from "@/lib/format";
 import { getOrdersByEmail } from "@/lib/orders";
 import { PRIJS_COOKIE, prijsModusUit } from "@/lib/prijs";
 import { getStores } from "@/lib/tilroy";
@@ -23,7 +25,7 @@ import { isPaidStatus } from "@/lib/types";
 
 import { AccountNav } from "./_onderdelen/AccountNav";
 import { btwLabel } from "./_onderdelen/bedrag";
-import { statusTekst } from "./_onderdelen/opmaak";
+import { datumLang, statusTekst } from "./_onderdelen/opmaak";
 
 export const dynamic = "force-dynamic";
 
@@ -51,12 +53,13 @@ export default async function AccountPage() {
   // Alleen wat snel is doen we hier: de klantgegevens en onze eigen orders.
   // De winkelhistorie haalt de pagina er zelf bij — daarvoor doorloopt het
   // dashboard een jaar verkopen, en daar wachten we de klant niet op.
-  const [klant, webshoporders, winkelKeuze, winkels, favorieten] = await Promise.all([
+  const [klant, webshoporders, winkelKeuze, winkels, favorieten, kluspunten] = await Promise.all([
     haalKlant(email),
     getOrdersByEmail(email),
     voorkeurWinkel(email),
     getStores(),
     haalFavorieten(email),
+    haalKluspunten(email),
   ]);
 
   const webshopAankopen: Aankoop[] = webshoporders.map((order) => ({
@@ -120,6 +123,37 @@ export default async function AccountPage() {
               </Link>
             </div>
           )}
+
+          {/* Saldo alleen tonen als we het écht weten. "Onbekend" mag nooit
+              als "0 punten" op het scherm — zie haalKluspunten. */}
+          {kluspunten ? (
+            <div className="card p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-ink-soft">
+                Kluspunten
+              </p>
+              <p className="mt-1 text-2xl font-black text-ink">
+                {kluspunten.punten === 0
+                  ? "Nog geen punten"
+                  : `${kluspunten.punten} punten`}
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                {kluspunten.punten === 0
+                  ? "Je spaart automatisch bij elke aankoop met je Kluspas."
+                  : `Goed voor ${euros(kluspunten.waarde)} korting, in te wisselen aan de kassa.`}
+                {kluspunten.geldigTot ? ` Geldig tot ${datumLang(kluspunten.geldigTot)}.` : ""}
+              </p>
+            </div>
+          ) : klant.kluspas ? (
+            <div className="card p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-ink-soft">
+                Kluspunten
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Je puntensaldo kon nu even niet worden opgehaald. Het staat er
+                gewoon nog — kijk straks nog eens, of vraag ernaar in de winkel.
+              </p>
+            </div>
+          ) : null}
 
           <div className="card p-5">
             <p className="text-xs font-black uppercase tracking-wide text-ink-soft">
