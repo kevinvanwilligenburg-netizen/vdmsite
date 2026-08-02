@@ -374,7 +374,16 @@ export function ColorPicker({
         aria-label="Kleuren"
         aria-busy={loading}
         onKeyDown={opKleurToets}
-        className={`grid min-w-0 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${
+        /*
+          `content-start` en `auto-rows-max` zijn hier geen opmaak maar de
+          reparatie: zonder die twee verdeelt het raster zijn hoogte over álle
+          rijen. Bij 166 kleuren in vijf kolommen zijn dat 34 rijen, en dan
+          eisen de tussenruimtes alleen al meer ruimte dan het vak hoog is —
+          waarna elke rij op 3 pixels uitkomt. De kleurvlakken stonden er dus
+          wel, als grijze streepjes van drie pixels, en niemand zag een kleur.
+          Met deze twee houden de rijen hun eigen hoogte en scrollt het vak.
+        */
+        className={`grid min-w-0 auto-rows-max content-start grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${
           fill ? "min-h-0 flex-1" : "max-h-[30rem]"
         } ${loading && colors.length > 0 ? "opacity-60" : ""}`}
       >
