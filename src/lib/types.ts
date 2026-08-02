@@ -289,6 +289,14 @@ export interface Order {
   confirmationSentAt?: string;
   /** Wanneer de verzendmail is verstuurd; het dashboard mag opnieuw aankloppen. */
   shippedMailSentAt?: string;
+  /**
+   * Wanneer de annuleringsmail is verstuurd. Bewust pas gezet ná een
+   * geslaagde mail: het dashboard mag de webhook herhalen tot dit stempel er
+   * staat, en de klant hoort het nieuws precies één keer.
+   */
+  canceledMailSentAt?: string;
+  /** Reden zoals het dashboard die meegaf bij de annulering. */
+  cancelReason?: string;
   /** Wat de Kluspas op deze bestelling scheelde (euro's). */
   kluspasSavings?: number;
   isTest?: boolean;

@@ -36,6 +36,8 @@ export interface Voucher {
   gebruiktInOrder?: string;
   /** Wanneer de herinneringsmail is verstuurd; voorkomt een tweede. */
   herinnerdOp?: string;
+  /** Gezet bij annulering van de bestelling die de voucher opleverde. */
+  ingetrokkenOp?: string;
 }
 
 export const VOUCHER_GELDIG_MAANDEN = 12;
@@ -182,6 +184,43 @@ export async function verzilverVoucher(code: string, orderRef: string): Promise<
     gebruiktOp: new Date().toISOString(),
     gebruiktInOrder: orderRef,
   });
+}
+
+/* ── Annulering ────────────────────────────────────────────────── */
+
+/**
+ * Trekt een uitgegeven voucher in wanneer de bestelling die hem opleverde
+ * wordt geannuleerd en terugbetaald: de klant krijgt zijn testergeld terug,
+ * dus de tegoedbon erbovenop zou dubbel tellen. Intrekken = per direct laten
+ * verlopen, zodat elke bestaande controle hem als "verlopen" weigert;
+ * `ingetrokkenOp` legt voor de klantenservice vast dat dit geen gewone
+ * vervaldatum was. Al verzilverd? Dan blijven we eraf — dat lost een mens op.
+ */
+export async function trekVoucherIn(
+  code: string,
+): Promise<"ingetrokken" | "al-gebruikt" | "onbekend"> {
+  const voucher = await getVoucher(code);
+  if (!voucher) return "onbekend";
+  if (voucher.gebruiktOp) return "al-gebruikt";
+  const nu = new Date().toISOString();
+  await persist({ ...voucher, geldigTot: nu, ingetrokkenOp: nu });
+  return "ingetrokken";
+}
+
+/**
+ * Maakt een verzilverde voucher weer bruikbaar wanneer de bestelling waarin
+ * hij opging wordt geannuleerd: de korting is dan nooit genoten. Alleen als
+ * hij in precies déze bestelling is ingewisseld — een voucher die (na een
+ * eerdere herstelactie) alweer in een andere order zit, blijft daar.
+ */
+export async function herstelVoucher(code: string, orderRef: string): Promise<boolean> {
+  const voucher = await getVoucher(code);
+  if (!voucher || !voucher.gebruiktOp || voucher.gebruiktInOrder !== orderRef) return false;
+  const hersteld: Voucher = { ...voucher };
+  delete hersteld.gebruiktOp;
+  delete hersteld.gebruiktInOrder;
+  await persist(hersteld);
+  return true;
 }
 
 /* ── Herinnering ───────────────────────────────────────────────── */
