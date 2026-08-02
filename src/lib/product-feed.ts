@@ -601,6 +601,12 @@ function buildSpecs(item: FeedItem, group: FeedItem[]): { label: string; value: 
     if (pakM2Spec) add("Pakinhoud", `${formatteerM2(pakM2Spec)} m² per pak`);
   }
 
+  // Uit de handgeschreven webtekst, zodra de feed die meelevert. De
+  // rekenhulp op de productpagina leest deze regel (coveragePerLiter) en
+  // kan dan liters uitrekenen in plaats van alleen een vuistregel.
+  const rendement = rendementUit(item);
+  if (rendement) add("Rendement", `ca. ${String(rendement).replace(".", ",")} m² per liter`);
+
   add("Artikelnummer", item.id);
 
   return specs;
@@ -1071,6 +1077,24 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
  * De webtekst is HTML; wij tonen alinea's. Blokelementen worden dus
  * alineascheidingen en de rest van de tags verdwijnt.
  */
+/**
+ * Rendement uit de webtekst: "Verbruik: ca. 10 m² per liter",
+ * "Rendement: 16-18 m²/l". Gemeten op Tilroy: 99 producten noemen het zo.
+ * Bij een bereik nemen we het gemiddelde; de rekenhulp zegt er "circa" bij.
+ * Wacht net als de webtekst zelf op de feedvelden — geen veld, geen waarde.
+ */
+function rendementUit(item: FeedItem): number | undefined {
+  const tekst = (item.omschrijving_web ?? "").replace(/<[^>]+>/g, " ");
+  const match = tekst.match(
+    /(?:verbruik|rendement)[^0-9]{0,20}(\d+(?:[.,]\d+)?)\s*(?:-|–|tot\s+)?\s*(\d+(?:[.,]\d+)?)?\s*m[²2]\s*(?:per\s+liter|\/\s*l\b|per\s+l\b)/i,
+  );
+  if (!match) return undefined;
+  const laag = Number(match[1].replace(",", "."));
+  const hoog = match[2] ? Number(match[2].replace(",", ".")) : laag;
+  const waarde = (laag + hoog) / 2;
+  return Number.isFinite(waarde) && waarde > 0 && waarde < 100 ? waarde : undefined;
+}
+
 function webTekstUit(item: FeedItem): string | undefined {
   const ruw = (item.omschrijving_web ?? "").trim();
   if (ruw.length < 60) return undefined;
