@@ -34,14 +34,23 @@ export async function GET() {
 
   // 1. Staan de vaste rubrieken uit de balk er nog? Verandert Tilroy een slug,
   //    dan verdwijnt zo'n knop stilletjes uit het menu.
+  // Elke plek in de balk heeft alternatieven; pas als geen enkel alternatief
+  // bestaat is die plek écht weg en valt de balk terug op de grootste
+  // rubrieken.
   const ontbrekend = HOOFDRUBRIEKEN.filter(
-    (naam) => !menu.some((categorie) => isHoofdrubriek(categorie.name) && categorie.name.toLocaleLowerCase("nl") === naam.toLocaleLowerCase("nl")),
-  );
+    (alternatieven) =>
+      !alternatieven.some((naam) =>
+        menu.some(
+          (categorie) =>
+            categorie.name.trim().toLocaleLowerCase("nl") === naam.toLocaleLowerCase("nl"),
+        ),
+      ),
+  ).map((alternatieven) => alternatieven[0]);
   if (ontbrekend.length > 0) {
     bevindingen.push({
       soort: "vaste-rubriek-weg",
       waar: "menubalk",
-      detail: `Namen uit HOOFDRUBRIEKEN die niet meer bestaan: ${ontbrekend.join(", ")}. De balk valt terug op de grootste rubrieken.`,
+      detail: `Geen enkel alternatief gevonden voor: ${ontbrekend.join(", ")}. De balk valt terug op de grootste rubrieken.`,
     });
   }
 

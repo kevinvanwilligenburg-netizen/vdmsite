@@ -357,8 +357,16 @@ export const FILTER_KEYS: string[] = [
  */
 export function popularFacets(facets: Facet[], max = 8): (FacetOption & { key: string; groep: string })[] {
   const perGroep = facets
+    // Het merkfilter staat altijd als eerste groep direct onder dit rijtje.
+    // Merken hier herhalen leverde precies dat op: "Histor 89" en
+    // "Sikkens 60" twee keer op hetzelfde scherm, met twee vinkjes die
+    // hetzelfde doen. Merken zoekt men bovendien gericht, niet bij toeval.
+    .filter((facet) => facet.key !== "merk")
     .map((facet) =>
       facet.options
+        // Een optie die maar een paar artikelen overhoudt is geen populair
+        // filter maar een doodlopend weggetje ("Oplosmiddel 2").
+        .filter((option) => option.count >= 5)
         .slice(0, 3)
         .map((option) => ({ ...option, key: facet.key, groep: facet.label })),
     )

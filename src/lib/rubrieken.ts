@@ -17,19 +17,28 @@
  * rubrieken" — wat er toevallig goed uitzag, maar niets met deze keuze te
  * maken had. /api/menucheck meldt het nu als een rubriek niet meer bestaat.
  */
-export const HOOFDRUBRIEKEN = [
-  "Verf en Beits",
-  "Verfbenodigdheden",
-  "IJzerwaren",
-  "Behang en wandbekleding",
-  "Lijmen en kitten",
-  "Gereedschap",
+export const HOOFDRUBRIEKEN: string[][] = [
+  // Per plek in de balk een rijtje alternatieven, in volgorde van voorkeur.
+  // De kassa-indeling schuift: op 3 augustus 2026 verdwenen de hoofdgroepen
+  // uit de feed en bleven alleen de subgroepen over — waardoor "Verf en
+  // Beits" nergens meer bestond en er ineens géén verf meer in de menubalk
+  // stond, bij een verfwinkel. Met alternatieven overleeft de balk zo'n
+  // verschuiving: bestaat de hoofdgroep niet, dan pakt hij de grootste
+  // verfrubriek die er wél is.
+  ["Verf en Beits", "Lakken"],
+  ["Verfbenodigdheden", "Schildersgereedschap & schuurpapier"],
+  ["IJzerwaren", "Bevestigingsmaterialen"],
+  ["Behang en wandbekleding", "Behang"],
+  ["Lijmen en kitten", "Lijm, kit & vulmiddelen"],
+  ["Gereedschap", "Handgereedschap"],
 ];
 
 /** Staat deze rubriek vast in de balk? Vergelijkt op naam, hoofdletterloos. */
 export function isHoofdrubriek(naam: string): boolean {
   const gezocht = naam.trim().toLocaleLowerCase("nl");
-  return HOOFDRUBRIEKEN.some((vast) => vast.toLocaleLowerCase("nl") === gezocht);
+  return HOOFDRUBRIEKEN.some((rij) =>
+    rij.some((vast) => vast.toLocaleLowerCase("nl") === gezocht),
+  );
 }
 
 /**

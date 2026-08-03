@@ -49,12 +49,19 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
    * er te weinig, dan vallen we terug op de grootste rubrieken; een menu met
    * de verkeerde volgorde is te overzien, een leeg menu niet.
    */
-  const gekozen = HOOFDRUBRIEKEN.map((naam) =>
-    categories.find(
-      (category) =>
-        category.name.trim().toLocaleLowerCase("nl") === naam.toLocaleLowerCase("nl"),
-    ),
-  ).filter((category): category is MenuCategory => Boolean(category));
+  const gekozen = HOOFDRUBRIEKEN.map((alternatieven) => {
+    for (const naam of alternatieven) {
+      const gevonden = categories.find(
+        (category) =>
+          category.name.trim().toLocaleLowerCase("nl") === naam.toLocaleLowerCase("nl"),
+      );
+      if (gevonden) return gevonden;
+    }
+    return undefined;
+  })
+    .filter((category): category is MenuCategory => Boolean(category))
+    // Twee plekken kunnen op hetzelfde uitkomen als de indeling schuift.
+    .filter((category, index, rij) => rij.findIndex((c) => c.slug === category.slug) === index);
   const inBalk =
     gekozen.length >= 4
       ? gekozen
