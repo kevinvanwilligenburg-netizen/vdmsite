@@ -956,6 +956,14 @@ const SCHOONMAAK_SOORTEN: { naam: string; match: RegExp }[] = [
 ];
 
 function verfijndeSoort(kassaSub: string, titel: string): string | undefined {
+  // Muurverf tussen de lak: 29 artikelen die "Muurverf", "Latex" of
+  // "Sausklaar" in de naam hebben stonden in de kassa onder Lakken, terwijl
+  // er een eigen rubriek Muurverf bestaat. Wie op lak filtert wil geen
+  // muurverf zien, en andersom.
+  if (/^lakken$/i.test(kassaSub.trim()) && /(muurverf|latex|sausklaar|wandverf)/i.test(titel)) {
+    return "Muurverf";
+  }
+
   if (/schildersger/i.test(kassaSub)) {
     const soort = VERFGEREEDSCHAP_SOORTEN.find((entry) => entry.match.test(titel))?.naam;
     if (soort) return soort;
@@ -1652,7 +1660,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v44";
+const KV_KEY = "catalog:products:v45";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

@@ -192,7 +192,7 @@ export function ColorPicker({
    * mee) of pakt de lijst.
    */
   const CHIPS_ZICHTBAAR = 8;
-  const { chips, inLijst } = useMemo(() => {
+  const { chips } = useMemo(() => {
     const zoekt = query.trim().length > 0;
     // Tijdens het zoeken zijn de treffers juist het antwoord: dan alles tonen
     // wat matcht (dat zijn er per definitie weinig).
@@ -332,7 +332,16 @@ export function ColorPicker({
                   tabIndex={index === waaierFocus ? 0 : -1}
                   onFocus={() => setWaaierFocus(index)}
                   onClick={() => kiesWaaier(entry.id)}
+                  /*
+                    Op een telefoon zijn zeven waaierknoppen vijf regels hoog,
+                    en dan blijft er van het kleurenraster nog anderhalve rij
+                    over. Daar staan de kleuren voor niets. Vanaf de derde
+                    knop dus pas zichtbaar op een breder scherm; op mobiel
+                    loopt alles via de keuzelijst ernaast.
+                  */
                   className={`shrink-0 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-sm font-bold transition ${
+                    index >= 2 && !actief ? "hidden sm:inline-flex" : "inline-flex"
+                  } ${
                     actief
                       ? "border-brand bg-brand text-white"
                       : "border-ink/10 bg-white text-ink hover:border-brand hover:text-brand"
@@ -349,16 +358,17 @@ export function ColorPicker({
         {/* De overige waaiers in een lijst in plaats van achter een
             schuifbalk: honderd namen wegslepen naar rechts vindt niemand, en
             op een telefoon vecht dat schuiven met het scrollen van de pagina. */}
-        {inLijst.length > 0 && (
+        {waaierKnoppen.length > 1 && (
           <label className="inline-flex items-center gap-2 text-sm text-ink-soft">
-            <span className="sr-only">Andere kleurwaaier kiezen</span>
+            <span className="sr-only">Kleurwaaier kiezen</span>
+            {/* Alle waaiers, niet alleen de overige: op een telefoon staan er
+                maar twee als knop, dus dit is daar de enige volledige weg. */}
             <select
-              value={inLijst.some((entry) => entry.id === waaier) ? waaier : ""}
+              value={waaier}
               onChange={(event) => event.target.value && kiesWaaier(event.target.value)}
-              className="max-w-52 rounded-full border-2 border-ink/10 bg-white px-3 py-1.5 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
+              className="max-w-56 rounded-full border-2 border-ink/10 bg-white px-3 py-1.5 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
             >
-              <option value="">Meer waaiers ({inLijst.length})…</option>
-              {inLijst.map((entry) => (
+              {waaierKnoppen.map((entry) => (
                 <option key={entry.id} value={entry.id}>
                   {waaierNaam(entry)} ({entry.count.toLocaleString("nl-NL")})
                 </option>
