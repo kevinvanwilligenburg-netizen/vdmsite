@@ -138,8 +138,12 @@ export default async function AccountPage() {
                   : `${kluspunten.punten} punten`}
               </p>
               <p className="mt-1 text-sm text-ink-soft">
+                {/* "Bij elke aankoop" stond hier, en dat klopt niet: op
+                    webshopbestellingen boekt Tilroy geen punten (gemeten over
+                    54 online bonnen: nul). Dat is een instelling op de
+                    webshopvestiging. Zolang die uit staat beloven we het niet. */}
                 {kluspunten.punten === 0
-                  ? "Je spaart automatisch bij elke aankoop met je Kluspas."
+                  ? "Je spaart punten bij elke aankoop in de winkel, op je Kluspas."
                   : `Goed voor ${euros(kluspunten.waarde)} korting, in te wisselen aan de kassa.`}
                 {kluspunten.geldigTot ? ` Geldig tot ${datumLang(kluspunten.geldigTot)}.` : ""}
               </p>

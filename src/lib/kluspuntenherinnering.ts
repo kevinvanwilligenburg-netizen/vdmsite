@@ -12,6 +12,14 @@ import { absoluteUrl, SITE_NAME } from "@/lib/site";
  * groep die met één klus over de streep is, en precies de reden dat een
  * spaarsysteem werkt.
  *
+ * ⚠️ ONLINE BESTELLINGEN LEVEREN OP DIT MOMENT GEEN PUNTEN OP. Het dashboard
+ * mat 54 webshopbonnen over drie maanden: € 5.428 omzet, nul punten, terwijl
+ * de kassa in diezelfde periode 640 bonnen mét punten boekte. Het ligt aan de
+ * vestiging (shop 8934, kassa 15295), niet aan de klant of aan een actie. Dat
+ * is een schakelaar in de Tilroy-backoffice. Zolang die uit staat mag nergens
+ * in deze mail of op de site staan dat je online spaart — daarom "op elke
+ * aankoop in de winkel".
+ *
  * Twee dingen die dit bewust NIET doet:
  *
  * - Zelf uitrekenen hoeveel punten een aankoop oplevert. Tilroy kent per
@@ -109,7 +117,7 @@ export async function stuurBijnaVoucherMail(kandidaat: Kandidaat): Promise<boole
     "",
     `Je saldo bekijken: ${accountUrl}`,
     "",
-    "Je punten spaar je op elke aankoop, in de winkel en online. Inwisselen doe je aan de kassa.",
+    "Je punten spaar je op elke aankoop in de winkel. Inwisselen doe je aan de kassa.",
     "",
     `Groet, ${SITE_NAME}`,
   ].join("\n");
@@ -118,7 +126,7 @@ export async function stuurBijnaVoucherMail(kandidaat: Kandidaat): Promise<boole
     "<p>Hoi,</p>",
     `<p>Je staat op <strong>${puntenTekst} kluspunten</strong>. Nog ${tekortTekst} te gaan en je hebt <strong>${waarde} korting</strong> te besteden.</p>`,
     `<p><a href="${accountUrl}">Bekijk je saldo</a></p>`,
-    "<p>Je punten spaar je op elke aankoop, in de winkel en online. Inwisselen doe je aan de kassa.</p>",
+    "<p>Je punten spaar je op elke aankoop in de winkel. Inwisselen doe je aan de kassa.</p>",
     `<p>Groet,<br>${SITE_NAME}</p>`,
   ].join("");
 

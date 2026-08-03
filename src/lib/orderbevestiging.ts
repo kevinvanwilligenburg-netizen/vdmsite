@@ -17,20 +17,24 @@ import type { Order } from "@/lib/types";
  * kleur is bij te bestellen.
  */
 
-/**
- * Wat deze bestelling met de kluspunten doet.
+/*
+ * HIER STOND EEN REGEL OVER KLUSPUNTEN, EN DIE WAS ONWAAR.
  *
- * De winkel zag de punten tot nu toe op de pakbon staan en printte daar een
- * bon van. Online staat het saldo op de accountpagina; deze regel wijst de
- * klant daarheen.
+ * "Je kluspunten voor deze bestelling worden automatisch bijgeschreven" —
+ * dat gebeurt niet. Het dashboard mat 54 webshopbonnen over drie maanden,
+ * € 5.428 omzet, nul punten. Aan elke bon hing een klant en de
+ * vermenigvuldigingsfactor stond gewoon op 1; het ligt aan de vestiging.
+ * Webshoporders lopen op shop 8934 / kassa 15295 en daar raakt Tilroy het
+ * puntensysteem niet aan. Zelfs het beginsaldo op de bon blijft nul.
  *
- * Bewust GEEN uitgerekend aantal punten erbij. Tilroy kent per verkoop een
- * `LoyaltyMultiplierFactor`, dus tijdens een dubbele-puntenactie klopt
- * "bedrag maal een vast getal" niet meer. Een verkeerd aantal in een
- * bevestigingsmail is erger dan geen aantal.
+ * Dat is een schakelaar in de Tilroy-backoffice, niet iets wat wij vanuit de
+ * Order API kunnen meesturen. Zolang die uit staat zeggen we hier niets over
+ * punten: een belofte in een bevestigingsmail die de kassa niet waarmaakt,
+ * levert een klant op die zich terecht bekocht voelt.
+ *
+ * Gaat de schakelaar aan, zet dan de regel terug (zonder aantal punten erbij:
+ * het tarief loopt in de praktijk van 0,433 tot 1,334 punt per euro).
  */
-const KLUSPUNTEN_TEKST =
-  "Je kluspunten voor deze bestelling worden automatisch bijgeschreven op je Kluspas. Je saldo zie je in je account.";
 
 function regel(order: Order): string[] {
   return order.items.map((item) => {
@@ -97,7 +101,6 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     `Totaal betaald: ${euros(order.total)} (incl. btw)`,
     "",
     levering(order),
-    ...(order.kluspasNumber ? ["", KLUSPUNTEN_TEKST] : []),
     "",
     `Je bestelling volgen: ${orderUrl}`,
     `Je factuur: ${factuurUrl}`,
@@ -122,14 +125,6 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
         : ""
     }<br><strong>Totaal betaald: ${euros(order.total)}</strong> (incl. btw)</p>`,
     `<p>${levering(order)}</p>`,
-    ...(order.kluspasNumber
-      ? [
-          `<p>${KLUSPUNTEN_TEKST.replace(
-            "in je account",
-            `in <a href="${absoluteUrl("/account")}">je account</a>`,
-          )}</p>`,
-        ]
-      : []),
     `<p><a href="${orderUrl}">Volg je bestelling</a> · <a href="${factuurUrl}">Bekijk je factuur</a></p>`,
     `<p>Vragen? Mail <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> of bel ${CONTACT_PHONE}.</p>`,
     `<p>Groet,<br>${SITE_NAME}</p>`,
