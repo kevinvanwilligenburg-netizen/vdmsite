@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Roboto_Condensed } from "next/font/google";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
 
 import { AddedToCart } from "@/components/cart/AddedToCart";
 import { CartProvider } from "@/components/cart/CartProvider";
@@ -189,6 +190,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <CookieBanner />
         </PrijsProvider>
         </ConsentProvider>
+        <Analytics />
       </body>
     </html>
   );
