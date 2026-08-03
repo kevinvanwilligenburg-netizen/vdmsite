@@ -790,11 +790,21 @@ function bruikbareVerpakkingsmaat(maat: string): boolean {
   return true;
 }
 
-/** Zet de glansgraad achter de naam, als die er nog niet in staat. */
+/**
+ * Zet de glansgraad achter de naam, als die er nog niet in staat.
+ *
+ * "Er staat al in" is breder dan letterlijk hetzelfde woord: bij Sikkens
+ * staat de glansgraad in het Engels in de titel, en dan werd het "Sikkens
+ * Rubbol XD High Gloss Hoogglans". Zegt de naam het al, in welke taal dan
+ * ook, dan laten we hem met rust.
+ */
 function metGlans(naam: string, glans: string | undefined): string {
   const waarde = glans?.trim();
   if (!waarde) return naam;
-  return naam.toLowerCase().includes(waarde.toLowerCase()) ? naam : `${naam} ${waarde}`;
+  if (naam.toLowerCase().includes(waarde.toLowerCase())) return naam;
+  const alGenoemd = GLANS_UIT_TITEL.find((entry) => entry.patroon.test(naam))?.glans;
+  if (alGenoemd === waarde) return naam;
+  return `${naam} ${waarde}`;
 }
 
 /**
@@ -1787,7 +1797,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v50";
+const KV_KEY = "catalog:products:v51";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
