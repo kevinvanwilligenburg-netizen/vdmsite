@@ -108,11 +108,15 @@ export function KleurTrechter({
     const lijst = termen[klus.id] ?? ["kwast", "verfroller", "afplaktape"];
     const gekozen: Product[] = [];
     for (const term of lijst) {
+      // Mét foto: een bijverkoopkaartje met een grijs plaatje verkoopt niets
+      // en laat de rij er kapot uitzien. De andere bijverkooplijsten
+      // (winkelwagen, productpagina) eisen dat al; hier ontbrak het.
       const match = producten
         .filter(
           (product) =>
             !product.colorMixable &&
             product.inStock !== false &&
+            Boolean(product.image) &&
             !gekozen.some((entry) => entry.id === product.id) &&
             product.name.toLowerCase().includes(term),
         )
