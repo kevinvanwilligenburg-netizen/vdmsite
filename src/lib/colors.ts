@@ -245,6 +245,45 @@ export async function resolvePaintColor(key: string): Promise<PaintColor | undef
 }
 
 /**
+ * De kleur van een voorgemengd artikel, uit het kleurveld van de kassa.
+ *
+ * Dat veld is rommelig: "6763", "6763 Hoornwit", "Ral 9001", "Wit",
+ * "Monumenten Groen". Voorgemengde blikken hebben in de webshop maar één
+ * foto — het blik — en die zegt niets over de kleur erin. Met deze functie
+ * kunnen we er een echt kleurvlak naast zetten.
+ *
+ * Geeft niets terug bij "NoColour", "Transparant" en andere niet-kleuren:
+ * een vlak tonen dat we niet kennen is erger dan geen vlak.
+ */
+const GEEN_KLEURWAARDE = /^(nocolour|no colour|transparant|blank|kleurloos|-|n\.v\.t\.)$/i;
+
+export async function kleurUitKassaveld(waarde: string): Promise<PaintColor | undefined> {
+  const tekst = (waarde ?? "").trim();
+  if (!tekst || GEEN_KLEURWAARDE.test(tekst)) return undefined;
+
+  // "Ral 9001" en "6763 Hoornwit" beginnen allebei met het nummer dat telt.
+  const nummer = tekst.match(/(?:^|\s)(?:ral\s*)?(\d{4})(?:\s|$)/i)?.[1];
+  if (nummer) {
+    const opRal = await resolvePaintColor(nummer);
+    if (opRal) return opRal;
+    const colors = await loadAllColors();
+    const opCode = colors.find(
+      (color) => (color.code ?? "").replace(/\s/g, "").toLowerCase() === nummer,
+    );
+    if (opCode) return opCode;
+  }
+
+  // Anders op naam: "Monumenten Groen", "Grachtengroen".
+  const colors = await loadAllColors();
+  const genormaliseerd = tekst.toLowerCase().replace(/\s+/g, " ");
+  return colors.find(
+    (color) =>
+      color.name.toLowerCase() === genormaliseerd ||
+      `${color.code} ${color.name}`.toLowerCase() === genormaliseerd,
+  );
+}
+
+/**
  * Kleuren die als eerste in de kiezer horen te staan.
  *
  * De RAL-waaier loopt op nummer, en dan begint hij bij de gelen (1000-serie)

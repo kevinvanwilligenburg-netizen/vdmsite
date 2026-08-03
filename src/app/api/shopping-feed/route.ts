@@ -152,6 +152,22 @@ function regelVoor(product: Product, kleur: PaintColor): string | null {
     )}</g:description>`,
     `<g:link>${xml(link)}</g:link>`,
     `<g:image_link>${xml(product.image!)}</g:image_link>`,
+    // Tweede afbeelding: het kleurvlak zelf. Deze regels gaan over één
+    // specifieke kleur ("Sikkens Rubbol in Museumgroen"), maar de foto toont
+    // altijd hetzelfde blik. In Google Shopping staan zo tientallen
+    // identieke plaatjes naast elkaar; met dit vlak ziet iemand meteen welke
+    // kleur hij aanklikt.
+    ...(kleur.hex
+      ? [
+          `<g:additional_image_link>${xml(
+            absoluteUrl(
+              `/api/kleurplaatje?hex=${encodeURIComponent(kleur.hex)}&code=${encodeURIComponent(
+                kleur.code ?? "",
+              )}&naam=${encodeURIComponent(kleur.name ?? "")}`,
+            ),
+          )}</g:additional_image_link>`,
+        ]
+      : []),
     `<g:availability>${voorradig ? "in stock" : "out of stock"}</g:availability>`,
     `<g:price>${(prijs / 100).toFixed(2)} EUR</g:price>`,
     // Kevin: Google krijgt altijd de Kluspas-prijs te zien. Als sale_price,

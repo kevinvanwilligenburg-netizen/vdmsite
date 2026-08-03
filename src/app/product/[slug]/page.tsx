@@ -15,7 +15,7 @@ import { getWhatsappNummer } from "@/lib/contact";
 import { kleurtestersActief } from "@/lib/instellingen";
 import { GekozenVariantProvider } from "@/components/product/GekozenVariant";
 import { StockList } from "@/components/StockList";
-import { getInitialColors } from "@/lib/colors";
+import { getInitialColors, kleurUitKassaveld } from "@/lib/colors";
 import { bouwProductFaqs } from "@/lib/product-faq";
 import { haalSeoTekst } from "@/lib/seo-tekst";
 import { euro } from "@/lib/format";
@@ -129,6 +129,13 @@ export default async function ProductPage({ params }: Props) {
     kleurtestersActief(),
     getWhatsappNummer(),
   ]);
+
+  // Voorgemengd blik? Dan de echte kleur erbij zoeken, uit dezelfde bron
+  // als de kleurkiezer. Mengbare artikelen slaan we over: daar kiest de
+  // klant de kleur zelf en staat er al een kleurkiezer op de pagina.
+  const voorgemengdeKleur = product.colorMixable
+    ? undefined
+    : await kleurUitKassaveld(product.attributes?.kleur ?? "");
 
   // Vloeren worden per pak van een paar vierkante meter verkocht. Weten we hoe
   // groot dat pak is, dan kan de klant zijn kamer invullen in plaats van zelf
@@ -281,15 +288,45 @@ export default async function ProductPage({ params }: Props) {
             elkaar. Stonden de bezorgblokken onder de foto, dan las je links
             over levertijd terwijl de koopknop rechts al voorbij was. */}
         <div className="min-w-0">
-          <div className="card overflow-hidden lg:sticky lg:top-40">
-            <ProductArt
-              icon={product.art.icon}
-              hue={product.art.hue}
-              image={product.image}
-              size="lg"
-              label={product.name}
-              priority
-            />
+          <div className="lg:sticky lg:top-40">
+            <div className="card overflow-hidden">
+              <ProductArt
+                icon={product.art.icon}
+                hue={product.art.hue}
+                image={product.image}
+                size="lg"
+                label={product.name}
+                priority
+              />
+            </div>
+            {/*
+              Bij een voorgemengd blik toont de foto het blik, niet de kleur —
+              terwijl de klant juist daarvoor komt. Dit vlak zet de echte
+              kleur ernaast, met dezelfde waarde als in de kleurkiezer.
+            */}
+            {voorgemengdeKleur && (
+              <figure className="card mt-3 overflow-hidden">
+                <div
+                  className="h-40 w-full"
+                  style={{ backgroundColor: voorgemengdeKleur.hex }}
+                  role="img"
+                  aria-label={`Kleurvoorbeeld ${voorgemengdeKleur.code} ${voorgemengdeKleur.name}`}
+                />
+                <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 px-4 py-3">
+                  <span className="font-black text-ink">
+                    {voorgemengdeKleur.name}
+                    {voorgemengdeKleur.code ? (
+                      <span className="ml-1.5 font-bold text-ink-soft">
+                        {voorgemengdeKleur.code}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="text-xs text-ink-soft">
+                    Kleur op je scherm is een indicatie
+                  </span>
+                </figcaption>
+              </figure>
+            )}
           </div>
         </div>
 
