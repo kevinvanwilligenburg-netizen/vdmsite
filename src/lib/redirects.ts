@@ -105,9 +105,30 @@ function woorden(tekst: string): string[] {
  */
 function rubriekPast(naam: string, term: string): boolean {
   const naamWoorden = woorden(naam);
-  const termWoorden = new Set(woorden(term));
-  if (naamWoorden.length === 0 || termWoorden.size === 0) return false;
-  return naamWoorden.every((woord) => termWoorden.has(woord));
+  const termWoorden = woorden(term);
+  if (naamWoorden.length === 0 || termWoorden.length === 0) return false;
+  // Alle woorden van de rubrieknaam komen als heel woord in de term voor.
+  if (naamWoorden.every((woord) => termWoorden.includes(woord))) return true;
+  // Of de term ís het eerste woord van de rubriek: "auto" hoort bij
+  // "Auto-accessoires", maar "verfbenodigheden" niet bij "Verf".
+  return termWoorden.length === 1 && naamWoorden[0] === termWoorden[0];
+}
+
+/**
+ * Mogelijke enkelvouden van een meervoud, om in productnamen te zoeken.
+ * Nederlands verdubbelt de medeklinker ("kit" → "kitten"), dus alleen "-en"
+ * afhalen levert "kitt" op en dat staat in geen enkele productnaam.
+ */
+function stammen(term: string): string[] {
+  const kern = vereenvoudig(term);
+  const kandidaten = new Set([kern]);
+  if (kern.endsWith("en")) {
+    const zonder = kern.slice(0, -2);
+    kandidaten.add(zonder);
+    if (/(.)\1$/.test(zonder)) kandidaten.add(zonder.slice(0, -1));
+  }
+  if (kern.endsWith("s")) kandidaten.add(kern.slice(0, -1));
+  return [...kandidaten].filter((woord) => woord.length >= 3);
 }
 
 /**
@@ -183,13 +204,16 @@ async function resolveLegacyCategory(path: string): Promise<string | null> {
   //    is voor Google en klant beter dan de zoekpagina (die op noindex staat).
   const term = termen[0];
   if (term && term.length >= 4) {
-    const kern = vereenvoudig(term).replace(/(en|s)$/, "");
-    const perRubriek = new Map<string, number>();
-    for (const product of producten) {
-      if (!vereenvoudig(product.name).includes(kern)) continue;
-      perRubriek.set(product.category, (perRubriek.get(product.category) ?? 0) + 1);
+    let beste: [string, number] | undefined;
+    for (const stam of stammen(term)) {
+      const perRubriek = new Map<string, number>();
+      for (const product of producten) {
+        if (!vereenvoudig(product.name).includes(stam)) continue;
+        perRubriek.set(product.category, (perRubriek.get(product.category) ?? 0) + 1);
+      }
+      const top = [...perRubriek.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (top && (!beste || top[1] > beste[1])) beste = top;
     }
-    const beste = [...perRubriek.entries()].sort((a, b) => b[1] - a[1])[0];
     // Een handvol treffers kan toeval zijn; pas vanaf tien is het een rubriek.
     if (beste && beste[1] >= 10) return `/categorie/${beste[0]}`;
     if (/-kopen$/.test(laatste)) return `/zoeken?q=${encodeURIComponent(term)}`;
