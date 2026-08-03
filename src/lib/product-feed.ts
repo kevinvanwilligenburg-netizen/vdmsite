@@ -1391,11 +1391,14 @@ async function fetchFeedResponse(attempt = 0): Promise<Response> {
   // Next gooit dan "Page changed from static to dynamic at runtime" en de
   // pagina geeft een 500. Het echte cachen doet Redis.
   const res = await fetch(FEED_URL, {
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(feedGeduldMs()),
     next: { revalidate: 3600 },
   });
+  // In een build is er geen tijd om te wachten en opnieuw te proberen; buiten
+  // een build wel, want dan houdt hooguit één bezoeker het even voor gezien.
+  const maxPogingen = inBuild() ? 0 : 3;
   const retriable = res.status === 403 || res.status === 429 || res.status >= 500;
-  if (retriable && attempt < 3) {
+  if (retriable && attempt < maxPogingen) {
     const wachttijd = 2000 * 2 ** attempt + Math.floor(Math.random() * 500);
     console.warn(
       `[catalogus] feed gaf ${res.status}; opnieuw proberen over ${Math.round(wachttijd / 1000)}s.`,
@@ -1424,9 +1427,18 @@ async function fetchJsonFeed(): Promise<FeedItem[] | null> {
   let url: string | null = `${FEED_JSON_URL}?limit=${PAGE_SIZE}&offset=0`;
   let pagina = 0;
 
+  // Ook de optelsom bewaken: veertien pagina's van elk twaalf seconden past
+  // niet in het bouwbudget van zestig. Loopt het uit, dan stoppen we en laat
+  // de opgeslagen catalogus de build gewoon slagen.
+  const uiterlijkKlaar = Date.now() + (inBuild() ? 25_000 : 5 * 60_000);
+
   while (url && pagina < 40) {
+    if (Date.now() > uiterlijkKlaar) {
+      console.warn("[catalogus] feed duurt te lang voor deze build; opgeslagen versie blijft staan.");
+      return null;
+    }
     const res: Response = await fetch(url, {
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(feedGeduldMs()),
       next: { revalidate: 3600 },
     });
     if (res.status === 404) return null; // endpoint bestaat nog niet
@@ -1535,6 +1547,26 @@ function schreeuwt(naam: string): boolean {
 function zonderKapitalen(naam: string): string {
   const klein = naam.toLocaleLowerCase("nl");
   return klein.charAt(0).toLocaleUpperCase("nl") + klein.slice(1);
+}
+
+/**
+ * Tijdens een build mag de catalogus nooit de deploy gijzelen.
+ *
+ * Next geeft elke build-worker 60 seconden om de paginagegevens te
+ * verzamelen. Ligt de feed eruit — zoals op 3 augustus 2026, toen het
+ * dashboard 60 seconden lang 504's gaf — dan wacht elke worker eerst 45
+ * seconden op JSON, valt daarna terug op XML, en dan is de tijd op: de hele
+ * deploy faalt, ook al gaat de wijziging nergens over de catalogus. Binnen
+ * een build knippen we die poging daarom eerder af; de site draait dan op de
+ * opgeslagen catalogus en de eerste bezoeker na de deploy haalt hem alsnog op.
+ */
+function inBuild(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
+/** Hoe lang één feedverzoek mag duren. */
+function feedGeduldMs(): number {
+  return inBuild() ? 12_000 : 45_000;
 }
 
 async function fetchFeed(): Promise<Product[]> {
