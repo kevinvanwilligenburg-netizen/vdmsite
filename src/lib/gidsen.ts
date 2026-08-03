@@ -26,7 +26,7 @@ export interface Gids {
 function tekstVan(product: Product): string {
   return [
     product.name,
-    product.attributes?.subcategorie ?? "",
+    product.attributes?.subcategorie?.split("|")[0] ?? "",
     product.attributes?.toepassing ?? "",
     product.attributes?.verfsoort ?? "",
   ]

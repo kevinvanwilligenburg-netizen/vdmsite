@@ -85,7 +85,7 @@ export function mengproductenPerSoort(products: Product[], limit = 6): Mengprodu
     // De feed markeert ook randgevallen als mengbaar (afbijt, verdunner);
     // die horen niet in de etalage van een kleurpagina.
     if (/afbijt|verdunner|thinner|reiniger|ontvetter/i.test(product.name)) continue;
-    const soort = product.attributes?.subcategorie ?? "Overige verf";
+    const soort = product.attributes?.subcategorie?.split("|")[0] ?? "Overige verf";
     const lijst = perSoort.get(soort);
     if (lijst) lijst.push(product);
     else perSoort.set(soort, [product]);

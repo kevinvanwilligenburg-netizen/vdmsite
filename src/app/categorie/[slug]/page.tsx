@@ -52,7 +52,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     const oud = params.slug.toLocaleLowerCase("nl");
     const treffer = producten.find(
       (product) =>
-        slugify(product.attributes?.subcategorie ?? "") === oud &&
+        slugify(product.attributes?.subcategorie?.split("|")[0] ?? "") === oud &&
         product.category !== params.slug,
     );
     if (treffer) {

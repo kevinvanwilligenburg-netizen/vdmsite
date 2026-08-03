@@ -94,7 +94,7 @@ export const KLEURKLUSSEN: Kleurklus[] = [
 function hooiberg(product: Product): string {
   return [
     product.name,
-    product.attributes?.subcategorie,
+    product.attributes?.subcategorie?.split("|")[0],
     product.attributes?.verfsoort,
     product.attributes?.toepassing,
     product.attributes?.ondergrond,

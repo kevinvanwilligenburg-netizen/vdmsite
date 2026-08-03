@@ -956,6 +956,17 @@ const SCHOONMAAK_SOORTEN: { naam: string; match: RegExp }[] = [
 ];
 
 function verfijndeSoort(kassaSub: string, titel: string): string | undefined {
+  // Transparante afwerklakken horen in twee rubrieken thuis (keuze Kevin):
+  // een parketlak ís een vernislaag, maar wie "lak" zoekt moet hem ook
+  // vinden. Het filter leest meerdere waarden gescheiden door een pijp, dus
+  // hij verschijnt onder allebei zonder dat het product dubbel bestaat.
+  if (
+    /^beits, olie en vernis$/i.test(kassaSub.trim()) &&
+    /(blanke lak|meubellak|parketlak|vloerlak|pantserlak|jachtlak|bootlak)/i.test(titel)
+  ) {
+    return "Beits, olie en vernis|Lakken";
+  }
+
   // Muurverf tussen de lak: 29 artikelen die "Muurverf", "Latex" of
   // "Sausklaar" in de naam hebben stonden in de kassa onder Lakken, terwijl
   // er een eigen rubriek Muurverf bestaat. Wie op lak filtert wil geen
@@ -1671,7 +1682,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v46";
+const KV_KEY = "catalog:products:v47";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

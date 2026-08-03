@@ -206,8 +206,16 @@ export async function getMenu(): Promise<MenuCategory[]> {
     const soortCounts = new Map<string, number>();
     const merkCounts = new Map<string, number>();
     for (const product of inCategory) {
-      const soort = product.attributes?.subcategorie;
-      if (soort) soortCounts.set(soort, (soortCounts.get(soort) ?? 0) + 1);
+      // Een artikel kan in twee rubrieken horen (een parketlak is vernis én
+      // lak); die staan als "A|B" in het kenmerk, net als bij de andere
+      // filters. Allebei apart tellen, anders komt "Vernis|Lakken" als één
+      // onleesbare knop in het menu.
+      for (const soort of (product.attributes?.subcategorie ?? "")
+        .split("|")
+        .map((waarde) => waarde.trim())
+        .filter(Boolean)) {
+        soortCounts.set(soort, (soortCounts.get(soort) ?? 0) + 1);
+      }
       if (isEchtMerk(product.brand)) {
         const naam = merknaam(product.brand!);
         merkCounts.set(naam, (merkCounts.get(naam) ?? 0) + 1);

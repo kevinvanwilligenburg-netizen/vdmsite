@@ -192,9 +192,9 @@ async function resolveLegacyCategory(path: string): Promise<string | null> {
     const gezocht = vereenvoudig(term);
     if (!gezocht) continue;
     const treffer = producten.find(
-      (product) => vereenvoudig(product.attributes?.subcategorie ?? "") === gezocht,
+      (product) => vereenvoudig(product.attributes?.subcategorie?.split("|")[0] ?? "") === gezocht,
     );
-    if (treffer?.attributes?.subcategorie) {
+    if (treffer?.attributes?.subcategorie?.split("|")[0]) {
       return `/categorie/${treffer.category}?subcategorie=${encodeURIComponent(
         treffer.attributes.subcategorie,
       )}`;

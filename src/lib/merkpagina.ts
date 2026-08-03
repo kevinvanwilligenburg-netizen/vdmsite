@@ -49,7 +49,7 @@ export interface MerkFeiten {
 function rubriekNaam(product: Product): string {
   return (
     product.attributes?.hoofdgroep?.trim() ||
-    product.attributes?.subcategorie?.trim() ||
+    product.attributes?.subcategorie?.split("|")[0]?.trim() ||
     ""
   );
 }

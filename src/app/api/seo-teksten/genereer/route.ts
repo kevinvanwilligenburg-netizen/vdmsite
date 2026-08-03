@@ -89,7 +89,7 @@ export async function GET(request: Request) {
           ander.id !== product.id &&
           metTekst.has(ander.id) &&
           (ander.brand === product.brand ||
-            ander.attributes?.subcategorie === product.attributes?.subcategorie),
+            ander.attributes?.subcategorie?.split("|")[0] === product.attributes?.subcategorie?.split("|")[0]),
       )
       .slice(0, 6)
       .map((ander) => metTekst.get(ander.id) as string);
