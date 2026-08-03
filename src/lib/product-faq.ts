@@ -78,6 +78,18 @@ export function bouwProductFaqs(
     });
   }
 
+  // "rubbol xd droogtijd" is precies zo'n zoekopdracht waar de concurrent nu
+  // op binnenkomt. Alleen beantwoorden met wat de fabrikant opgeeft; de
+  // waarschuwing erbij, want overschilderen mag meestal pas veel later dan
+  // stofdroog.
+  const droogtijd = attr.droogtijd?.trim();
+  if (droogtijd) {
+    faqs.push({
+      q: `Hoe lang moet ${product.name} drogen?`,
+      a: `De opgegeven droogtijd is ${droogtijd.toLowerCase()}. Dat is de tijd tot stofdroog of aanraakdroog; voor een volgende laag heb je meestal langer nodig — lees dat na op de verpakking. Bij lage temperaturen en hoge luchtvochtigheid duurt drogen altijd langer dan opgegeven.`,
+    });
+  }
+
   const toepassing = attr.toepassing?.trim();
   if (toepassing) {
     faqs.push({

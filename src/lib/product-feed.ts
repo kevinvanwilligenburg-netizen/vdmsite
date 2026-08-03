@@ -593,6 +593,10 @@ function buildSpecs(item: FeedItem, group: FeedItem[]): { label: string; value: 
   add("Ondergrond", item.ondergrondList?.replace(/\|/g, ", ") || item.ondergrond);
   add("Eigenschappen", item.eigenschappen?.replace(/\|/g, ", "));
   add("Kwaliteit", item.kwaliteit);
+  // Staat als veld al in de feed maar was tot nu toe leeg; het dashboard vult
+  // hem uit Tilroy's featureFeed (1.871 artikelen). Nooit zelf invullen: een
+  // verzonnen droogtijd kost iemand zijn tweede laag.
+  add("Droogtijd", item.droogtijd);
 
   // Uit de titel gelezen kenmerken (zie soorten.ts en vloer.ts): dezelfde
   // gegevens waar de filters op draaien, dus de tabel en de filterkolom
@@ -997,6 +1001,7 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
   const kassaSub = (leader.categorie_sub ?? "").trim() || subcategoryOf(leader.categories) || "";
   add("subcategorie", verfijndeSoort(kassaSub, leader.title ?? "") || kassaSub);
   add("glans", leader.glans);
+  add("droogtijd", leader.droogtijd);
   add("verfsoort", leader.verfsoort);
   // Binnen/buiten is hét eerste filter waar een verfkoper op klikt (zo ook
   // bij verfwinkel.nl), maar de kassa vult het veld op nog geen vijf procent
