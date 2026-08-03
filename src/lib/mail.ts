@@ -31,7 +31,22 @@ export type MailResultaat =
   | { ok: true; via: "dashboard" | "resend" }
   | { ok: false; reden: string };
 
-const AFZENDER = process.env.MAIL_FROM ?? "De Voordeelmarkt <noreply@devoordeelmarkt.nl>";
+/**
+ * De afzender.
+ *
+ * `RESEND_FROM` staat in Vercel (noreply@devoordeelmarkt.nl, domein
+ * goedgekeurd in Resend op 3 augustus 2026); `MAIL_FROM` is de oudere naam en
+ * blijft werken. Staat er alleen een adres zonder naam, dan zetten we
+ * "De Voordeelmarkt" ervoor: in de inbox lees je anders alleen "noreply".
+ */
+const AFZENDER = metNaam(
+  process.env.MAIL_FROM ?? process.env.RESEND_FROM ?? "noreply@devoordeelmarkt.nl",
+);
+
+function metNaam(afzender: string): string {
+  const waarde = afzender.trim();
+  return waarde.includes("<") ? waarde : `De Voordeelmarkt <${waarde}>`;
+}
 
 async function viaDashboard(bericht: MailBericht): Promise<MailResultaat | null> {
   const sleutel = process.env.SITE_API_KEY;

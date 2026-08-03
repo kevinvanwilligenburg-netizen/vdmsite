@@ -94,6 +94,9 @@ export function CheckoutForm({
   // wat we alvast laten zien.
   const [klantType, setKlantType] = useState<"particulier" | "zakelijk">("particulier");
   const [accountAanmaken, setAccountAanmaken] = useState(false);
+  // Inlogblok bovenin, dichtgeklapt tot iemand er zelf op klikt: wie als gast
+  // wil afrekenen mag daar geen drempel bij krijgen.
+  const [inlogOpen, setInlogOpen] = useState(false);
   const [profpas, setProfpas] = useState(false);
   const [kvkNummer, setKvkNummer] = useState("");
   const [btwNummer, setBtwNummer] = useState("");
@@ -477,6 +480,42 @@ export function CheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_380px]">
       <div className="space-y-8">
+        {/*
+          "Ben je al klant?" bovenaan. Kevin: "ik kan niet inloggen bij
+          afrekenen; zou mooi zijn dat je bovenin iets hebt."
+
+          Inloggen zat alleen verstopt in het kortingsblok naast het overzicht,
+          en dat blok verschijnt pas als er Kluspas-korting op het mandje zit.
+          Zonder korting was er dus helemaal geen manier om in te loggen. Nu
+          staat het bovenaan, waar elke webshop het heeft, en dichtgeklapt:
+          afrekenen als gast blijft de kortste weg.
+        */}
+        {!ingelogdAls && (
+          <div className="rounded-xl bg-brand-light px-4 py-3 ring-1 ring-brand/20">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold text-ink">
+                Ben je al klant?{" "}
+                <span className="font-normal text-ink-soft">
+                  Log in, dan staan je gegevens en korting er meteen goed.
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setInlogOpen((open) => !open)}
+                aria-expanded={inlogOpen}
+                className="shrink-0 rounded-lg border-2 border-brand px-3 py-1.5 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
+              >
+                {inlogOpen ? "Sluiten" : "Inloggen"}
+              </button>
+            </div>
+            {inlogOpen && (
+              <div className="mt-1 max-w-sm">
+                <InlogInline startEmail={email} onKlaar={() => setInlogOpen(false)} />
+              </div>
+            )}
+          </div>
+        )}
+
         <section className="card p-6">
           <h2 className="text-lg font-black text-ink">1. Bezorgen of afhalen?</h2>
           {/* Zit er iets in het mandje dat niet in een pakket past, dan is

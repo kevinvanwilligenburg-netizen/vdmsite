@@ -161,17 +161,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         {/*
-          Tag Manager staat UIT op verzoek van Kevin (30 juli 2026): het script
-          botste met een ander script op de huidige site. De container bestaat
-          wel (GTM-MSHWXMG5) en NEXT_PUBLIC_GTM_ID staat in Vercel, dus dit
-          weer aanzetten is één regel terugzetten — de Consent Mode eronder
-          blijft gewoon staan en zet de standen alvast goed.
+          Tag Manager (GTM-MSHWXMG5) stond uit sinds 30 juli 2026: het script
+          botste met iets op de oude site. Op verzoek van Kevin weer aan
+          (3 augustus 2026). Dat kan nu ook: dit is een nieuwe site met een
+          eigen scriptset, dus de botsing van toen speelt hier niet.
 
-          Zoek eerst uit wélk script botste voordat je 'm terugzet; anders
-          komt hetzelfde probleem terug op het moment dat er echt gemeten
-          wordt.
+          De Consent Mode hierboven staat vóór elke Google-tag en zet de
+          standen alvast op geweigerd; pas als iemand de cookiebanner accepteert
+          gaan ze open. Meet GTM straks niets, kijk dan éérst daar.
         */}
-        {/* <GoogleTagManager /> */}
+        <GoogleTagManager />
         <JsonLd data={organizationJsonLd(rating)} />
         <JsonLd data={websiteJsonLd} />
         <a

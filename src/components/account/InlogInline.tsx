@@ -87,10 +87,22 @@ export function InlogInline({
       <label htmlFor="inline-email" className="sr-only">
         E-mailadres
       </label>
+      {/*
+        Geen `required` en geen `pattern`, hoe verleidelijk ook.
+
+        Dit blok staat binnen het <form> van de checkout (zie de toelichting
+        hieronder). De browser valideert bij het afrekenen élk veld in dat
+        formulier, dus een leeg inlogveld hield de hele bestelling tegen met
+        "vul dit veld in" — terwijl inloggen hier optioneel is en alleen om de
+        Kluspas-korting gaat. Kevin: "stuur mij een code veld is verplicht maar
+        dat hoeft niet."
+
+        Wat er wél moet gebeuren bewaken we in JavaScript: de knop hieronder
+        controleert het adres en de code-knop staat pas aan bij zes cijfers.
+      */}
       <input
         id="inline-email"
         type="email"
-        required
         autoComplete="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
@@ -106,7 +118,7 @@ export function InlogInline({
       <button
         type="button"
         onClick={() => void vraagCode()}
-        disabled={bezig}
+        disabled={bezig || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
         className="btn btn-primary w-full py-2 text-sm disabled:opacity-60"
       >
         {bezig ? "Bezig…" : "Stuur mij een code"}
@@ -132,8 +144,6 @@ export function InlogInline({
         id="inline-code"
         inputMode="numeric"
         autoComplete="one-time-code"
-        required
-        pattern="\d{6}"
         maxLength={6}
         value={code}
         onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
