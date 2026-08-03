@@ -273,15 +273,35 @@ export async function kleurUitKassaveld(waarde: string): Promise<PaintColor | un
     if (opCode) return opCode;
   }
 
+  // Een kaal kleurwoord is geen kleur. "Wit" staat op 75 artikelen en komt in
+  // het kleurenbestand zes keer voor met zes verschillende hexwaarden; welke
+  // je pakt is dan toeval. Bij verf is een gegokte tint erger dan geen vlak —
+  // vandaar liever niets. (Gevonden door de Klus=r-sessie, die bij zichzelf
+  // "Geel" op een oranje hex zag uitkomen.)
+  if (KAAL_KLEURWOORD.test(tekst)) return undefined;
+
   // Anders op naam: "Monumenten Groen", "Grachtengroen".
   const colors = await loadAllColors();
   const genormaliseerd = tekst.toLowerCase().replace(/\s+/g, " ");
-  return colors.find(
+  const treffers = colors.filter(
     (color) =>
       color.name.toLowerCase() === genormaliseerd ||
       `${color.code} ${color.name}`.toLowerCase() === genormaliseerd,
   );
+  if (treffers.length === 0) return undefined;
+
+  // Ook een specifieke naam kan in meerdere waaiers voorkomen met net andere
+  // tinten ("Antraciet" in vier smaken). Alleen tonen als iedereen het eens is.
+  const hexes = new Set(treffers.map((kleur) => kleur.hex.toLowerCase()));
+  return hexes.size === 1 ? treffers[0] : undefined;
 }
+
+/**
+ * Kleurwoorden die op zichzelf niets vastleggen. Met of zonder voorvoegsel
+ * ("gebroken wit", "licht grijs") blijft het een omschrijving, geen kleur.
+ */
+const KAAL_KLEURWOORD =
+  /^(licht|donker|gebroken|zacht|warm|koel|extra)?\s*(wit|zwart|grijs|groen|blauw|rood|geel|bruin|beige|creme|crème|oranje|paars|roze|zilver|goud|antraciet|ivoor|taupe|okergeel|antiek\s+\w+)$/i;
 
 /**
  * Kleuren die als eerste in de kiezer horen te staan.
