@@ -110,6 +110,27 @@ function bedrijfsregel(): string {
 }
 
 /**
+ * Waar het logo in de mail vandaan komt.
+ *
+ * Niet van `absoluteUrl()`. Dat wijst naar devoordeelmarkt.nl, en zolang dat
+ * domein nog de oude site serveert, geeft het een 404 — in de inbox een
+ * kapot plaatje met de alt-tekst ernaast. Precies wat Kevin op zijn scherm
+ * zag.
+ *
+ * Het vercel.app-adres blijft ook ná de domeinomzetting gewoon werken (het is
+ * het productie-alias van hetzelfde project), dus dit is geen tijdelijke
+ * kunstgreep die je later moet terugdraaien. Wie het toch wil verzetten, zet
+ * `MAIL_LOGO_URL`.
+ *
+ * Mailclients kennen geen SVG en geen next/image, dus een gewone PNG.
+ */
+function mailLogoUrl(): string {
+  const eigen = process.env.MAIL_LOGO_URL?.trim();
+  if (eigen) return eigen;
+  return "https://vdmsite.vercel.app/logo/logo-vdm.png";
+}
+
+/**
  * Zet een stuk mail-HTML in de huisstijl.
  *
  * `inhoud` is de kern van het bericht; kop en voet komen hiervandaan. Geef
@@ -125,10 +146,7 @@ export async function mailInHuisstijl({
   voorbeeldtekst?: string;
 }): Promise<string> {
   const winkels = await winkelblok();
-  // Het logo als gewone afbeelding: mailclients kennen geen SVG en geen
-  // next/image. Blokkeert de client afbeeldingen, dan valt hij terug op de
-  // alt-tekst, en die leest gewoon als onze naam.
-  const logo = absoluteUrl("/logo/logo-vdm.png");
+  const logo = mailLogoUrl();
 
   return `<!DOCTYPE html>
 <html lang="nl">
@@ -149,17 +167,28 @@ ${
   <tr>
     <td align="center" style="padding:24px 12px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+        <!-- Oranje streep bovenlangs: geeft de mail meteen een gezicht, ook
+             als de mailclient afbeeldingen blokkeert. -->
         <tr>
-          <td style="padding:22px 24px 14px 24px;">
-            <img src="${logo}" alt="${esc(SITE_NAME)}" width="150" height="82"
-                 style="display:block;border:0;width:150px;height:auto;">
-            <p style="margin:10px 0 0 0;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.04em;color:${ORANJE};">
-              ${esc(SITE_TAGLINE)}
-            </p>
+          <td style="height:5px;line-height:5px;font-size:0;background:${ORANJE};">&nbsp;</td>
+        </tr>
+        <tr>
+          <td style="padding:20px 24px 16px 24px;border-bottom:1px solid ${LIJN};">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <img src="${logo}" alt="${esc(SITE_NAME)}" width="132"
+                       style="display:block;border:0;width:132px;max-width:132px;height:auto;">
+                </td>
+                <td align="right" style="vertical-align:middle;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.04em;color:${ORANJE};line-height:1.4;">
+                  ${esc(SITE_TAGLINE)}
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
         <tr>
-          <td style="padding:6px 24px 20px 24px;font-size:15px;line-height:1.6;color:${INKT};">
+          <td style="padding:20px 24px;font-size:15px;line-height:1.6;color:${INKT};">
             ${inhoud}
           </td>
         </tr>
