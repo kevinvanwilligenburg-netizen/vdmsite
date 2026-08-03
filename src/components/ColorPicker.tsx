@@ -12,7 +12,12 @@ import {
 } from "@/components/kleur/waaier";
 import type { PaintColor } from "@/lib/types";
 
-const STANDAARD_WAAIER = "ral";
+// De kiezer opent op de kleuren waar de mengmachine dagelijks op draait.
+// Beginnen bij de volledige RAL-waaier betekende scrollen langs 166 tinten
+// voordat je bij wit was — en wit is verreweg het meest verkocht.
+const STANDAARD_WAAIER = "populair";
+/** De waaier waarvan we de kleuren al meegeleverd krijgen (initialColors). */
+const MEEGELEVERDE_WAAIER = "ral";
 const KAARTJES_PER_KEER = 240;
 
 /** Zwart of wit vinkje op een staal, afhankelijk van hoe donker de kleur is. */
@@ -113,7 +118,9 @@ export function ColorPicker({
   // Kleuren ophalen bij een andere zoekterm of waaier.
   useEffect(() => {
     const term = query.trim();
-    if (term === "" && waaier === STANDAARD_WAAIER) {
+    // Alleen de meegeleverde waaier kan zonder ophalen; de kiezer opent op
+    // Populair en die tien kleuren komen wél van de server.
+    if (term === "" && waaier === MEEGELEVERDE_WAAIER) {
       setColors(initialColors);
       setTotal(initialColors.length);
       setLoading(false);
@@ -193,19 +200,66 @@ export function ColorPicker({
    */
   const CHIPS_ZICHTBAAR = 8;
   const { chips } = useMemo(() => {
+    // "Alle waaiers" staat in de keuzelijst en hoeft er niet ook nog als knop
+    // bij; die plek gaat naar een waaier waar iemand echt op klikt.
+    const zonderAlles = waaierKnoppen.filter((entry) => entry.id !== ALLE_WAAIERS);
     const zoekt = query.trim().length > 0;
     // Tijdens het zoeken zijn de treffers juist het antwoord: dan alles tonen
     // wat matcht (dat zijn er per definitie weinig).
-    if (zoekt) return { chips: waaierKnoppen, inLijst: [] as typeof waaierKnoppen };
-    const eerste = waaierKnoppen.slice(0, CHIPS_ZICHTBAAR);
-    const rest = waaierKnoppen.slice(CHIPS_ZICHTBAAR);
+    if (zoekt) return { chips: zonderAlles };
+    const eerste = zonderAlles.slice(0, CHIPS_ZICHTBAAR);
+    const rest = zonderAlles.slice(CHIPS_ZICHTBAAR);
     // De gekozen waaier hoort zichtbaar te zijn, ook als hij achteraan staat.
     const actief = rest.find((entry) => entry.id === waaier);
-    return {
-      chips: actief ? [...eerste, actief] : eerste,
-      inLijst: rest,
-    };
+    return { chips: actief ? [...eerste, actief] : eerste };
   }, [waaierKnoppen, waaier, query]);
+
+  /*
+   * De keuzelijst met álle waaiers, op alfabet en met een zoekveldje.
+   *
+   * Een gewone <select> kan niet zoeken, en met 150 waaiers scrol je je suf
+   * langs een lijst op grootte — dan moet je weten hoe groot "Trimetal Colour
+   * Index 2" is om hem te vinden. Op naam gesorteerd staat alles waar je het
+   * zoekt, en wie de naam half weet typt hem.
+   */
+  const [lijstOpen, setLijstOpen] = useState(false);
+  const [lijstZoek, setLijstZoek] = useState("");
+  const lijstRef = useRef<HTMLDivElement | null>(null);
+
+  const alleWaaiersOpNaam = useMemo(() => {
+    const alles = [
+      { id: ALLE_WAAIERS, name: "Alle waaiers", count: totaalAantal },
+      ...waaiers,
+    ];
+    return [...alles].sort((a, b) =>
+      waaierNaam(a).localeCompare(waaierNaam(b), "nl", { sensitivity: "base" }),
+    );
+  }, [waaiers, totaalAantal]);
+
+  const lijstTreffers = useMemo(() => {
+    const term = lijstZoek.trim().toLowerCase();
+    if (!term) return alleWaaiersOpNaam;
+    return alleWaaiersOpNaam.filter((entry) =>
+      waaierNaam(entry).toLowerCase().includes(term),
+    );
+  }, [alleWaaiersOpNaam, lijstZoek]);
+
+  // Buiten de lijst klikken sluit hem; anders blijft hij over de kleuren staan.
+  useEffect(() => {
+    if (!lijstOpen) return;
+    const buitenom = (event: MouseEvent) => {
+      if (!lijstRef.current?.contains(event.target as Node)) setLijstOpen(false);
+    };
+    const opToets = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLijstOpen(false);
+    };
+    document.addEventListener("mousedown", buitenom);
+    document.addEventListener("keydown", opToets);
+    return () => {
+      document.removeEventListener("mousedown", buitenom);
+      document.removeEventListener("keydown", opToets);
+    };
+  }, [lijstOpen]);
 
   // De actieve waaier in beeld schuiven; met honderden waaiers staat hij
   // anders buiten het zichtbare stuk van de rij.
@@ -358,23 +412,69 @@ export function ColorPicker({
         {/* De overige waaiers in een lijst in plaats van achter een
             schuifbalk: honderd namen wegslepen naar rechts vindt niemand, en
             op een telefoon vecht dat schuiven met het scrollen van de pagina. */}
-        {waaierKnoppen.length > 1 && (
-          <label className="inline-flex items-center gap-2 text-sm text-ink-soft">
-            <span className="sr-only">Kleurwaaier kiezen</span>
-            {/* Alle waaiers, niet alleen de overige: op een telefoon staan er
-                maar twee als knop, dus dit is daar de enige volledige weg. */}
-            <select
-              value={waaier}
-              onChange={(event) => event.target.value && kiesWaaier(event.target.value)}
-              className="max-w-56 rounded-full border-2 border-ink/10 bg-white px-3 py-1.5 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
+        {waaiers.length > 0 && (
+          <div ref={lijstRef} className="relative">
+            <button
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={lijstOpen}
+              onClick={() => {
+                setLijstOpen((open) => !open);
+                setLijstZoek("");
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink/10 bg-white px-4 py-1.5 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
             >
-              {waaierKnoppen.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {waaierNaam(entry)} ({entry.count.toLocaleString("nl-NL")})
-                </option>
-              ))}
-            </select>
-          </label>
+              Alle waaiers ({waaiers.length})
+              <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 opacity-60" aria-hidden>
+                <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            </button>
+
+            {lijstOpen && (
+              <div
+                role="listbox"
+                aria-label="Kies een kleurwaaier"
+                className="absolute left-0 top-full z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border-2 border-ink/10 bg-white shadow-lift"
+              >
+                <div className="border-b border-ink/10 p-2">
+                  <input
+                    autoFocus
+                    value={lijstZoek}
+                    onChange={(event) => setLijstZoek(event.target.value)}
+                    placeholder="Zoek een waaier…"
+                    aria-label="Zoek een waaier"
+                    className="input w-full py-1.5 text-sm"
+                  />
+                </div>
+                <ul className="max-h-72 overflow-y-auto py-1">
+                  {lijstTreffers.length === 0 && (
+                    <li className="px-3 py-2 text-sm text-ink-soft">Geen waaier gevonden.</li>
+                  )}
+                  {lijstTreffers.map((entry) => (
+                    <li key={entry.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={entry.id === waaier}
+                        onClick={() => {
+                          kiesWaaier(entry.id);
+                          setLijstOpen(false);
+                        }}
+                        className={`flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-brand-light ${
+                          entry.id === waaier ? "font-black text-brand" : "font-semibold text-ink"
+                        }`}
+                      >
+                        <span className="truncate">{waaierNaam(entry)}</span>
+                        <span className="shrink-0 text-xs font-normal text-ink-soft">
+                          {entry.count.toLocaleString("nl-NL")}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
