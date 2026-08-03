@@ -1,36 +1,24 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-
 import Image from "next/image";
 import Link from "next/link";
 
-/**
- * Het échte logobestand, zodra het er staat.
- *
- * Kevin: "Logo is geen officieel logo maar zijn zelfgemaakte vakken met tekst
- * erin." Klopt, en hij stond gewoon in het huisstijlpakket dat we al hadden:
- * "LOGO vdm 2022.png" uit HUISSTIJL VDM 2022 map.zip, 845 bij 461 met
- * transparante achtergrond. Die staat nu in public/logo en wordt gebruikt.
- *
- * De natekening hieronder blijft staan als vangnet: haalt iemand het bestand
- * weg, dan valt de site daarop terug in plaats van op een gat in de header.
- * Komt er een SVG uit het pakket, zet die er dan naast als logo-vdm.svg; die
- * wint vanzelf.
- */
-const LOGOMAP = join(process.cwd(), "public", "logo");
-const OFFICIEEL = ["logo-vdm.svg", "logo-vdm.png"]
-  .map((naam) => ({ naam, pad: join(LOGOMAP, naam) }))
-  .find((entry) => existsSync(entry.pad));
+import logoVdm from "../../public/logo/logo-vdm.png";
 
 /**
- * Logo van De Voordeelmarkt, nagebouwd als inline SVG naar "LOGO vdm 2022.png"
- * uit het officiële huisstijlpakket (nagemeten op de pixel, 1 aug 2026):
- * afgeronde badge met witte rand, zwart bovenvlak "DE VOORDEEL" (DE wit,
- * VOORDEEL oranje), en een HORIZONTALE scheidslijn op 36,7% van de hoogte —
- * de eerdere schuine lijn en de 50/50-verdeling kwamen uit een oudere
- * aangeleverde afbeelding en wijken af van het echte logo. Het oranje in het
- * logo is #F5821F (het huisstijl-oranje), niet het fellere #FF8200 van de
- * actiebalken; de letters staan in Muller, het echte logoletterype.
+ * Het officiële logo.
+ *
+ * Kevin: "Logo is geen officieel logo maar zijn zelfgemaakte vakken met tekst
+ * erin." Klopte: hier stond een natekening in SVG. Het echte bestand zat
+ * gewoon in het huisstijlpakket dat we al hadden ("LOGO vdm 2022.png" uit
+ * HUISSTIJL VDM 2022 map.zip, 845 bij 461, transparant) en staat nu in
+ * public/logo.
+ *
+ * Bewust een statische import en géén controle of het bestand bestaat. Dat
+ * laatste stond hier eerst en werkte niet: op Vercel zit public/ niet in de
+ * serverbundel, dus op elke dynamisch gerenderde pagina viel hij terug op de
+ * natekening en stonden er twee verschillende logo's op één site. Zo faalt de
+ * build als het bestand weg is, en dat is een duidelijker signaal.
+ *
+ * Komt er een SVG uit het pakket, vervang dan de import hierboven.
  */
 export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
   return (
@@ -39,76 +27,16 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
       aria-label="De Voordeelmarkt – naar de homepage"
       className="inline-flex shrink-0"
     >
-      {OFFICIEEL ? (
-        <Image
-          src={`/logo/${OFFICIEEL.naam}`}
-          alt=""
-          // De maat van "LOGO vdm 2022.png" uit het huisstijlpakket. Next
-          // heeft de verhouding nodig; de klasse bepaalt de echte hoogte.
-          width={845}
-          height={461}
-          priority
-          className={`${className} object-contain`}
-        />
-      ) : (
-        <Natekening className={className} />
-      )}
+      <Image
+        src={logoVdm}
+        alt=""
+        priority
+        // Het logo staat in de header, dus hij is altijd klein: een breedte
+        // meegeven scheelt Next het uitserveren van een veel te groot plaatje.
+        sizes="180px"
+        className={`${className} object-contain`}
+      />
     </Link>
-  );
-}
-
-function Natekening({ className }: { className: string }) {
-  return (
-      <svg viewBox="0 0 300 176" className={className} aria-hidden>
-        <defs>
-          <clipPath id="vdm-logo-clip">
-            <rect x="6" y="6" width="288" height="164" rx="18" />
-          </clipPath>
-        </defs>
-        <rect x="6" y="6" width="288" height="164" rx="18" fill="#141414" />
-        <rect
-          x="6"
-          y="64.5"
-          width="288"
-          height="105.5"
-          clipPath="url(#vdm-logo-clip)"
-          fill="#F5821F"
-        />
-        <rect
-          x="4"
-          y="4"
-          width="292"
-          height="168"
-          rx="20"
-          fill="none"
-          stroke="#FFFFFF"
-          strokeWidth="7"
-        />
-        <text
-          x="24"
-          y="50"
-          fontFamily="'Muller Logo', 'Muller', var(--font-vdm), 'Arial Black', Arial, sans-serif"
-          fontWeight="900"
-          fontSize="34"
-          fill="#FFFFFF"
-          textLength="252"
-          lengthAdjust="spacingAndGlyphs"
-        >
-          DE <tspan fill="#F5821F">VOORDEEL</tspan>
-        </text>
-        <text
-          x="24"
-          y="150"
-          fontFamily="'Muller Logo', 'Muller', var(--font-vdm), 'Arial Black', Arial, sans-serif"
-          fontWeight="900"
-          fontSize="66"
-          fill="#FFFFFF"
-          textLength="252"
-          lengthAdjust="spacingAndGlyphs"
-        >
-          MARKT
-        </text>
-      </svg>
   );
 }
 
