@@ -8,10 +8,14 @@ import Link from "next/link";
  * Het échte logobestand, zodra het er staat.
  *
  * Kevin: "Logo is geen officieel logo maar zijn zelfgemaakte vakken met tekst
- * erin." Klopt: hieronder staat een natekening. Zet het officiële bestand uit
- * het huisstijlpakket in public/logo (svg heeft de voorkeur, png mag ook), dan
- * pakt de site dat automatisch en verdwijnt de natekening. Geen code meer voor
- * nodig.
+ * erin." Klopt, en hij stond gewoon in het huisstijlpakket dat we al hadden:
+ * "LOGO vdm 2022.png" uit HUISSTIJL VDM 2022 map.zip, 845 bij 461 met
+ * transparante achtergrond. Die staat nu in public/logo en wordt gebruikt.
+ *
+ * De natekening hieronder blijft staan als vangnet: haalt iemand het bestand
+ * weg, dan valt de site daarop terug in plaats van op een gat in de header.
+ * Komt er een SVG uit het pakket, zet die er dan naast als logo-vdm.svg; die
+ * wint vanzelf.
  */
 const LOGOMAP = join(process.cwd(), "public", "logo");
 const OFFICIEEL = ["logo-vdm.svg", "logo-vdm.png"]
@@ -39,8 +43,10 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
         <Image
           src={`/logo/${OFFICIEEL.naam}`}
           alt=""
-          width={300}
-          height={176}
+          // De maat van "LOGO vdm 2022.png" uit het huisstijlpakket. Next
+          // heeft de verhouding nodig; de klasse bepaalt de echte hoogte.
+          width={845}
+          height={461}
           priority
           className={`${className} object-contain`}
         />
