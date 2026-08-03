@@ -66,7 +66,10 @@ const GIDS_TREFWOORDEN: [RegExp, string][] = [
   [/kozijn|deur|raamhout/, "beste-kozijnlak"],
   [/beits|hout-?beits/, "beste-beits"],
   [/grondverf|primer|voorstrijk/, "beste-grondverf"],
-  [/muurverf|muur|plafond|latex/, "beste-muurverf"],
+  // Als laatste, want dit is de breedste: "binnen schilderen" en "muren
+  // verven" horen hier, maar "kozijnen" en "buiten" moeten eerst hun eigen
+  // gids kunnen pakken.
+  [/muurverf|muur|muren|plafond|latex|verven|binnen|sauzen/, "beste-muurverf"],
 ];
 
 /** "kwasten-kopen", "verf-online-kopen" → "kwasten", "verf". */
@@ -214,8 +217,8 @@ async function resolveLegacyCategory(path: string): Promise<string | null> {
       const top = [...perRubriek.entries()].sort((a, b) => b[1] - a[1])[0];
       if (top && (!beste || top[1] > beste[1])) beste = top;
     }
-    // Een handvol treffers kan toeval zijn; pas vanaf tien is het een rubriek.
-    if (beste && beste[1] >= 10) return `/categorie/${beste[0]}`;
+    // Een enkele treffer kan toeval zijn; vanaf een handvol is het een rubriek.
+    if (beste && beste[1] >= 5) return `/categorie/${beste[0]}`;
     if (/-kopen$/.test(laatste)) return `/zoeken?q=${encodeURIComponent(term)}`;
   }
 
