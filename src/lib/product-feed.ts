@@ -5,6 +5,7 @@ import { isGeloofwaardigeKluspasPrijs } from "@/lib/kluspas";
 import { parseBase } from "@/lib/paint-bases";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import type { Category, Product, ProductVariant } from "@/lib/types";
+import { isEchtMerk } from "@/lib/merken";
 import { soortKenmerken } from "@/lib/soorten";
 import { houtsoortUit, pakInhoudM2, tintUit } from "@/lib/vloer";
 
@@ -185,6 +186,14 @@ const EIGEN_RUBRIEKEN: { sub?: RegExp; titel?: RegExp; slug: string; naam: strin
   // bovenaan in het beitsfilter — smeermiddel tussen de tuinbeits.
   {
     titel: /(wd-?40|kruipolie|slotspray|contactspray|siliconenspray|droogsmeerspray|multi-?use|smeerspray|teflonspray)/i,
+    slug: "schoonmaak",
+    naam: "Schoonmaak en onderhoud",
+  },
+  // Handgel en handzeep stonden in de kassa onder Verf en Beits > Lakken, en
+  // kwamen zo tussen de lak te staan met "voor hout" eronder. Hygiëne hoort
+  // bij schoonmaak, waar de derde Sanicur al stond.
+  {
+    titel: /(handgel|hand gel|handzeep|handclean|handreiniger|handdesinfect)/i,
     slug: "schoonmaak",
     naam: "Schoonmaak en onderhoud",
   },
@@ -939,6 +948,7 @@ const SCHOONMAAK_SOORTEN: { naam: string; match: RegExp }[] = [
   { naam: "Tegels en steen", match: /(tegel|natuursteen|voeg|grind|terras|beton)/i },
   { naam: "Auto en buiten", match: /(auto|car |bbq|barbecue|tuinmeubel|gevel|strooizout|groene aanslag)/i },
   { naam: "Meubels en leer", match: /(meubel|leer|leder|bankstel|textiel|tapijtreiniger)/i },
+  { naam: "Handhygiëne", match: /(handgel|hand gel|handzeep|handclean|handreiniger|desinfect)/i },
 ];
 
 function verfijndeSoort(kassaSub: string, titel: string): string | undefined {
@@ -1155,6 +1165,14 @@ function decodeEntities(tekst: string): string {
     .replace(/&amp;/gi, "&");
 }
 
+/** De eerste zin van een tekst, kort genoeg voor onder een productkaart. */
+function eersteZin(tekst: string | undefined): string | undefined {
+  if (!tekst) return undefined;
+  const eerste = tekst.split(/(?<=[.!?])\s|\n/)[0]?.trim();
+  if (!eerste || eerste.length < 25) return undefined;
+  return eerste.length > 160 ? `${eerste.slice(0, 157).trimEnd()}…` : eerste;
+}
+
 function webTekstUit(item: FeedItem): string | undefined {
   const ruw = (item.omschrijving_web ?? "").trim();
   if (ruw.length < 60) return undefined;
@@ -1323,14 +1341,24 @@ function buildProduct(
     name: definitieveNaam,
     // De uitsluiting hierboven kijkt naar het merk uit de feed, niet naar deze
     // weergavenaam; een artikel zonder merk wordt dus niet per ongeluk verborgen.
-    brand: leader.brand || "De Voordeelmarkt",
+    // "No brand", "Overige" en "Essentieel overige" zijn geen merken maar
+    // vakjes in de kassa. Ze stonden in kapitalen boven de productnaam op de
+    // kaart — "NO BRAND" leest als een merk dat niemand kent. De filterkolom
+    // liet ze al weg; hier ontbrak diezelfde controle.
+    brand: isEchtMerk(leader.brand) ? leader.brand! : "De Voordeelmarkt",
     sku: leader.id,
     category: categorySlugFor(leader),
     shortDescription: isBaseFamily
       ? `${definitieveNaam} in elke gewenste kleur — wij mengen gratis in de juiste basis.`
-      : leader.description && leader.description !== name
-        ? leader.description
-        : `${definitieveNaam} — voordelig online bestellen bij De Voordeelmarkt.`,
+      : // De eerste zin van de handgeschreven webtekst zegt wat het artikel
+        // ís. Het regeltje dat de kassa zelf maakt plakt merk, productlijn en
+        // ondergrond aan elkaar, en dat gaat mis zodra een van die velden
+        // niet klopt: "No brand Sanicur hand, voor hout" onder een flesje
+        // handgel. Eigen tekst gaat dus voor.
+        eersteZin(webTekst) ??
+        (leader.description && leader.description !== name
+          ? leader.description
+          : `${definitieveNaam} — voordelig online bestellen bij De Voordeelmarkt.`),
     // De handgeschreven webtekst uit Tilroy gaat vóór alles wat wij afleiden
     // of laten genereren; zie webTekstUit().
     description:
@@ -1619,7 +1647,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v43";
+const KV_KEY = "catalog:products:v44";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
