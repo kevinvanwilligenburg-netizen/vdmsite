@@ -1,3 +1,4 @@
+import { mailInHuisstijl } from "@/lib/mailhuisstijl";
 import { DASHBOARD_API_URL } from "@/lib/site";
 
 /**
@@ -34,8 +35,9 @@ export type MailResultaat =
 /**
  * De afzender.
  *
- * `RESEND_FROM` staat in Vercel (noreply@devoordeelmarkt.nl, domein
- * goedgekeurd in Resend op 3 augustus 2026); `MAIL_FROM` is de oudere naam en
+ * `RESEND_FROM` staat in Vercel (noreply@mail.devoordeelmarkt.nl; dat
+ * subdomein is op 3 augustus 2026 in Resend geverifieerd, het kale domein
+ * niet — vandaar de "mail." ervoor). `MAIL_FROM` is de oudere naam en
  * blijft werken. Staat er alleen een adres zonder naam, dan zetten we
  * "De Voordeelmarkt" ervoor: in de inbox lees je anders alleen "noreply".
  */
@@ -120,10 +122,37 @@ async function viaResend(bericht: MailBericht): Promise<MailResultaat | null> {
   }
 }
 
+/**
+ * De huisstijl gaat er hier omheen, niet bij elke afzonderlijke mail.
+ *
+ * Zo hoeft een nieuwe mail alleen zijn eigen alinea's te schrijven en krijgt
+ * hij logo, winkels, klantenservice en bedrijfsgegevens vanzelf. Wie het toch
+ * helemaal zelf wil doen, stuurt een compleet document mee; dat laten we met
+ * rust.
+ */
+async function metHuisstijl(bericht: MailBericht): Promise<MailBericht> {
+  if (!bericht.html) return bericht;
+  if (/<(?:!doctype|html|body)\b/i.test(bericht.html)) return bericht;
+  try {
+    const html = await mailInHuisstijl({
+      inhoud: bericht.html,
+      // De eerste regel platte tekst is precies de samenvatting die de inbox
+      // naast het onderwerp toont.
+      voorbeeldtekst: bericht.tekst.split("\n").find((regel) => regel.trim().length > 12),
+    });
+    return { ...bericht, html };
+  } catch (error) {
+    // Opmaak is nooit een reden om een mail niet te versturen.
+    console.error("[mail] huisstijl mislukt, ongewijzigd verstuurd:", error);
+    return bericht;
+  }
+}
+
 export async function verstuurMail(bericht: MailBericht): Promise<MailResultaat> {
+  const opgemaakt = await metHuisstijl(bericht);
   return (
-    (await viaDashboard(bericht)) ??
-    (await viaResend(bericht)) ?? {
+    (await viaDashboard(opgemaakt)) ??
+    (await viaResend(opgemaakt)) ?? {
       ok: false,
       reden:
         "Geen mailkanaal beschikbaar. Zet RESEND_API_KEY, of laat het dashboard /api/mail/verstuur aanbieden.",
