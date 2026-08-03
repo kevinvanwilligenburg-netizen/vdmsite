@@ -898,9 +898,45 @@ function zonderMengbasis(naam: string): string {
     .trim();
 }
 
+/**
+ * De glansgraad, ook als de kassa het veld leeg laat.
+ *
+ * Bij Sikkens staat `glans` leeg en zit de glansgraad in de titel, in het
+ * Engels: "Sikkens Rubbol XD High Gloss" naast "Sikkens Rubbol XD Semi-Gloss".
+ * Omdat de groepssleutel op het lege veld keek, belandden hoogglans en
+ * zijdeglans onder één product met één prijs — terwijl het twee verschillende
+ * verven zijn. Op 692 mengverf-artikelen staat het veld 430 keer leeg; bij 86
+ * daarvan zegt de titel het gewoon.
+ *
+ * Kevins voorbeeld 1003402 is er één: "Sikkens Rubbol XD High Gloss",
+ * donkere basis, oude URL xd-hg-n00-1l.
+ */
+const GLANS_UIT_TITEL: { patroon: RegExp; glans: string }[] = [
+  { patroon: /\b(high gloss|hoogglans)\b/i, glans: "Hoogglans" },
+  { patroon: /\b(semi[- ]?gloss|zijdeglans|satin)\b/i, glans: "Zijdeglans" },
+  { patroon: /\b(zijdemat|eggshell)\b/i, glans: "Zijdemat" },
+  { patroon: /\b(matt?|flat)\b/i, glans: "Mat" },
+  // "Gloss" zonder meer staat achteraan: "High Gloss" en "Semi Gloss" moeten
+  // eerst hun kans krijgen, anders wordt alles hoogglans.
+  { patroon: /\bgloss\b/i, glans: "Hoogglans" },
+];
+
+function glansVan(item: FeedItem): string | undefined {
+  const veld = item.glans?.trim();
+  if (veld) return veld;
+  const titel = item.title ?? "";
+  return GLANS_UIT_TITEL.find((entry) => entry.patroon.test(titel))?.glans;
+}
+
 function groupKeyFor(item: FeedItem): string {
   if (item.mengverf === "Ja" && item.productlijn && parseBase(item.mengbasis)) {
-    return `meng:${[lijnZonderBasis(item.productlijn), item.glans, item.verfsoort]
+    // `verfsoort` bewust niet in de sleutel. Dat veld is bij mengverf half
+    // gevuld: van de tien Rubbol XD-artikelen draagt er één "Oplosmiddel" en
+    // de rest niets, en dat ene werd daardoor een eigen product met alleen
+    // een lichte basis — waardoor een klant die zwart koos daar geen donkere
+    // basis kon krijgen. Een veld dat maar bij een enkel artikel is ingevuld
+    // is een gat in de data, geen productverschil.
+    return `meng:${[lijnZonderBasis(item.productlijn), glansVan(item)]
       .filter(Boolean)
       .join("|")
       .toLowerCase()}`;
@@ -1088,7 +1124,7 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
   );
   const kassaSub = (leader.categorie_sub ?? "").trim() || subcategoryOf(leader.categories) || "";
   add("subcategorie", verfijndeSoort(kassaSub, leader.title ?? "") || kassaSub);
-  add("glans", leader.glans);
+  add("glans", glansVan(leader));
   add("droogtijd", leader.droogtijd);
   add("verfsoort", leader.verfsoort);
   // Binnen/buiten is hét eerste filter waar een verfkoper op klikt (zo ook
@@ -1413,7 +1449,7 @@ function buildProduct(
           leader.productlijn ? lijnZonderBasis(leader.productlijn) : leader.title,
           leader.title ?? "",
         ),
-        leader.glans,
+        glansVan(leader),
       )
     : // Zijn er meerdere maten samengevoegd, dan mag de maat van de eerste
       // niet in de naam blijven staan: "Mack Houtbout M8 x 80 mm" met daaronder
@@ -1427,7 +1463,7 @@ function buildProduct(
   // daar al met de hand opgeschoond. De slug verandert dan mee — de
   // productpagina vangt oude slugs op via het groepsnummer aan het eind.
   const webNaam = webNaamUit(leader);
-  const ruweNaam = webNaam ? schoneNaam(metGlans(webNaam, leader.glans)) : name;
+  const ruweNaam = webNaam ? schoneNaam(metGlans(webNaam, glansVan(leader))) : name;
   // Ook de webnaam bevat de mengbasis: "Histor Perfect Finish Acryl
   // Zijdeglans Basis ZN 1L". De basis kiezen wij op de kleur, dus in de
   // naam hoort hij niet.
@@ -1751,7 +1787,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v49";
+const KV_KEY = "catalog:products:v50";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
