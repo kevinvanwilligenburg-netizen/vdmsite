@@ -8,7 +8,13 @@ import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductFiltersPanel } from "@/components/plp/ProductFilters";
 import { ProductCard } from "@/components/ProductCard";
-import { activeFilterCount, applyFilters, buildFacets, parseFilters } from "@/lib/facets";
+import {
+  activeFilterCount,
+  applyFilters,
+  buildFacets,
+  parseFilters,
+  snelfilterAantallen,
+} from "@/lib/facets";
 import { absoluteUrl } from "@/lib/site";
 import { slugify } from "@/lib/product-feed";
 import { getCategories, getCategory, getProducts, getProductsByCategory } from "@/lib/tilroy";
@@ -73,13 +79,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   // Hoeveel houdt elk snelfilter over? Een filter dat niets wegneemt (of
   // alles) hoort niet in de kolom te staan — zie ProductFiltersPanel.
-  const snelfilters = {
-    voorraad: alle.filter((product) => product.inStock !== false).length,
-    aanbieding: alle.filter(
-      (product) => product.compareAtPrice && product.compareAtPrice > product.price,
-    ).length,
-    mengverf: alle.filter((product) => product.colorMixable).length,
-  };
+  const snelfilters = snelfilterAantallen(alle, filters);
   const facets = buildFacets(alle, filters);
   const actief = activeFilterCount(filters);
 

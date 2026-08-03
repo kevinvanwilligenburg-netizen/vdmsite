@@ -7,7 +7,13 @@ import { Icon } from "@/components/icons";
 import { ProductFiltersPanel } from "@/components/plp/ProductFilters";
 import { ProductCard } from "@/components/ProductCard";
 import { SearchTracker } from "@/components/search/SearchTracker";
-import { activeFilterCount, applyFilters, buildFacets, parseFilters } from "@/lib/facets";
+import {
+  activeFilterCount,
+  applyFilters,
+  buildFacets,
+  parseFilters,
+  snelfilterAantallen,
+} from "@/lib/facets";
 import { klusIntentie } from "@/lib/klus-intentie";
 import { Mark } from "@/components/Mark";
 import { getCategories, searchProducts } from "@/lib/tilroy";
@@ -86,13 +92,7 @@ export default async function SearchPage({ searchParams }: Props) {
 
   // Hoeveel houdt elk snelfilter over? Een filter dat niets wegneemt (of
   // alles) hoort niet in de kolom te staan — zie ProductFiltersPanel.
-  const snelfilters = {
-    voorraad: results.all.filter((product) => product.inStock !== false).length,
-    aanbieding: results.all.filter(
-      (product) => product.compareAtPrice && product.compareAtPrice > product.price,
-    ).length,
-    mengverf: results.all.filter((product) => product.colorMixable).length,
-  };
+  const snelfilters = snelfilterAantallen(results.all, filters);
   const facets = buildFacets(results.all, filters);
   const actief = activeFilterCount(filters);
   const zichtbaar = gefilterd.slice(0, 48);

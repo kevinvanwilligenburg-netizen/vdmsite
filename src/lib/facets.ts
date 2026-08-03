@@ -253,6 +253,32 @@ export function hardloperScore(product: Product): number {
 }
 
 /** Pas de filters toe en sorteer. */
+/**
+ * Wat houdt elk snelfilter over, gegeven wat er al aanstaat?
+ *
+ * Kevin op de Mack-pagina: "je krijgt ook filters die niet relevant zijn
+ * (mengbaar in elke kleur), maar als je aanklikt filtert die ook niks."
+ * Dat kwam doordat we telden over de hele rubriek in plaats van over de
+ * artikelen die na de andere filters overblijven: in IJzerwaren zit mengverf,
+ * bij Mack niet. Elk snelfilter telt nu tegen de lijst zonder zichzelf, zoals
+ * facetten dat horen te doen. Nul betekent: laat de knop weg.
+ */
+export function snelfilterAantallen(
+  products: Product[],
+  filters: ProductFilters,
+): { voorraad: number; aanbieding: number; mengverf: number } {
+  const zonder = (sleutel: "opVoorraad" | "aanbieding" | "mengverf") =>
+    products.filter((product) => matches(product, { ...filters, [sleutel]: undefined }));
+
+  return {
+    voorraad: zonder("opVoorraad").filter((product) => product.inStock !== false).length,
+    aanbieding: zonder("aanbieding").filter(
+      (product) => product.compareAtPrice && product.compareAtPrice > product.price,
+    ).length,
+    mengverf: zonder("mengverf").filter((product) => product.colorMixable).length,
+  };
+}
+
 export function applyFilters(products: Product[], filters: ProductFilters): Product[] {
   const filtered = products.filter((product) => matches(product, filters));
 
