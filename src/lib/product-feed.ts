@@ -398,6 +398,10 @@ function koppelWitArtikelen(items: FeedItem[]): WitKoppeling {
 
 function hoortOnline(item: FeedItem): boolean {
   if (!hoofdgroepOnline(item)) return false;
+  // Zonder foto niet online (opdracht Kevin). Een kaartje met een grijs vlak
+  // verkoopt niet, en Google keurt zo'n artikel toch af. Zodra de foto er is,
+  // staat het artikel er de volgende nacht vanzelf weer bij.
+  if (!(item.image_link ?? "").trim()) return false;
   const merk = (item.brand ?? "").trim().toLowerCase();
   if (MERKEN_NIET_ONLINE.has(merk)) return false;
   if (PASTA_IN_DE_NAAM.test(item.title ?? "")) return false;
@@ -840,9 +844,36 @@ function verpakkingUit(titel: string | undefined): string | undefined {
   return aantal === 1 ? "per stuk" : `${aantal} stuks`;
 }
 
+/**
+ * De basiscode van het einde van een productlijn.
+ *
+ * De kassa zet de mengbasis niet alleen in het basisveld maar ook achter de
+ * lijnnaam: "Drenth Grondlak" (licht), "Drenth Grondlak D" (donker), "Drenth
+ * Grondlak SD TR" (transparant). Zolang die letter meetelt in de sleutel is
+ * elke basis een eigen product, en dan staat "Drenth Grondlak D" als losse
+ * regel in de zoekresultaten — voor een klant onbegrijpelijke zooi, want hij
+ * kiest een kleur en wij kiezen de basis.
+ *
+ * Alleen de codes die Kevin heeft doorgegeven: Sikkens W05/N00, Histor
+ * LN/ZN/ZX, Fitex/Drenth/Pastolex D/TR. "SD" blijft staan — dat is een eigen
+ * product (Grondlak SD naast Grondlak), geen basis.
+ */
+const BASIS_ACHTER_LIJNNAAM = /\s+(w05|n00|ln|zn|zx|tr|d)$/i;
+
+function lijnZonderBasis(productlijn: string): string {
+  let naam = productlijn.trim();
+  // Twee keer, want "Grondlak SD TR" kan er ook nog een hebben staan.
+  for (let ronde = 0; ronde < 2; ronde++) {
+    const korter = naam.replace(BASIS_ACHTER_LIJNNAAM, "");
+    if (korter === naam) break;
+    naam = korter;
+  }
+  return naam;
+}
+
 function groupKeyFor(item: FeedItem): string {
   if (item.mengverf === "Ja" && item.productlijn && parseBase(item.mengbasis)) {
-    return `meng:${[item.productlijn, item.glans, item.verfsoort]
+    return `meng:${[lijnZonderBasis(item.productlijn), item.glans, item.verfsoort]
       .filter(Boolean)
       .join("|")
       .toLowerCase()}`;
@@ -1347,7 +1378,12 @@ function buildProduct(
       // naast acryl — als regels met exact dezelfde naam en verschillende
       // prijzen in de lijst.
       metGlans(
-        metDrager(leader.productlijn || leader.title, leader.title ?? ""),
+        metDrager(
+          // Zonder basiscode: welke basis het wordt bepalen wij op de kleur,
+          // dus "Drenth Grondlak D" hoort gewoon "Drenth Grondlak" te heten.
+          leader.productlijn ? lijnZonderBasis(leader.productlijn) : leader.title,
+          leader.title ?? "",
+        ),
         leader.glans,
       )
     : // Zijn er meerdere maten samengevoegd, dan mag de maat van de eerste
@@ -1682,7 +1718,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v47";
+const KV_KEY = "catalog:products:v48";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

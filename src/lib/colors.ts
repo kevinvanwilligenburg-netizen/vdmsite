@@ -81,13 +81,26 @@ export async function loadAllColors(): Promise<PaintColor[]> {
   const ral = ralPaintColors();
   let colors = ral;
 
+  /*
+   * De volledige kleurenfeed, niet de publieke selectie.
+   *
+   * public-colors telt 18.370 kleuren in 147 waaiers; de feed 54.222 in 245.
+   * Wat er in die 98 ontbrekende waaiers zit, is precies waar klanten om
+   * vragen: Farrow and Ball, Little Greene, Benjamin Moore, NCS, RAL Design,
+   * Sikkens 4041. Kevin: "als ik in de kleurkiezer farrow and ball of little
+   * greene zoek vind ik het niet" — terecht, ze zaten niet in de bron. De
+   * feed is 10 MB, maar hij wordt server-side een uur gecachet en de browser
+   * krijgt hem nooit in zijn geheel: de kiezer haalt per waaier of zoekterm
+   * een beperkte set op via /api/kleuren.
+   */
   try {
-    const res = await fetch(`${DASHBOARD_API_URL}/api/kleurenkiezer/public-colors`, {
-      signal: AbortSignal.timeout(15000),
+    const res = await fetch(`${DASHBOARD_API_URL}/api/kleurenkiezer/feed`, {
+      signal: AbortSignal.timeout(25000),
       next: { revalidate: 3600 },
     });
     if (res.ok) {
-      const data = (await res.json()) as { colors?: HubColor[] };
+      const ruw = (await res.json()) as HubColor[] | { colors?: HubColor[] };
+      const data = { colors: Array.isArray(ruw) ? ruw : ruw.colors };
       if (Array.isArray(data.colors) && data.colors.length > 0) {
         const seen = new Set<string>();
         const mapped: PaintColor[] = [];
