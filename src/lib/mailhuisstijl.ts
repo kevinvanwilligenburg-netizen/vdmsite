@@ -112,22 +112,22 @@ function bedrijfsregel(): string {
 /**
  * Waar het logo in de mail vandaan komt.
  *
- * Niet van `absoluteUrl()`. Dat wijst naar devoordeelmarkt.nl, en zolang dat
- * domein nog de oude site serveert, geeft het een 404 — in de inbox een
- * kapot plaatje met de alt-tekst ernaast. Precies wat Kevin op zijn scherm
- * zag.
+ * Van ons eigen domein, sinds de omzetting op 3 augustus 2026. Daarvóór stond
+ * hier het vercel.app-adres, omdat devoordeelmarkt.nl toen nog de oude site
+ * serveerde en het plaatje dus een 404 gaf.
  *
- * Het vercel.app-adres blijft ook ná de domeinomzetting gewoon werken (het is
- * het productie-alias van hetzelfde project), dus dit is geen tijdelijke
- * kunstgreep die je later moet terugdraaien. Wie het toch wil verzetten, zet
- * `MAIL_LOGO_URL`.
+ * Dat het nu van het eigen domein komt is niet alleen netter: de
+ * deliverability-controle van Resend waarschuwt ervoor. Een afbeelding van een
+ * ander domein dan de afzender oogt voor Gmail verdacht, en bij mail wil je
+ * geen enkele reden geven om je in de spammap te zetten.
  *
- * Mailclients kennen geen SVG en geen next/image, dus een gewone PNG.
+ * Mailclients kennen geen SVG en geen next/image, dus een gewone PNG. Wie het
+ * wil verzetten, zet `MAIL_LOGO_URL`.
  */
 function mailLogoUrl(): string {
   const eigen = process.env.MAIL_LOGO_URL?.trim();
   if (eigen) return eigen;
-  return "https://vdmsite.vercel.app/logo/logo-vdm.png";
+  return absoluteUrl("/logo/logo-vdm.png");
 }
 
 /**
