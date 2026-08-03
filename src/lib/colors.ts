@@ -1,4 +1,5 @@
 import { ralColors } from "@/lib/ral";
+import { merkKleurVoor } from "@/lib/merkkleuren";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import type { PaintColor } from "@/lib/types";
 
@@ -257,9 +258,30 @@ export async function resolvePaintColor(key: string): Promise<PaintColor | undef
  */
 const GEEN_KLEURWAARDE = /^(nocolour|no colour|transparant|blank|kleurloos|-|n\.v\.t\.)$/i;
 
-export async function kleurUitKassaveld(waarde: string): Promise<PaintColor | undefined> {
+export async function kleurUitKassaveld(
+  waarde: string,
+  merk?: string,
+): Promise<PaintColor | undefined> {
   const tekst = (waarde ?? "").trim();
   if (!tekst || GEEN_KLEURWAARDE.test(tekst)) return undefined;
+
+  // Eerst de eigen waaier van het merk: een blik "Histor Hoornwit 6763" komt
+  // uit Histors Ready Mixed-reeks, en dáár staat de kleur die er echt in zit.
+  // Dat is preciezer dan onze algemene kleurenlijst, waar dezelfde naam bij
+  // vijf fabrikanten in vijf tinten voorkomt.
+  if (merk) {
+    const merkKleur = await merkKleurVoor(merk, tekst);
+    if (merkKleur) {
+      return {
+        key: `merk:${merk.toLowerCase()}:${merkKleur.naam.toLowerCase()}`,
+        code: tekst.match(/^\d{3,4}[a-z]?/i)?.[0] ?? "",
+        name: merkKleur.naam,
+        hex: merkKleur.hex,
+        group: merkKleur.waaier,
+        collectionId: "merk",
+      };
+    }
+  }
 
   // "Ral 9001" en "6763 Hoornwit" beginnen allebei met het nummer dat telt.
   const nummer = tekst.match(/(?:^|\s)(?:ral\s*)?(\d{4})(?:\s|$)/i)?.[1];

@@ -135,7 +135,7 @@ export default async function ProductPage({ params }: Props) {
   // klant de kleur zelf en staat er al een kleurkiezer op de pagina.
   const voorgemengdeKleur = product.colorMixable
     ? undefined
-    : await kleurUitKassaveld(product.attributes?.kleur ?? "");
+    : await kleurUitKassaveld(product.attributes?.kleur ?? "", product.brand);
 
   // Vloeren worden per pak van een paar vierkante meter verkocht. Weten we hoe
   // groot dat pak is, dan kan de klant zijn kamer invullen in plaats van zelf
