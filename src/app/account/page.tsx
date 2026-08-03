@@ -18,6 +18,7 @@ import {
   voorkeurWinkel,
 } from "@/lib/account";
 import { euros } from "@/lib/format";
+import { VOUCHER_VANAF, VOUCHER_WAARDE } from "@/lib/kluspuntenherinnering";
 import { getOrdersByEmail } from "@/lib/orders";
 import { PRIJS_COOKIE, prijsModusUit } from "@/lib/prijs";
 import { getStores } from "@/lib/tilroy";
@@ -142,6 +143,29 @@ export default async function AccountPage() {
                   : `Goed voor ${euros(kluspunten.waarde)} korting, in te wisselen aan de kassa.`}
                 {kluspunten.geldigTot ? ` Geldig tot ${datumLang(kluspunten.geldigTot)}.` : ""}
               </p>
+              {/* Hoe ver nog? Een saldo zonder doel zegt een klant niets; met
+                  de streep erbij weet hij wat één klus hem oplevert. Dezelfde
+                  drempel als de herinneringsmail, uit één bron. */}
+              {kluspunten.punten > 0 && kluspunten.punten < VOUCHER_VANAF && (
+                <>
+                  <div
+                    className="mt-3 h-2 overflow-hidden rounded-full bg-ink/10"
+                    role="presentation"
+                  >
+                    <div
+                      className="h-full rounded-full bg-brand"
+                      style={{
+                        width: `${Math.min(100, (kluspunten.punten / VOUCHER_VANAF) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-sm font-bold text-ink">
+                    Nog{" "}
+                    {Math.round((VOUCHER_VANAF - kluspunten.punten) * 10) / 10} punten tot{" "}
+                    {euros(VOUCHER_WAARDE * 100)} korting.
+                  </p>
+                </>
+              )}
             </div>
           ) : klant.kluspas ? (
             <div className="card p-5">
