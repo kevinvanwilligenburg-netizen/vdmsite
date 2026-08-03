@@ -1,5 +1,6 @@
+import { findRalBySlug, ralSlug } from "@/lib/kleurpaginas";
 import { demoStores } from "@/lib/stores";
-import { getProducts } from "@/lib/tilroy";
+import { getCategories, getProducts } from "@/lib/tilroy";
 
 /**
  * Redirects van de huidige (Tilroy-)site naar de nieuwe.
@@ -13,28 +14,8 @@ import { getProducts } from "@/lib/tilroy";
  * met een permanente redirect (308), die Google net als een 301 verwerkt.
  */
 
-/**
- * De categorieën van de webshop volgen sinds 30 juli 2026 de indeling van
- * Tilroy in plaats van tien zelfbedachte bakken. Deze tien slugs hebben
- * bestaan; ze wijzen naar de rubriek die er het dichtst bij komt, zodat
- * gedeelde links en al geïndexeerde pagina's blijven werken.
- */
-const OUDE_CATEGORIEEN: Record<string, string> = {
-  "/categorie/verf": "/categorie/lakken",
-  "/categorie/verfbenodigdheden": "/categorie/schildersger-en-schuurpapier",
-  "/categorie/lijm-en-kit": "/categorie/lijmen-kitten-en-vulmiddelen",
-  "/categorie/bevestiging": "/categorie/bevestigingsmaterialen",
-  "/categorie/gereedschap": "/categorie/handgereedschap",
-  "/categorie/vloeren": "/categorie/laminaat",
-  "/categorie/elektra": "/categorie/lichtbronnen-en-zaklampen",
-  "/categorie/huishouden": "/categorie/huishoudelijk",
-  "/categorie/auto-en-tuin": "/categorie/auto-accessoires",
-  "/categorie/overig": "/",
-};
-
 /** Vaste paden van de huidige site → nieuwe pagina. */
 const STATIC_REDIRECTS: Record<string, string> = {
-  ...OUDE_CATEGORIEEN,
   "/nl": "/",
   "/nl/home": "/",
   "/nl/winkels": "/winkels",
@@ -54,18 +35,135 @@ const STATIC_REDIRECTS: Record<string, string> = {
   "/nl/klantenservice": "/klantenservice",
 };
 
-/** Categorieën uit het oude menu → nieuwe categoriepagina's. */
-const CATEGORY_REDIRECTS: Record<string, string> = {
-  verf: "/categorie/verf",
-  verfbenodigdheden: "/categorie/verfbenodigdheden",
-  bouw: "/categorie/lijm-en-kit",
-  gereedschap: "/categorie/gereedschap",
-  elektra: "/categorie/elektra",
-  behang: "/categorie/verfbenodigdheden",
-  vloer: "/categorie/verf",
-  "auto-aanhang": "/categorie/auto-en-tuin",
-  reinigen: "/categorie/huishouden",
+/**
+ * Oude categorie- en menupaden → een ZOEKTERM, niet een vast pad.
+ *
+ * Hier stond een tabel met doelen als `/categorie/lakken`. Die rot: sinds de
+ * feed op Tilroy-groepscodes overging (`g1000`) bestaat geen van die slugs
+ * nog, en stuurden acht van de negen menupaden naar een 404. Een term
+ * overleeft dat wél, want die zoeken we op in de rubrieken die er nú zijn.
+ */
+const OUDE_CATEGORIE_TERMEN: Record<string, string> = {
+  verf: "verf en beits",
+  verfbenodigdheden: "verfbenodigdheden",
+  bouw: "lijmen, kitten en vulmiddelen",
+  "lijm-en-kit": "lijmen, kitten en vulmiddelen",
+  bevestiging: "ijzerwaren",
+  gereedschap: "gereedschap",
+  elektra: "elektra",
+  behang: "behang",
+  vloer: "vloeren",
+  vloeren: "vloeren",
+  "auto-aanhang": "auto",
+  "auto-en-tuin": "auto",
+  reinigen: "schoonmaak",
+  huishouden: "schoonmaak",
 };
+
+/** Themapagina's van de oude site die nu een gids zijn. */
+const GIDS_TREFWOORDEN: [RegExp, string][] = [
+  [/buiten|gevel|schutting|tuinhuis/, "beste-buitenverf"],
+  [/kozijn|deur|raamhout/, "beste-kozijnlak"],
+  [/beits|hout-?beits/, "beste-beits"],
+  [/grondverf|primer|voorstrijk/, "beste-grondverf"],
+  [/muurverf|muur|plafond|latex/, "beste-muurverf"],
+];
+
+/** "kwasten-kopen", "verf-online-kopen" → "kwasten", "verf". */
+function zoektermUit(segment: string): string {
+  return segment
+    .replace(/-?online-?/g, "-")
+    .replace(/-?kopen$/, "")
+    .replace(/^verf-/, "")
+    .replace(/-+/g, " ")
+    .trim();
+}
+
+function vereenvoudig(tekst: string): string {
+  return tekst
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Oude categorie-, kleur- en themapagina's naar de pagina die er nu voor in
+ * de plaats is gekomen.
+ *
+ * Zonder dit belandden 284 geïndexeerde pagina's — kwasten-kopen,
+ * verf-ral-9010, buiten-schilderen — via het vangnet onderaan allemaal op de
+ * homepage. Google leest zo'n massale omleiding naar één pagina als een
+ * verkapte 404 en laat de posities vallen, terwijl de vervangers (167
+ * RAL-pagina's, 20 rubrieken, 5 gidsen) gewoon bestaan.
+ */
+async function resolveLegacyCategory(path: string): Promise<string | null> {
+  const segmenten = path.split("/").filter(Boolean);
+  if (segmenten.length === 0) return null;
+  const laatste = segmenten[segmenten.length - 1];
+
+  // 1. RAL-kleur, waar in het pad hij ook staat: /nl/…/verf-ral-9010.
+  const ralCode = path.match(/ral-?(\d{4})\b/)?.[1];
+  if (ralCode) {
+    const kleur = findRalBySlug(`ral-${ralCode}`);
+    if (kleur) return `/kleuren/ral/${ralSlug(kleur)}`;
+    return "/kleuren/ral";
+  }
+  if (/kleur(en)?-?(kiezen|kiezer|waaier)/.test(path)) return "/kleurkiezer";
+
+  // 2. Themapagina's ("verf-klussen-buiten-schilderen") → de gids erover.
+  //    Alleen bij klus-achtige paden: anders vangt "muur" ook een muurbeugel.
+  if (/klussen|advies|inspiratie|schilderen|tips/.test(path)) {
+    for (const [patroon, gids] of GIDS_TREFWOORDEN) {
+      if (patroon.test(path)) return `/gids/${gids}`;
+    }
+  }
+
+  // 3. Rubriek op naam. Eerst het laatste segment, dan het voorlaatste —
+  //    "/verfbenodigheden-online-kopen/kwasten-kopen" is specifiek naar
+  //    algemeen.
+  const termen = segmenten
+    .slice(-2)
+    .reverse()
+    .map((segment) => zoektermUit(segment))
+    .filter(Boolean);
+
+  const categorieen = await getCategories();
+  for (const term of termen) {
+    const gezocht = vereenvoudig(OUDE_CATEGORIE_TERMEN[term.replace(/ /g, "-")] ?? term);
+    if (!gezocht) continue;
+    const treffer =
+      categorieen.find((categorie) => vereenvoudig(categorie.name) === gezocht) ??
+      categorieen.find((categorie) => vereenvoudig(categorie.name).includes(gezocht)) ??
+      categorieen.find((categorie) => gezocht.includes(vereenvoudig(categorie.name)));
+    if (treffer) return `/categorie/${treffer.slug}`;
+  }
+
+  // 4. Oude rubrieknaam die nu een subgroep bínnen een rubriek is.
+  const producten = await getProducts();
+  for (const term of termen) {
+    const gezocht = vereenvoudig(term);
+    if (!gezocht) continue;
+    const treffer = producten.find(
+      (product) => vereenvoudig(product.attributes?.subcategorie ?? "") === gezocht,
+    );
+    if (treffer?.attributes?.subcategorie) {
+      return `/categorie/${treffer.category}?subcategorie=${encodeURIComponent(
+        treffer.attributes.subcategorie,
+      )}`;
+    }
+  }
+
+  // 5. Duidelijk een assortimentspagina ("…-kopen") maar geen rubriek die
+  //    past: dan is de zoekpagina met die term nog altijd een antwoord, en
+  //    de homepage niet.
+  if (/-kopen$/.test(laatste) && termen[0]) {
+    return `/zoeken?q=${encodeURIComponent(termen[0])}`;
+  }
+
+  return null;
+}
 
 function normalize(path: string): string {
   const lower = `/${path}`.replace(/\/+/g, "/").toLowerCase().replace(/\/+$/, "");
@@ -108,12 +206,10 @@ export async function resolveLegacyPath(segments: string[]): Promise<string | nu
     if (byId) return `/product/${byId.slug}`;
   }
 
-  // Categorie uit het oude menu.
-  const categoryMatch = path.match(/^(?:\/nl)?\/([a-z0-9-]+)$/);
-  if (categoryMatch) {
-    const target = CATEGORY_REDIRECTS[categoryMatch[1]];
-    if (target) return target;
-  }
+  // Oude categorie-, kleur- en themapagina's. Moet vóór het vangnet hieronder:
+  // anders verdwijnt elke geïndexeerde /nl/-zoekpagina naar de homepage.
+  const categorie = await resolveLegacyCategory(path);
+  if (categorie) return categorie;
 
   // Onbekende /nl/-pagina: stuur naar de homepage in plaats van een 404,
   // zodat er geen bezoeker verdwaalt bij de overgang.
