@@ -11,6 +11,17 @@ import { getDeals, getNavCategories, getStores } from "@/lib/tilroy";
 
 export const revalidate = 3600;
 
+/**
+ * De homepage was de enige pagina zonder canonical. Juist bij een
+ * domeinverhuizing telt dat: zonder canonical kan Google een variant met
+ * parameters (een campagne-URL, ?fbclid=…) als eigen pagina behandelen en
+ * verdeelt de waarde zich over meerdere adressen. De titel staat in de
+ * layout; hier alleen het canonieke adres.
+ */
+export const metadata = {
+  alternates: { canonical: "/" },
+};
+
 const HIGHLIGHTS = [
   {
     icon: "tag",
