@@ -12,6 +12,7 @@ import { kleurLabel } from "@/components/kleur/waaier";
 import { euro } from "@/lib/format";
 import { KLEURKLUSSEN, verfVoorKlus, type Kleurklus } from "@/lib/kleurklussen";
 import { baseForColor, PAINT_BASES, pickVariant, sizesOf } from "@/lib/paint-bases";
+import { berekenVoorKlus, stapelTekst } from "@/lib/verfberekening";
 import type { PaintColor, Product } from "@/lib/types";
 
 type Stap = 1 | 2 | 3 | 4;
@@ -54,10 +55,39 @@ export function KleurTrechter({
   const [maat, setMaat] = useState<string | undefined>();
   const [toegevoegd, setToegevoegd] = useState<string[]>([]);
 
-  const verven = useMemo(
-    () => (klus ? verfVoorKlus(producten, klus).slice(0, 8) : []),
-    [klus, producten],
-  );
+  // Hoeveel ga je verven? Leeg betekent: nog niet ingevuld, dan tonen we de
+  // blikprijzen zoals voorheen.
+  const [oppervlak, setOppervlak] = useState("");
+  const [lagen, setLagen] = useState(2);
+
+  const klusInvoer = useMemo(() => {
+    const m2 = Number(oppervlak.replace(",", "."));
+    return Number.isFinite(m2) && m2 > 0 ? { vierkanteMeter: m2, lagen } : null;
+  }, [oppervlak, lagen]);
+
+  /*
+   * De verflijst, en bij een ingevuld oppervlak wat de klus per verf kost.
+   *
+   * Zonder die berekening stonden € 12,54 (1 liter) en € 52,30 (5 liter)
+   * onder elkaar alsof je ze kon vergelijken; de goedkoopste regel was dan
+   * gewoon het kleinste blik. Met een oppervlak sorteren we op wat de muur
+   * kost — en dan blijkt de duurdere verf die verder reikt geregeld
+   * voordeliger.
+   */
+  const verven = useMemo(() => {
+    const lijst = klus ? verfVoorKlus(producten, klus).slice(0, 8) : [];
+    const metBerekening = lijst.map((product) => ({
+      product,
+      berekening: klusInvoer ? berekenVoorKlus(product, klusInvoer) : null,
+    }));
+    if (!klusInvoer) return metBerekening;
+    return [...metBerekening].sort((a, b) => {
+      // Verf zonder berekening (geen bruikbare blikmaten) achteraan.
+      if (!a.berekening) return 1;
+      if (!b.berekening) return -1;
+      return a.berekening.totaal - b.berekening.totaal;
+    });
+  }, [klus, producten, klusInvoer]);
 
   const maten = verf ? sizesOf(verf) : [];
   const variant = verf ? pickVariant(verf, maat ?? maten[0], kleur) : undefined;
@@ -269,6 +299,72 @@ export function KleurTrechter({
             Deze verf mengen wij gratis in {kleurNaam}
             {basis ? `, in de ${PAINT_BASES[basis].label.toLowerCase()}` : ""}.
           </p>
+
+          {/*
+            Eén vraag, want meer vragen haakt af. Met het oppervlak erbij
+            kunnen we per verf uitrekenen wat de klus kost in plaats van wat
+            een willekeurig blik kost — en dat is het enige getal waarop je
+            twee verven eerlijk vergelijkt.
+          */}
+          <div className="card mt-4 p-4">
+            <label htmlFor="oppervlak" className="block font-black text-ink">
+              Hoeveel m² ga je verven?
+            </label>
+            <p className="mt-0.5 text-sm text-ink-soft">
+              Dan rekenen we per verf uit hoeveel je nodig hebt en wat het kost.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                id="oppervlak"
+                type="number"
+                inputMode="decimal"
+                min="1"
+                max="2000"
+                value={oppervlak}
+                onChange={(event) => setOppervlak(event.target.value)}
+                placeholder="bijv. 40"
+                className="input w-28"
+              />
+              <span className="text-sm font-semibold text-ink-soft">m²</span>
+              {[
+                { label: "Slaapkamer ±40 m²", waarde: "40" },
+                { label: "Woonkamer ±70 m²", waarde: "70" },
+                { label: "Plafond ±20 m²", waarde: "20" },
+              ].map((snel) => (
+                <button
+                  key={snel.waarde}
+                  type="button"
+                  onClick={() => setOppervlak(snel.waarde)}
+                  className={`rounded-full border-2 px-3 py-1.5 text-sm font-bold transition ${
+                    oppervlak === snel.waarde
+                      ? "border-brand bg-brand text-white"
+                      : "border-ink/10 text-ink hover:border-brand hover:text-brand"
+                  }`}
+                >
+                  {snel.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
+              <span>Aantal lagen:</span>
+              {[1, 2, 3].map((aantal) => (
+                <button
+                  key={aantal}
+                  type="button"
+                  onClick={() => setLagen(aantal)}
+                  aria-pressed={lagen === aantal}
+                  className={`rounded-lg border-2 px-2.5 py-1 font-bold transition ${
+                    lagen === aantal
+                      ? "border-brand text-brand"
+                      : "border-ink/10 text-ink hover:border-ink/30"
+                  }`}
+                >
+                  {aantal}
+                </button>
+              ))}
+              <span className="text-xs">Twee lagen is gebruikelijk bij dekkend werk.</span>
+            </div>
+          </div>
           {verven.length === 0 ? (
             <p className="card mt-4 p-6 text-ink-soft">
               Voor deze klus staat geen mengverf online. Loop even binnen — in de
@@ -276,7 +372,7 @@ export function KleurTrechter({
             </p>
           ) : (
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {verven.map((product) => {
+              {verven.map(({ product, berekening }) => {
                 const gekozen = verf?.id === product.id;
                 const productMaten = sizesOf(product);
                 return (
@@ -306,12 +402,34 @@ export function KleurTrechter({
                         <span className="min-w-0 flex-1">
                           <span className="block font-bold text-ink">{product.name}</span>
                           <span className="block text-sm text-ink-soft">{product.brand}</span>
-                          <span className="mt-1 block font-black text-brand">
-                            {euro(product.kluspasPrice ?? product.price)}
-                            {product.kluspasPrice && (
-                              <span className="ml-1 text-[10px] font-bold uppercase">Kluspas</span>
-                            )}
-                          </span>
+                          {berekening ? (
+                            <>
+                              <span className="mt-1 block font-black text-brand">
+                                {euro(berekening.totaal)}
+                                <span className="ml-1.5 text-xs font-bold text-ink-soft">
+                                  voor jouw {oppervlak} m²
+                                </span>
+                              </span>
+                              <span className="block text-sm text-ink-soft">
+                                {stapelTekst(berekening.blikken)} ·{" "}
+                                {euro(berekening.perM2)} per m²
+                              </span>
+                              <span className="block text-xs text-ink-soft">
+                                Je hebt {berekening.benodigdeLiters.toLocaleString("nl-NL")} liter
+                                nodig
+                                {berekening.rendementBron === "opgave"
+                                  ? ` (${berekening.rendement} m² per liter volgens de fabrikant)`
+                                  : " (vuistregel; de fabrikant geeft geen rendement op)"}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="mt-1 block font-black text-brand">
+                              {euro(product.kluspasPrice ?? product.price)}
+                              {product.kluspasPrice && (
+                                <span className="ml-1 text-[10px] font-bold uppercase">Kluspas</span>
+                              )}
+                            </span>
+                          )}
                         </span>
                       </button>
 
