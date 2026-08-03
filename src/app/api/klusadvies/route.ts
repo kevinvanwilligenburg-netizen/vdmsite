@@ -202,7 +202,7 @@ export async function POST(request: Request) {
     "onbekend";
   if (!(await magNog(ip))) {
     return NextResponse.json(
-      { error: "Je hebt vandaag veel adviezen opgevraagd. Bel of mail ons gerust — we helpen je graag persoonlijk." },
+      { error: "Je hebt vandaag veel adviezen opgevraagd. Bel of mail ons gerust, we helpen je graag persoonlijk." },
       { status: 429 },
     );
   }

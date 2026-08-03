@@ -62,7 +62,7 @@ const SECTIONS: { title: string; paragraphs: string[] }[] = [
     paragraphs: [
       "Je hebt 14 dagen bedenktijd, gerekend vanaf de dag dat jij of iemand namens jou de bestelling ontvangt. Binnen die termijn mag je de overeenkomst zonder opgaaf van reden ontbinden.",
       "Meld je herroeping via e-mail of in de winkel. Daarna heb je nog 14 dagen om de producten terug te sturen of terug te brengen. Producten moeten ongebruikt en compleet zijn, met verpakking en toebehoren.",
-      "Uitgesloten van het herroepingsrecht zijn producten die op jouw specificatie zijn gemaakt — bij ons is dat vooral op kleur gemengde verf. Ook verzegelde producten waarvan de verzegeling is verbroken kunnen niet retour.",
+      "Uitgesloten van het herroepingsrecht zijn producten die op jouw specificatie zijn gemaakt, bij ons is dat vooral op kleur gemengde verf. Ook verzegelde producten waarvan de verzegeling is verbroken kunnen niet retour.",
       "We betalen binnen 14 dagen na je melding terug, met hetzelfde betaalmiddel. We mogen wachten tot we de producten retour hebben ontvangen. Retourkosten voor terugsturen zijn voor jouw rekening; in de winkel terugbrengen is gratis.",
     ],
   },

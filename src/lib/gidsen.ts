@@ -38,11 +38,11 @@ export const GIDSEN: Gids[] = [
   {
     slug: "beste-muurverf",
     titel: "De beste muurverf",
-    metaTitel: "Beste muurverf kopen — onze top 10",
+    metaTitel: "Beste muurverf kopen: onze top 10",
     metaOmschrijving:
       "Welke muurverf kies je voor je woonkamer, slaapkamer of plafond? Onze top 10 muurverf met het hoogste voordeel, gratis gemengd in elke kleur.",
     intro: [
-      "Muurverf is de snelste manier om een kamer een ander gezicht te geven — maar in het schap staan tientallen bussen die allemaal wit lijken. Deze gids zet de toppers uit ons assortiment op een rij, met het voordeel van dit moment, en legt uit waar je op let bij het kiezen.",
+      "Muurverf is de snelste manier om een kamer een ander gezicht te geven, maar in het schap staan tientallen bussen die allemaal wit lijken. Deze gids zet de toppers uit ons assortiment op een rij, met het voordeel van dit moment, en legt uit waar je op let bij het kiezen.",
       "Alles hieronder mengen we gratis in elke kleur die je wilt: RAL, Sikkens, Flexa of een van de andere waaiers.",
     ],
     hoortErbij: (product) => {
@@ -53,7 +53,7 @@ export const GIDSEN: Gids[] = [
       {
         kop: "Mat, zijdeglans of afwasbaar?",
         tekst:
-          "Mat oogt rustig en verdoezelt kleine oneffenheden — ideaal voor plafonds en muren waar je niet dagelijks tegenaan zit. In een gang, keuken of kinderkamer is een afwasbare of zijdeglans muurverf praktischer: vingerafdrukken en spatten veeg je er zo af. Vuistregel: hoe meer glans, hoe beter schoon te maken, maar hoe meer je van de ondergrond ziet.",
+          "Mat oogt rustig en verdoezelt kleine oneffenheden, ideaal voor plafonds en muren waar je niet dagelijks tegenaan zit. In een gang, keuken of kinderkamer is een afwasbare of zijdeglans muurverf praktischer: vingerafdrukken en spatten veeg je er zo af. Vuistregel: hoe meer glans, hoe beter schoon te maken, maar hoe meer je van de ondergrond ziet.",
       },
       {
         kop: "Hoeveel muurverf heb je nodig?",
@@ -73,7 +73,7 @@ export const GIDSEN: Gids[] = [
       },
       {
         q: "Kan ik muurverf in elke kleur krijgen?",
-        a: "Ja — alle mengbare muurverf in deze gids mengen we gratis in ruim 18.000 kleuren, van RAL tot de merkenwaaiers van Sikkens, Flexa en Histor. Je kiest de kleur op de productpagina.",
+        a: "Ja, alle mengbare muurverf in deze gids mengen we gratis in ruim 18.000 kleuren, van RAL tot de merkenwaaiers van Sikkens, Flexa en Histor. Je kiest de kleur op de productpagina.",
       },
       {
         q: "Hoe lang moet muurverf drogen tussen twee lagen?",
@@ -84,11 +84,11 @@ export const GIDSEN: Gids[] = [
   {
     slug: "beste-buitenverf",
     titel: "De beste buitenverf",
-    metaTitel: "Beste buitenverf kopen — onze top 10",
+    metaTitel: "Beste buitenverf kopen: onze top 10",
     metaOmschrijving:
       "De beste verf voor kozijnen, deuren en houtwerk buiten: onze top 10 buitenverf en buitenbeits met het hoogste voordeel, gratis gemengd in elke kleur.",
     intro: [
-      "Buiten vraagt meer van verf dan binnen: zon, regen en vorst werken het hele jaar op je kozijnen en deuren in. Goede buitenverf beschermt het hout jarenlang — en dat scheelt je schilderbeurten. Dit zijn de toppers uit ons buitenassortiment, met het voordeel van dit moment.",
+      "Buiten vraagt meer van verf dan binnen: zon, regen en vorst werken het hele jaar op je kozijnen en deuren in. Goede buitenverf beschermt het hout jarenlang, en dat scheelt je schilderbeurten. Dit zijn de toppers uit ons buitenassortiment, met het voordeel van dit moment.",
       "Ook buitenverf mengen we gratis in elke kleur. Klassiek grachtengroen, RAL 9010 voor de kozijnen of een antracietgrijze voordeur: jij kiest, wij mengen.",
     ],
     hoortErbij: (product) => {
@@ -107,7 +107,7 @@ export const GIDSEN: Gids[] = [
       {
         kop: "Wanneer schilder je buiten?",
         tekst:
-          "Bij droog weer, weinig wind en temperaturen ruwweg tussen 10 en 25 graden. Verf niet in de volle zon op heet hout (de verf droogt dan te snel) en niet vlak voor regen. Het voor- en najaar zijn de klassieke schilderseizoenen; sommige moderne lakken zijn ook bij lagere temperaturen te verwerken — check daarvoor de specificaties op de productpagina.",
+          "Bij droog weer, weinig wind en temperaturen ruwweg tussen 10 en 25 graden. Verf niet in de volle zon op heet hout (de verf droogt dan te snel) en niet vlak voor regen. Het voor- en najaar zijn de klassieke schilderseizoenen; sommige moderne lakken zijn ook bij lagere temperaturen te verwerken. Check daarvoor de specificaties op de productpagina.",
       },
       {
         kop: "Goed voorbereiden is het halve werk",
@@ -122,23 +122,23 @@ export const GIDSEN: Gids[] = [
       },
       {
         q: "Kan ik buitenverf in elke RAL-kleur krijgen?",
-        a: "Ja. Alle mengbare buitenverf mengen we gratis in elke RAL-kleur en in de merkenwaaiers. Let op: op kleur gemengde verf is maatwerk en kan niet retour — bestel bij twijfel eerst een kleurtester.",
+        a: "Ja. Alle mengbare buitenverf mengen we gratis in elke RAL-kleur en in de merkenwaaiers. Let op: op kleur gemengde verf is maatwerk en kan niet retour. Bestel bij twijfel eerst een kleurtester.",
       },
       {
         q: "Heb ik grondverf nodig?",
-        a: "Op kaal hout altijd; op een bestaande, goed hechtende verflaag meestal niet — licht schuren en ontvetten volstaat dan. Bij twijfel helpt onze verfspecialist je in de winkel of via de klusadviseur.",
+        a: "Op kaal hout altijd; op een bestaande, goed hechtende verflaag meestal niet; licht schuren en ontvetten volstaat dan. Bij twijfel helpt onze verfspecialist je in de winkel of via de klusadviseur.",
       },
     ],
   },
   {
     slug: "beste-beits",
     titel: "De beste beits",
-    metaTitel: "Beste beits kopen — onze top 10",
+    metaTitel: "Beste beits kopen: onze top 10",
     metaOmschrijving:
-      "Welke beits kies je voor je schutting, schuur of tuinhuis? Onze top 10 beits met het hoogste voordeel — transparant of dekkend, ook op kleur gemengd.",
+      "Welke beits kies je voor je schutting, schuur of tuinhuis? Onze top 10 beits met het hoogste voordeel, transparant of dekkend, ook op kleur gemengd.",
     intro: [
       "Beits beschermt tuinhout tegen zon en regen en bepaalt meteen de uitstraling: van naturel steigerhout tot een diep zwarte schutting. Dit zijn de toppers uit ons beitsassortiment, met het voordeel van dit moment.",
-      "Dekkende beits mengen we net als verf in vrijwel elke kleur — dezelfde waaiers, gratis gemengd.",
+      "Dekkende beits mengen we net als verf in vrijwel elke kleur, dezelfde waaiers, gratis gemengd.",
     ],
     hoortErbij: (product) => {
       const tekst = tekstVan(product);
@@ -168,7 +168,7 @@ export const GIDSEN: Gids[] = [
       },
       {
         q: "Kan ik beits op kleur laten mengen?",
-        a: "Dekkende beits mengen we in vrijwel elke kleur uit onze waaiers, gratis. Transparante beits is er in vaste houttinten — die vind je op de productpagina.",
+        a: "Dekkende beits mengen we in vrijwel elke kleur uit onze waaiers, gratis. Transparante beits is er in vaste houttinten, die vind je op de productpagina.",
       },
       {
         q: "Hoeveel beits heb ik nodig voor een schutting?",
@@ -179,12 +179,12 @@ export const GIDSEN: Gids[] = [
   {
     slug: "beste-grondverf",
     titel: "De beste grondverf",
-    metaTitel: "Beste grondverf en primer kopen — onze top 10",
+    metaTitel: "Beste grondverf en primer kopen: onze top 10",
     metaOmschrijving:
       "Grondverf is het halve schilderwerk: betere hechting, minder lagen aflak. Onze top 10 grondverf en primer met het hoogste voordeel.",
     intro: [
       "Goed schilderwerk begint onder de aflak: grondverf zorgt dat de laklaag hecht, vult kleine oneffenheden en voorkomt doorslaan van houtinhoudsstoffen. Wie de grondlaag overslaat, ziet dat binnen een paar seizoenen terug. Dit zijn de toppers uit ons grondverfassortiment.",
-      "Twijfel je welke primer bij jouw ondergrond past? Onze verfspecialist denkt gratis mee — in de winkel of via de klusadviseur.",
+      "Twijfel je welke primer bij jouw ondergrond past? Onze verfspecialist denkt gratis mee, in de winkel of via de klusadviseur.",
     ],
     hoortErbij: (product) => {
       const tekst = tekstVan(product);
@@ -199,7 +199,7 @@ export const GIDSEN: Gids[] = [
       {
         kop: "Welke grondverf bij welke ondergrond?",
         tekst:
-          "Hout binnen, hout buiten, metaal en kunststof vragen elk hun eigen primer — de toepassing staat per product in de specificaties. Kies bij een donkere eindkleur een grondverf in een aansluitende tint; dat scheelt vaak een hele aflaklaag.",
+          "Hout binnen, hout buiten, metaal en kunststof vragen elk hun eigen primer; de toepassing staat per product in de specificaties. Kies bij een donkere eindkleur een grondverf in een aansluitende tint; dat scheelt vaak een hele aflaklaag.",
       },
       {
         kop: "Watergedragen of terpentinegedragen?",
@@ -210,7 +210,7 @@ export const GIDSEN: Gids[] = [
     faqs: [
       {
         q: "Kan ik grondverf overslaan?",
-        a: "Op kaal hout of metaal niet — dan hecht de aflak slecht en werkt vocht onder de laag. Op een gezonde bestaande verflaag kan het wel: schuren, ontvetten en direct aflakken.",
+        a: "Op kaal hout of metaal niet, dan hecht de aflak slecht en werkt vocht onder de laag. Op een gezonde bestaande verflaag kan het wel: schuren, ontvetten en direct aflakken.",
       },
       {
         q: "Kan grondverf op kleur gemengd worden?",
@@ -225,11 +225,11 @@ export const GIDSEN: Gids[] = [
   {
     slug: "beste-kozijnlak",
     titel: "De beste lak voor kozijnen",
-    metaTitel: "Beste kozijnlak kopen — onze top 10 buitenlakken",
+    metaTitel: "Beste kozijnlak kopen: onze top 10 buitenlakken",
     metaOmschrijving:
-      "De beste lak voor kozijnen en buitendeuren: professionele hoogglans- en zijdeglanslakken met het hoogste voordeel, gemengd in elke kleur — ook RAL 9010.",
+      "De beste lak voor kozijnen en buitendeuren: professionele hoogglans- en zijdeglanslakken met het hoogste voordeel, gemengd in elke kleur, ook RAL 9010.",
     intro: [
-      "Kozijnen zijn het zwaarste schilderwerk van het huis: volle zon, slagregen en elke dag krimpend en werkend hout. Een professionele buitenlak beschermt jaren — en dat scheelt schilderbeurten. Dit zijn onze toppers voor kozijnen en buitendeuren.",
+      "Kozijnen zijn het zwaarste schilderwerk van het huis: volle zon, slagregen en elke dag krimpend en werkend hout. Een professionele buitenlak beschermt jaren, en dat scheelt schilderbeurten. Dit zijn onze toppers voor kozijnen en buitendeuren.",
       "Alle mengbare lakken hieronder mengen we gratis in elke kleur, van klassiek RAL 9010 tot antraciet of grachtengroen.",
     ],
     hoortErbij: (product) => {
@@ -243,23 +243,23 @@ export const GIDSEN: Gids[] = [
       {
         kop: "Hoogglans of zijdeglans?",
         tekst:
-          "Hoogglans is de klassieke keuze voor buiten: het strakst, het best reinigbaar en het langst kleurvast. Zijdeglans oogt zachter en vergeeft kleine oneffenheden meer. Voor kozijnen op de zon is glansbehoud het sleutelwoord — kijk daarvoor in de specificaties.",
+          "Hoogglans is de klassieke keuze voor buiten: het strakst, het best reinigbaar en het langst kleurvast. Zijdeglans oogt zachter en vergeeft kleine oneffenheden meer. Voor kozijnen op de zon is glansbehoud het sleutelwoord. Kijk daarvoor in de specificaties.",
       },
       {
         kop: "Het systeem maakt de klus",
         tekst:
-          "Kaal hout eerst gronden, bestaand werk schuren en ontvetten, en dan pas aflakken — reken bij kaal hout op grondverf plus twee aflaklagen. Blijf binnen één systeem (dezelfde lijn grondverf en aflak): dat is waar fabrikanten hun levensduur op baseren.",
+          "Kaal hout eerst gronden, bestaand werk schuren en ontvetten, en dan pas aflakken. Reken bij kaal hout op grondverf plus twee aflaklagen. Blijf binnen één systeem (dezelfde lijn grondverf en aflak): dat is waar fabrikanten hun levensduur op baseren.",
       },
       {
         kop: "Wanneer schilder je kozijnen?",
         tekst:
-          "Bij droog weer tussen ruwweg 10 en 25 graden, niet in de volle zon op heet hout en niet vlak voor regen. Sommige moderne lakken zijn geschikt voor vier-seizoenenonderhoud en kunnen ook bij lagere temperaturen — check de verwerkingsgegevens op de productpagina.",
+          "Bij droog weer tussen ruwweg 10 en 25 graden, niet in de volle zon op heet hout en niet vlak voor regen. Sommige moderne lakken zijn geschikt voor vier-seizoenenonderhoud en kunnen ook bij lagere temperaturen. Check de verwerkingsgegevens op de productpagina.",
       },
     ],
     faqs: [
       {
         q: "Welke kleur lak voor kozijnen is het populairst?",
-        a: "Wit voert de lijst aan — RAL 9010 en RAL 9016 zijn de klassiekers — gevolgd door antracietgrijs (RAL 7016) en zwartgrijs (RAL 7021). Elke kleur mengen we gratis; op de RAL-kleurpagina's zie je per kleur de passende lakken.",
+        a: "Wit voert de lijst aan (RAL 9010 en RAL 9016 zijn de klassiekers), gevolgd door antracietgrijs (RAL 7016) en zwartgrijs (RAL 7021). Elke kleur mengen we gratis; op de RAL-kleurpagina's zie je per kleur de passende lakken.",
       },
       {
         q: "Hoe lang gaat kozijnlak mee?",

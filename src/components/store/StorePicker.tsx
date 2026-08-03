@@ -15,7 +15,9 @@ export function StorePicker() {
   const [open, setOpen] = useState(false);
 
   if (!hydrated) {
-    return <span className="hidden h-9 w-32 animate-pulse rounded-lg bg-ink/5 md:block" />;
+    // Ook op de telefoon een plaatshouder van dezelfde maat, anders springt de
+    // hele header opzij zodra de knop verschijnt.
+    return <span className="block h-9 w-24 animate-pulse rounded-lg bg-ink/5 sm:w-32" />;
   }
 
   return (
@@ -24,11 +26,24 @@ export function StorePicker() {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-bold text-ink transition hover:text-brand sm:px-3"
+        aria-label={
+          favourite ? `Jouw winkel: ${favourite.city}. Andere winkel kiezen` : "Kies je winkel"
+        }
+        // Op de telefoon stond hier alleen een speldje met een pijltje, en dan
+        // is het raden wat de knop doet. Nu staat de plaatsnaam erbij, met een
+        // randje eromheen zodat je ziet dát het een knop is.
+        className="inline-flex items-center gap-1.5 rounded-lg border-2 border-ink/10 px-2.5 py-1.5 text-sm font-bold text-ink transition hover:border-brand hover:text-brand sm:gap-2 sm:px-3 sm:py-2"
       >
         <Icon name="pin" className="h-5 w-5 shrink-0 text-brand" />
-        <span className="hidden sm:inline">
-          {favourite ? favourite.city : "Kies je winkel"}
+        <span className="max-w-[7rem] truncate">
+          {favourite ? (
+            favourite.city
+          ) : (
+            <>
+              <span className="sm:hidden">Winkel</span>
+              <span className="hidden sm:inline">Kies je winkel</span>
+            </>
+          )}
         </span>
         <span aria-hidden className="text-xs">
           ▾
@@ -75,7 +90,7 @@ export function StorePicker() {
             </ul>
             <p className="border-t border-ink/10 px-3 py-2 text-xs text-ink-soft">
               We tonen dan de voorraad van die winkel en zetten je bestelling
-              daar klaar — gratis, binnen 2 uur.
+              daar klaar, gratis, binnen 2 uur.
             </p>
           </div>
         </>

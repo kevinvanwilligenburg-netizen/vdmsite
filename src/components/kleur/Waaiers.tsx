@@ -123,7 +123,7 @@ export function Waaiers({ collections }: { collections: WaaierOverzichtItem[] })
           type="search"
           value={zoekterm}
           onChange={(event) => setZoekterm(event.target.value)}
-          placeholder="Zoek een waaier — Sikkens, Flexa, NCS…"
+          placeholder="Zoek een waaier, Sikkens, Flexa, NCS…"
           className="input max-w-sm"
         />
         <p className="text-sm font-semibold text-ink-soft" aria-live="polite">
@@ -171,8 +171,8 @@ export function Waaiers({ collections }: { collections: WaaierOverzichtItem[] })
 
       {aantalWaaiers === 0 && (
         <p className="mt-6 text-ink-soft">
-          Geen waaier gevonden met &ldquo;{zoekterm}&rdquo;. Zoek op merk —
-          Sikkens, Flexa, Histor — of kies hierboven Populair.
+          Geen waaier gevonden met &ldquo;{zoekterm}&rdquo;. Zoek op merk,
+          Sikkens, Flexa, Histor, of kies hierboven Populair.
         </p>
       )}
     </section>

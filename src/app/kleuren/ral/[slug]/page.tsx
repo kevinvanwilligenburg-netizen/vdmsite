@@ -42,7 +42,7 @@ export function generateMetadata({ params }: Props): Metadata {
   if (!kleur) return {};
   const naam = `RAL ${kleur.code} ${kleur.name}`;
   return {
-    title: `${naam} verf kopen — gemengd in elke verfsoort`,
+    title: `${naam} verf kopen: gemengd in elke verfsoort`,
     description: `Verf in ${naam} bestellen? Wij mengen deze kleur gratis in muurverf, lak, grondverf en beits. Vandaag gemengd, bezorgd of gratis afgehaald in de winkel.`,
     alternates: { canonical: `/kleuren/ral/${ralSlug(kleur)}` },
   };
@@ -73,14 +73,14 @@ export default async function RalKleurPage({ params }: Props) {
       // De kleurtester alleen beloven als de schakelaar aan staat — anders
       // verwijst de tekst naar een pagina die niet bestaat.
       a: testers
-        ? `Schermkleuren zijn een indicatie: RAL kent geen officiële schermwaarden en elk beeldscherm wijkt af. Leg bij twijfel de officiële RAL-waaier ernaast in een van onze winkels, of bestel eerst een kleurtester voor ${STAAL_PRIJS_TEKST} — dat bedrag krijg je als voucher terug bij aankoop van je verf.`
-        : `Schermkleuren zijn een indicatie: RAL kent geen officiële schermwaarden en elk beeldscherm wijkt af. Leg bij twijfel de officiële RAL-waaier ernaast in een van onze winkels — onze verfspecialist denkt gratis met je mee.`,
+        ? `Schermkleuren zijn een indicatie: RAL kent geen officiële schermwaarden en elk beeldscherm wijkt af. Leg bij twijfel de officiële RAL-waaier ernaast in een van onze winkels, of bestel eerst een kleurtester voor ${STAAL_PRIJS_TEKST}, dat bedrag krijg je als voucher terug bij aankoop van je verf.`
+        : `Schermkleuren zijn een indicatie: RAL kent geen officiële schermwaarden en elk beeldscherm wijkt af. Leg bij twijfel de officiële RAL-waaier ernaast in een van onze winkels, onze verfspecialist denkt gratis met je mee.`,
     },
     {
       q: `Kan op kleur gemengde verf retour?`,
       a: testers
-        ? `Nee — verf die speciaal voor jou in ${naam} is gemengd, is maatwerk en valt buiten het herroepingsrecht. Twijfel je over de kleur, bestel dan eerst een kleurtester of kom langs in de winkel.`
-        : `Nee — verf die speciaal voor jou in ${naam} is gemengd, is maatwerk en valt buiten het herroepingsrecht. Twijfel je over de kleur, leg dan eerst de officiële waaier ernaast in de winkel.`,
+        ? `Nee, verf die speciaal voor jou in ${naam} is gemengd, is maatwerk en valt buiten het herroepingsrecht. Twijfel je over de kleur, bestel dan eerst een kleurtester of kom langs in de winkel.`
+        : `Nee, verf die speciaal voor jou in ${naam} is gemengd, is maatwerk en valt buiten het herroepingsrecht. Twijfel je over de kleur, leg dan eerst de officiële waaier ernaast in de winkel.`,
     },
   ];
 
@@ -120,7 +120,7 @@ export default async function RalKleurPage({ params }: Props) {
           <p className="mt-3 text-ink-soft">
             {kleur.name} ({kleur.code}) uit de groep {kleur.group.toLowerCase()} van de
             RAL Classic-waaier. Wij mengen deze kleur gratis in de verf die jij
-            kiest — klaar terwijl je wacht in de winkel, of morgen in huis.
+            kiest, klaar terwijl je wacht in de winkel, of morgen in huis.
           </p>
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-lg bg-ink/5 p-3">
@@ -170,7 +170,7 @@ export default async function RalKleurPage({ params }: Props) {
             Verf in {naam}
           </h2>
           <p className="mt-1 max-w-3xl text-ink-soft">
-            Kies je verfsoort — de kleur staat alvast voor je klaar op de
+            Kies je verfsoort, de kleur staat alvast voor je klaar op de
             productpagina.
           </p>
           <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

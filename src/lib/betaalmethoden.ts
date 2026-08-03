@@ -57,7 +57,7 @@ export const BETAALMETHODEN: Betaalmethode[] = [
   {
     id: "klarna",
     label: "Klarna",
-    uitleg: "Achteraf betalen — je hebt 14 dagen de tijd",
+    uitleg: "Achteraf betalen, je hebt 14 dagen de tijd",
     logo: "/betaalmethoden/klarna.svg",
   },
   {

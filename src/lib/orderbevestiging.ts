@@ -25,7 +25,7 @@ function regel(order: Order): string[] {
     ]
       .filter(Boolean)
       .join(" · ");
-    return `${item.quantity}× ${item.title}${extra ? ` (${extra})` : ""} — ${euros(
+    return `${item.quantity}× ${item.title}${extra ? ` (${extra})` : ""}, ${euros(
       item.price * item.quantity,
     )}`;
   });
@@ -118,7 +118,7 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
 
   const resultaat = await verstuurMail({
     aan: order.customer.email,
-    onderwerp: `Bestelling ${order.reference} — bedankt!`,
+    onderwerp: `Bestelling ${order.reference}, bedankt!`,
     tekst,
     html,
     ...(reviewBcc ? { bcc: reviewBcc } : {}),

@@ -23,7 +23,7 @@ export const PAINT_BASES: Record<PaintBaseId, { label: string; description: stri
   },
   donker: {
     label: "Donkere basis",
-    description: "Voor diepe en donkere tinten — meer pigment nodig.",
+    description: "Voor diepe en donkere tinten, meer pigment nodig.",
   },
 };
 

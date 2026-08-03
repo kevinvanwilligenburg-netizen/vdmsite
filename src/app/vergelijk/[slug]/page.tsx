@@ -103,7 +103,7 @@ export default async function VergelijkPage({ params }: Props) {
           <Link href="/winkels" className="font-bold text-brand hover:underline">
             vijf winkels
           </Link>{" "}
-          — daar krijg je wél gewoon advies van een verfspecialist.
+, daar krijg je wél gewoon advies van een verfspecialist.
         </p>
       </section>
 

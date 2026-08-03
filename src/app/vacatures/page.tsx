@@ -11,7 +11,7 @@ import { getVacatures } from "@/lib/vacatures";
 export const revalidate = 1800;
 
 export const metadata: Metadata = {
-  title: "Werken bij De Voordeelmarkt — vacatures",
+  title: "Werken bij De Voordeelmarkt: vacatures",
   description:
     "Werken bij De Voordeelmarkt? Bekijk de openstaande vacatures in onze winkels in Nijverdal, Apeldoorn, Deventer, Zutphen en Emmen.",
   alternates: { canonical: "/vacatures" },
@@ -102,7 +102,7 @@ export default async function VacaturesPage() {
           <Link href="/winkels" className="font-semibold text-brand hover:underline">
             vijf winkels
           </Link>{" "}
-          en vraag naar de bedrijfsleider — zo zijn de meeste collega&apos;s hier
+          en vraag naar de bedrijfsleider, zo zijn de meeste collega&apos;s hier
           begonnen.
         </p>
       </section>

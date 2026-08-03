@@ -35,7 +35,7 @@ export function MyColors() {
             <Link
               href={`/product/${color.productSlug}?kleur=${encodeURIComponent(color.key ?? color.code)}`}
               className="flex items-center gap-2 rounded-lg bg-slate-50 py-1.5 pl-1.5 pr-3 transition hover:bg-slate-100"
-              title={`${color.code} ${color.name} — ${color.productName}`}
+              title={`${color.code} ${color.name}: ${color.productName}`}
             >
               <span
                 className="h-7 w-7 shrink-0 rounded-md ring-1 ring-black/10"

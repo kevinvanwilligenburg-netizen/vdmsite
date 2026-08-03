@@ -184,7 +184,7 @@ export async function POST(request: Request) {
       }
       if (vies.status === "onbeslist" && input.profpas === true) {
         return badRequest(
-          "De BTW-controle (VIES) is tijdelijk niet bereikbaar. Probeer het zo weer, of bestel zonder Profpas-korting — die schrijven we dan later bij.",
+          "De BTW-controle (VIES) is tijdelijk niet bereikbaar. Probeer het zo weer, of bestel zonder Profpas-korting, die schrijven we dan later bij.",
         );
       }
       if (vies.status === "geldig") {
@@ -294,7 +294,7 @@ export async function POST(request: Request) {
       color = {
         key: "wit",
         code: "100% Wit",
-        name: "100% Wit — direct uit voorraad",
+        name: "100% Wit, direct uit voorraad",
         hex: "#FFFFFF",
       };
     } else if (entry.colorKey) {
@@ -616,7 +616,7 @@ export async function POST(request: Request) {
     await setMolliePaymentId(order.id, paymentId);
     meet("mollie");
     console.log(
-      "[checkout] " + order.reference + " klaar in " + (Date.now() - gestart) + "ms — " + klok.join(", "),
+      "[checkout] " + order.reference + " klaar in " + (Date.now() - gestart) + "ms, " + klok.join(", "),
     );
     return NextResponse.json({ orderId: order.id, reference: order.reference, checkoutUrl });
   } catch (error) {

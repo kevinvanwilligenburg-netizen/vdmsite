@@ -52,7 +52,7 @@ export async function GET(request: Request) {
         aan: wachtende.email,
         onderwerp: `${wachtende.productNaam} is weer op voorraad`,
         tekst: [
-          `Goed nieuws — ${wachtende.productNaam} ligt weer voor je klaar.`,
+          `Goed nieuws, ${wachtende.productNaam} ligt weer voor je klaar.`,
           "",
           `Bestellen: ${url}`,
           "",
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
           "een seintje. We bewaren je adres hier verder niet voor.",
         ].join("\n"),
         html: [
-          `<p>Goed nieuws — <strong>${wachtende.productNaam}</strong> ligt weer voor je klaar.</p>`,
+          `<p>Goed nieuws, <strong>${wachtende.productNaam}</strong> ligt weer voor je klaar.</p>`,
           `<p><a href="${url}">Bekijk het artikel</a></p>`,
           "<p>Wees er wel snel bij; we hebben er nu een beperkt aantal van.</p>",
           `<p>Groet,<br>${SITE_NAME}</p>`,

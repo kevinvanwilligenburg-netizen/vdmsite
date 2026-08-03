@@ -160,7 +160,7 @@ export function VloerRekenhulp({
             {nl(som.geleverd)} m².
           </p>
           <p className="mt-1 text-ink-soft">
-            Je houdt {nl(som.over)} m² over — handig als er later een plank
+            Je houdt {nl(som.over)} m² over, handig als er later een plank
             beschadigd raakt, want een pak uit een andere partij kan iets
             afwijken in kleur.
           </p>

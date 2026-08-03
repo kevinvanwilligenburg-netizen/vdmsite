@@ -84,9 +84,9 @@ export async function GET() {
     accounts: {
       dashboardSleutel: heeftDashboardSleutel() ? "aanwezig" : "ONTBREEKT (SITE_API_KEY)",
       // Niet "is de sleutel gezet" maar "kan er ook echt gemaild worden".
-      mail: mail.werkt ? "werkt" : "WERKT NIET — inloggen lukt niet",
+      mail: mail.werkt ? "werkt" : "WERKT NIET, inloggen lukt niet",
       mailDetails: mail,
-      opslag: kv.enabled ? "redis" : "GEEN — inloggen werkt niet",
+      opslag: kv.enabled ? "redis" : "GEEN, inloggen werkt niet",
     },
     dashboard: DASHBOARD_API_URL,
   });

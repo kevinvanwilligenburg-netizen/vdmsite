@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const feiten = merkFeiten(brand.products);
   const rubriek = feiten.rubrieken[0]?.naam.toLowerCase();
   return {
-    title: `${brand.name} kopen — ${brand.count} artikelen vanaf ${euro(feiten.vanaf)}`,
+    title: `${brand.name} kopen: ${brand.count} artikelen vanaf ${euro(feiten.vanaf)}`,
     // De beschrijving noemt de grootste rubriek van dít merk, zodat hij per
     // merkpagina verschilt in plaats van dezelfde zin met een andere naam.
     description: [

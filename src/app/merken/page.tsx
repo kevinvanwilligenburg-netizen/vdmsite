@@ -14,7 +14,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: "Alle verfmerken en klusmerken",
   description:
-    "Histor, Flexa, Sikkens, Fitex, Hammerite en meer — alle merken die wij voeren, met het complete assortiment per merk en de laagste prijs.",
+    "Histor, Flexa, Sikkens, Fitex, Hammerite en meer, alle merken die wij voeren, met het complete assortiment per merk en de laagste prijs.",
   alternates: { canonical: "/merken" },
 };
 
@@ -149,7 +149,7 @@ export default async function MerkenPage() {
         <h2 className="text-xl font-black uppercase text-ink">Merk niet gevonden?</h2>
         <p className="mt-2 max-w-2xl text-ink-soft">
           Ons assortiment in de winkel is groter dan wat online staat. Bel of mail
-          gerust — vaak kunnen we het bestellen of hebben we een gelijkwaardig
+          gerust, vaak kunnen we het bestellen of hebben we een gelijkwaardig
           alternatief voor een scherpere prijs.
         </p>
         <Link href="/klantenservice" className="btn btn-primary mt-4">

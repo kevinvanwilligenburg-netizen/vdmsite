@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Mijn Voordeelmarkt",
   description:
-    "Je Kluspas, je kluspunten en al je aankopen — online én uit de winkel — op één plek.",
+    "Je Kluspas, je kluspunten en al je aankopen, online én uit de winkel, op één plek.",
   robots: { index: false, follow: false },
 };
 
@@ -115,7 +115,7 @@ export default async function AccountPage() {
               <p className="font-black text-ink">Nog geen Kluspas gekoppeld</p>
               <p className="mt-1 text-sm text-ink-soft">
                 Met een Kluspas krijg je korting op het hele assortiment. Vraag hem
-                aan in de winkel — we koppelen hem dan aan dit e-mailadres, en daarna
+                aan in de winkel, we koppelen hem dan aan dit e-mailadres, en daarna
                 staat hij hier.
               </p>
               <Link href="/winkels" className="btn btn-primary mt-4 py-2 text-sm">
@@ -150,7 +150,7 @@ export default async function AccountPage() {
               </p>
               <p className="mt-1 text-sm text-ink-soft">
                 Je puntensaldo kon nu even niet worden opgehaald. Het staat er
-                gewoon nog — kijk straks nog eens, of vraag ernaar in de winkel.
+                gewoon nog, kijk straks nog eens, of vraag ernaar in de winkel.
               </p>
             </div>
           ) : null}
@@ -200,7 +200,7 @@ export default async function AccountPage() {
           {!klant.inTilroy && (
             <p className="rounded-xl bg-brand-light px-4 py-3 text-sm text-ink">
               We herkennen dit e-mailadres nog niet in onze winkeladministratie.
-              Koop je met je Kluspas in de winkel, geef dan dit adres door — daarna
+              Koop je met je Kluspas in de winkel, geef dan dit adres door, daarna
               verschijnen die aankopen hier ook.
             </p>
           )}

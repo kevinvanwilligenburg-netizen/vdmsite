@@ -35,7 +35,7 @@ export default async function ShippingPage() {
       <section className="card overflow-hidden">
         <div className="flex items-center gap-3 bg-brand p-5 text-white">
           <Icon name="truck" className="h-7 w-7 shrink-0" aria-hidden />
-          <h2 className="text-lg font-black">Bezorgen — gratis vanaf {GRATIS_VANAF_TEKST}</h2>
+          <h2 className="text-lg font-black">Bezorgen, gratis vanaf {GRATIS_VANAF_TEKST}</h2>
         </div>
         <div className="space-y-3 p-6 text-ink-soft">
           <p className="text-lg font-bold text-ink">
@@ -76,7 +76,7 @@ export default async function ShippingPage() {
                   Vandaag bezorgd
                 </th>
                 <td className="py-2 text-right">
-                  € 1,25 — bij bestellingen vóór 09:00
+                  € 1,25, bij bestellingen vóór 09:00
                 </td>
               </tr>
             </tbody>
@@ -91,12 +91,12 @@ export default async function ShippingPage() {
       <section className="card overflow-hidden">
         <div className="flex items-center gap-3 bg-ink p-5 text-white">
           <Icon name="store" className="h-7 w-7 shrink-0" aria-hidden />
-          <h2 className="text-lg font-black">Afhalen in de winkel — gratis</h2>
+          <h2 className="text-lg font-black">Afhalen in de winkel, gratis</h2>
         </div>
         <div className="space-y-3 p-6 text-ink-soft">
           <p>
             Kies bij het afrekenen je winkel. Je krijgt bericht zodra je
-            bestelling klaarstaat — vaak dezelfde dag nog. Meld je bij de kassa
+            bestelling klaarstaat, vaak dezelfde dag nog. Meld je bij de kassa
             met je afhaalcode; betalen is dan al gebeurd.
           </p>
           <p>

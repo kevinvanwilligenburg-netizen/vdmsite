@@ -112,7 +112,7 @@ function Uitkomst({
           <ul className="mt-1 space-y-0.5 text-ink-soft">
             {uitkomst.overgeslagen.map((regel, index) => (
               <li key={index}>
-                <span className="font-semibold text-ink">{regel.titel}</span> — {regel.reden}
+                <span className="font-semibold text-ink">{regel.titel}</span>, {regel.reden}
               </li>
             ))}
           </ul>

@@ -39,7 +39,7 @@ export default async function CategorieenPage() {
         </h1>
         <p className="mt-3 text-ink-soft">
           {totaal.toLocaleString("nl-NL")} artikelen, verdeeld over{" "}
-          {gesorteerd.length} rubrieken — dezelfde indeling als in de winkel.
+          {gesorteerd.length} rubrieken, dezelfde indeling als in de winkel.
           Alles uit voorraad, gratis af te halen of thuisbezorgd.
         </p>
       </header>

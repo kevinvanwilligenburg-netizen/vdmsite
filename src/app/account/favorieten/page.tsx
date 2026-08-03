@@ -81,7 +81,7 @@ export default async function FavorietenPage() {
       <header>
         <h1 className="text-3xl font-black uppercase text-ink">Bewaarde artikelen</h1>
         <p className="mt-2 text-ink-soft">
-          Bewaard bij je account, niet in deze browser — je vindt ze dus ook terug op
+          Bewaard bij je account, niet in deze browser, je vindt ze dus ook terug op
           je telefoon. Prijzen {btwLabel(modus)}, zoals ze vandaag in de winkel staan.
         </p>
       </header>
@@ -172,7 +172,7 @@ export default async function FavorietenPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-ink">Dit artikel verkopen we niet meer</p>
                   <p className="mt-1 text-sm text-ink-soft">
-                    Bel of mail ons gerust — vaak hebben we iets wat hetzelfde doet.
+                    Bel of mail ons gerust, vaak hebben we iets wat hetzelfde doet.
                   </p>
                   <div className="mt-3">
                     <VerwijderFavoriet

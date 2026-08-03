@@ -271,7 +271,7 @@ export function deliveryExplanation(
 ): string {
   switch (promise.type) {
     case "same-day":
-      return "Op voorraad in ons webshopmagazijn — DHL bezorgt het vandaag nog.";
+      return "Op voorraad in ons webshopmagazijn, DHL bezorgt het vandaag nog.";
     case "next-day": {
       // De uitleg moet dezelfde dag noemen als het label erboven. Die stond
       // hier hard op "morgen", zodat op zaterdag "Maandag bezorgd" boven
@@ -286,12 +286,12 @@ export function deliveryExplanation(
       // simpelweg niet.
       const weekend = now.getDay() === 0 || now.getDay() === 6;
       if (weekend) {
-        return `Op voorraad in ons webshopmagazijn — in het weekend rijdt DHL niet, dus je hebt het ${dag} in huis.`;
+        return `Op voorraad in ons webshopmagazijn, in het weekend rijdt DHL niet, dus je hebt het ${dag} in huis.`;
       }
       if (!bezorgdagMogelijk(now)) {
-        return `Op voorraad in ons webshopmagazijn — op feestdagen rijdt DHL niet, dus je hebt het ${dag} in huis.`;
+        return `Op voorraad in ons webshopmagazijn, op feestdagen rijdt DHL niet, dus je hebt het ${dag} in huis.`;
       }
-      return `Op voorraad in ons webshopmagazijn — na ${SAME_DAY_CUTOFF_HOUR}:00 besteld, dus DHL bezorgt ${dag}.`;
+      return `Op voorraad in ons webshopmagazijn, na ${SAME_DAY_CUTOFF_HOUR}:00 besteld, dus DHL bezorgt ${dag}.`;
     }
     case "next-workday":
       return "Dit artikel ligt in een van onze winkels; die verstuurt het met PostNL, binnen één werkdag bij je thuis.";

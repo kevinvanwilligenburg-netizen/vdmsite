@@ -51,10 +51,10 @@ export function bouwProductFaqs(
       q: "Kan ik dit in elke kleur krijgen?",
       // De kleurtester alleen noemen als de dashboard-schakelaar aan staat;
       // anders belooft de FAQ een pagina die niet bestaat.
-      a: `Ja. Kies je kleur met de kleurkiezer op deze pagina — je hebt keuze uit meer dan 18.000 kleuren. Onze verfspecialist mengt de verf gratis aan en kiest automatisch de juiste mengbasis bij jouw kleur. ${
+      a: `Ja. Kies je kleur met de kleurkiezer op deze pagina, je hebt keuze uit meer dan 18.000 kleuren. Onze verfspecialist mengt de verf gratis aan en kiest automatisch de juiste mengbasis bij jouw kleur. ${
         opties.testers
           ? `Twijfel je over de kleur? Bestel eerst een kleurtester van 30 ml (${STAAL_PRIJS_TEKST}); dat bedrag krijg je terug als voucher bij je verf.`
-          : "Twijfel je over de kleur? Leg de officiële waaier ernaast in een van onze winkels — onze verfspecialist denkt gratis met je mee."
+          : "Twijfel je over de kleur? Leg de officiële waaier ernaast in een van onze winkels, onze verfspecialist denkt gratis met je mee."
       }`,
     });
   }
@@ -86,7 +86,7 @@ export function bouwProductFaqs(
   if (droogtijd) {
     faqs.push({
       q: `Hoe lang moet ${product.name} drogen?`,
-      a: `De opgegeven droogtijd is ${droogtijd.toLowerCase()}. Dat is de tijd tot stofdroog of aanraakdroog; voor een volgende laag heb je meestal langer nodig — lees dat na op de verpakking. Bij lage temperaturen en hoge luchtvochtigheid duurt drogen altijd langer dan opgegeven.`,
+      a: `De opgegeven droogtijd is ${droogtijd.toLowerCase()}. Dat is de tijd tot stofdroog of aanraakdroog; voor een volgende laag heb je meestal langer nodig, lees dat na op de verpakking. Bij lage temperaturen en hoge luchtvochtigheid duurt drogen altijd langer dan opgegeven.`,
     });
   }
 
@@ -94,7 +94,7 @@ export function bouwProductFaqs(
   if (toepassing) {
     faqs.push({
       q: `Waar gebruik ik ${product.name} voor?`,
-      a: `De opgegeven toepassing is: ${toepassing.toLowerCase()}. Twijfel je of het bij jouw klus past? Onze verfspecialist denkt gratis met je mee — in de winkel, via de klusadviseur of telefonisch.`,
+      a: `De opgegeven toepassing is: ${toepassing.toLowerCase()}. Twijfel je of het bij jouw klus past? Onze verfspecialist denkt gratis met je mee, in de winkel, via de klusadviseur of telefonisch.`,
     });
   }
 
@@ -118,7 +118,7 @@ export function bouwProductFaqs(
   if (product.kluspasPrice && product.kluspasPrice < product.price) {
     faqs.push({
       q: "Kan ik korting krijgen op dit artikel?",
-      a: "Ja — met een gratis account betaal je de Kluspas-prijs die bij de prijs staat. Die korting wordt bij het afrekenen direct verrekend, ook als je het account tijdens het bestellen aanmaakt.",
+      a: "Ja, met een gratis account betaal je de Kluspas-prijs die bij de prijs staat. Die korting wordt bij het afrekenen direct verrekend, ook als je het account tijdens het bestellen aanmaakt.",
     });
   }
 

@@ -2,12 +2,13 @@ import Link from "next/link";
 
 import { CategoryCard } from "@/components/CategoryCard";
 import { Icon } from "@/components/icons";
+import { Mark } from "@/components/Mark";
 import { ProductCard } from "@/components/ProductCard";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { BezorgBelofte } from "@/components/BezorgBelofte";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
-import { getDeals, getNavCategories, getStores } from "@/lib/tilroy";
+import { getDeals, getMerkEtalage, getNavCategories, getStores } from "@/lib/tilroy";
 
 export const revalidate = 3600;
 
@@ -31,7 +32,7 @@ const HIGHLIGHTS = [
   {
     icon: "palette",
     title: "Verf mengen in elke kleur",
-    text: "140+ RAL-kleuren, gratis gemengd — klaar terwijl je wacht.",
+    text: "140+ RAL-kleuren, gratis gemengd, klaar terwijl je wacht.",
   },
   {
     icon: "truck",
@@ -46,8 +47,9 @@ const HIGHLIGHTS = [
 ];
 
 export default async function HomePage() {
-  const [deals, categories, stores, banner] = await Promise.all([
+  const [deals, sikkens, categories, stores, banner] = await Promise.all([
     getDeals(8),
+    getMerkEtalage("Sikkens", 4),
     // Dezelfde selectie als het menu: rubrieken die groot genoeg zijn en écht
     // een rubriek. Op de volledige lijst stond "Euromat" — een leverancier —
     // als kaart tussen Verf en Beits en Gereedschap.
@@ -62,7 +64,7 @@ export default async function HomePage() {
   const heroTitle = banner?.title ?? "De beste verf voor de laagste prijs.";
   const heroSubtitle =
     banner?.subtitle ??
-    "Mengverf in elke kleur, gereedschap en alles om te klussen. Gratis bezorgd of gratis afgehaald in de winkel — en verf mengen we gratis.";
+    "Mengverf in elke kleur, gereedschap en alles om te klussen. Gratis bezorgd of gratis afgehaald in de winkel, en verf mengen we gratis.";
   const heroBadge = banner?.badge;
   const heroCtaLabel = banner?.ctaLabel ?? "Bekijk de topdeals";
   const heroCtaHref = banner?.ctaHref ?? "#topdeals";
@@ -108,23 +110,44 @@ export default async function HomePage() {
                   Kies je RAL-kleur
                 </Link>
               </div>
+              {/* Op de telefoon past er geen kolom naast de tekst, maar juist
+                  daar is de hero het eerste wat iemand ziet. Dus een strook
+                  onder de knoppen. */}
+              {!banner?.imageUrl && (
+                <Mark pose="mengen" hoogte="h-44" className="mt-6 ring-4 ring-white/25 lg:hidden" />
+              )}
             </div>
+            {/* Een gezicht in de hero. Kevin: "ik mis een hero foto, bijna elke
+                webshop doet dit." Mark staat met het verfblik in de hand op
+                het oranje van de huisstijl, dus de foto loopt door in het vlak
+                en hoeft niet uitgesneden. Zet het dashboard een eigen
+                banner-foto neer, dan wint die. */}
             {!banner?.imageUrl && (
-              <div className="relative hidden justify-center lg:flex" aria-hidden>
-                <div className="rotate-3 rounded-2xl bg-white p-8 text-center shadow-lift">
-                  <p className="text-6xl font-black text-brand">−50%</p>
-                  <p className="mt-1 text-lg font-black uppercase text-ink">
-                    Tot wel 50% voordeel
-                  </p>
-                  <p className="text-sm font-semibold text-ink-soft">
-                    op honderden artikelen
-                  </p>
-                </div>
-                <div className="absolute -bottom-4 -left-4 -rotate-3 rounded-xl bg-ink px-5 py-3 shadow-lift">
-                  <p className="font-black text-white">
-                    140+ RAL-kleuren{" "}
-                    <span className="text-brand-bright">gratis gemengd</span>
-                  </p>
+              <div className="relative hidden justify-center lg:flex">
+                <div className="relative w-full max-w-xs">
+                  <Mark
+                    pose="mengen"
+                    hoogte="h-80"
+                    className="shadow-lift ring-4 ring-white/25"
+                  />
+                  <div
+                    className="absolute -left-5 bottom-6 -rotate-3 rounded-xl bg-white px-4 py-3 text-center shadow-lift"
+                    aria-hidden
+                  >
+                    <p className="text-4xl font-black leading-none text-brand">−50%</p>
+                    <p className="mt-1 text-xs font-black uppercase text-ink">
+                      op honderden artikelen
+                    </p>
+                  </div>
+                  <div
+                    className="absolute -right-4 top-5 rotate-3 rounded-xl bg-ink px-4 py-2 shadow-lift"
+                    aria-hidden
+                  >
+                    <p className="text-sm font-black text-white">
+                      140+ RAL-kleuren{" "}
+                      <span className="text-brand-bright">gratis gemengd</span>
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -168,6 +191,38 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Sikkens: het merk waar mensen speciaal voor komen, maar dat nooit in
+          de aanbiedingen staat omdat er geen korting op zit. */}
+      {sikkens.length >= 2 && (
+        <section aria-labelledby="sikkens-titel">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2
+                id="sikkens-titel"
+                className="text-2xl font-black uppercase text-ink sm:text-3xl"
+              >
+                Sikkens bij De Voordeelmarkt
+              </h2>
+              <p className="mt-1 text-ink-soft">
+                Professionele verf uit onze eigen winkel, gratis gemengd in elke
+                kleur die je wilt.
+              </p>
+            </div>
+            <Link
+              href="/merk/sikkens"
+              className="text-sm font-bold text-brand hover:underline"
+            >
+              Alle Sikkens →
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+            {sikkens.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Duo-banners (oranje + zwart, zoals Kluspas/Profpas op de huidige site) */}
       <section className="grid gap-5 lg:grid-cols-2" aria-label="Uitgelicht">
         <div className="flex flex-col items-start gap-4 rounded-2xl bg-gradient-to-br from-brand-bright to-brand p-8 text-white shadow-card">
@@ -179,7 +234,7 @@ export default async function HomePage() {
           </h2>
           <p className="font-semibold text-white/90">
             Kies online uit 140+ RAL-kleuren. Wij mengen je verf gratis in de
-            winkel — vóór 09:00 besteld is op werkdagen vandaag al onderweg.
+            winkel, vóór 09:00 besteld is op werkdagen vandaag al onderweg.
           </p>
           <div className="flex flex-wrap gap-1.5" aria-hidden>
             {swatches.slice(0, 10).map((color) => (
@@ -232,8 +287,8 @@ export default async function HomePage() {
             Hoeveel verf heb ik nodig?
           </h2>
           <p className="mt-2 max-w-2xl font-semibold text-ink-soft">
-            Beschrijf je klus in gewone taal — &ldquo;slaapkamer van 4 bij 3 meter, van
-            donkerblauw naar wit&rdquo; — en wij rekenen uit hoeveel liter je nodig hebt, of er
+            Beschrijf je klus in gewone taal, &ldquo;slaapkamer van 4 bij 3 meter, van
+            donkerblauw naar wit&rdquo; en wij rekenen uit hoeveel liter je nodig hebt, of er
             grondverf bij moet en welke kwast of roller erbij hoort. In één klik in je mandje.
           </p>
         </div>
@@ -289,14 +344,14 @@ export default async function HomePage() {
           prijs. Muurverf, lak, grondverf en beits mengen we gratis op elke
           gewenste RAL-kleur, terwijl je wacht. Daarnaast vind je in onze
           winkels gereedschap, elektra, tuinartikelen en huishoudelijke
-          producten — allemaal voor bodemprijzen, elke dag opnieuw.
+          producten, allemaal voor bodemprijzen, elke dag opnieuw.
         </p>
         <p className="mt-3 leading-relaxed">
           Online bestellen is zo gedaan: kies je producten en reken veilig af
           met iDEAL, Bancontact, creditcard of Apple Pay. Artikelen uit ons
           webshopmagazijn in Nijverdal bezorgen we bij bestelling vóór 09:00
           (op werkdagen) dezelfde dag nog; de rest sturen we binnen één werkdag met PostNL.
-          Afhalen kan ook — gratis, in Nijverdal, Apeldoorn, Deventer, Zutphen
+          Afhalen kan ook, gratis, in Nijverdal, Apeldoorn, Deventer, Zutphen
           of Emmen.
         </p>
       </section>

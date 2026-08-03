@@ -84,7 +84,7 @@ export function Inloggen() {
         <h1 className="text-2xl font-black uppercase text-ink">Mijn Voordeelmarkt</h1>
         <p className="mt-2 text-ink-soft">
           {stap === "email"
-            ? "Log in met je e-mailadres. Je krijgt een code van ons — geen wachtwoord nodig."
+            ? "Log in met je e-mailadres. Je krijgt een code van ons, geen wachtwoord nodig."
             : `We hebben een code gestuurd naar ${email}. Vul hem hieronder in.`}
         </p>
 

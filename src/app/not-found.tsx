@@ -6,7 +6,7 @@ export default function NotFound() {
       <p className="text-6xl font-black italic text-brand">404</p>
       <h1 className="mt-3 text-2xl font-black text-ink">Deze pagina is uitverkocht</h1>
       <p className="mt-2 text-ink-soft">
-        De pagina die je zoekt bestaat niet (meer). Geen zorgen — de voordeeltjes
+        De pagina die je zoekt bestaat niet (meer). Geen zorgen, de voordeeltjes
         liggen gewoon in de schappen.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">

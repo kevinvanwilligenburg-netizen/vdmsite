@@ -11,7 +11,7 @@ import { absoluteUrl } from "@/lib/site";
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
-  title: "Alle RAL-kleuren — verf op kleur gemengd",
+  title: "Alle RAL-kleuren: verf op kleur gemengd",
   description:
     "De complete RAL Classic-waaier met alle codes en kleurnamen. Kies je RAL-kleur en wij mengen hem gratis in muurverf, lak, grondverf of beits.",
   alternates: { canonical: "/kleuren/ral" },
@@ -57,7 +57,7 @@ export default async function RalOverzichtPage() {
         <p className="mt-3 text-ink-soft">
           RAL Classic telt {kleuren.length} kleuren en is de standaard voor
           schilderwerk aan kozijnen, deuren en gevels. Kies hieronder je kleur:
-          op elke kleurpagina zie je in welke verfsoorten we hem mengen — gratis,
+          op elke kleurpagina zie je in welke verfsoorten we hem mengen, gratis,
           klaar terwijl je wacht of bezorgd. De kleuren op je scherm zijn een
           indicatie; RAL kent geen officiële schermwaarden, dus leg bij twijfel
           de officiële waaier ernaast in de winkel

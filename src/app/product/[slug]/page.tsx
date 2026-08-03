@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await getProduct(params.slug);
   if (!product) return {};
   const prijs = euro(product.price);
-  const title = `${product.name} kopen — ${prijs}`;
+  const title = `${product.name} kopen: ${prijs}`;
   // Juist hier telt een eigen tekst: de meta-description is wat Google toont,
   // en die was voor duizenden artikelen dezelfde zin.
   const seo = await haalSeoTekst(product);
@@ -78,7 +78,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: product.image ? "summary_large_image" : "summary",
-      title: `${product.name} — ${prijs}`,
+      title: `${product.name}: ${prijs}`,
       description,
     },
     other: {

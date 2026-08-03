@@ -12,7 +12,7 @@ import { RAL_GROUPS } from "@/lib/ral";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Verfkleuren — RAL-kleuren en alle merkenwaaiers",
+  title: "Verfkleuren: RAL-kleuren en alle merkenwaaiers",
   description:
     "Bekijk alle verfkleuren: de complete RAL Classic-waaier en ruim 140 merkenwaaiers van o.a. Sikkens, Flexa en Histor. Elke kleur mengen we gratis in jouw verf.",
   alternates: { canonical: "/kleuren" },
@@ -49,7 +49,7 @@ export default async function KleurenPage() {
               <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
                 kleurtester
               </Link>{" "}
-              — het bedrag krijg je terug als voucher bij je verf.
+, het bedrag krijg je terug als voucher bij je verf.
             </>
           ) : (
             " Twijfel je tussen twee tinten? Leg de officiële waaier ernaast in een van onze winkels; onze verfspecialist denkt gratis met je mee."

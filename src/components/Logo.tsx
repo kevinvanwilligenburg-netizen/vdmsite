@@ -1,4 +1,22 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+import Image from "next/image";
 import Link from "next/link";
+
+/**
+ * Het échte logobestand, zodra het er staat.
+ *
+ * Kevin: "Logo is geen officieel logo maar zijn zelfgemaakte vakken met tekst
+ * erin." Klopt: hieronder staat een natekening. Zet het officiële bestand uit
+ * het huisstijlpakket in public/logo (svg heeft de voorkeur, png mag ook), dan
+ * pakt de site dat automatisch en verdwijnt de natekening. Geen code meer voor
+ * nodig.
+ */
+const LOGOMAP = join(process.cwd(), "public", "logo");
+const OFFICIEEL = ["logo-vdm.svg", "logo-vdm.png"]
+  .map((naam) => ({ naam, pad: join(LOGOMAP, naam) }))
+  .find((entry) => existsSync(entry.pad));
 
 /**
  * Logo van De Voordeelmarkt, nagebouwd als inline SVG naar "LOGO vdm 2022.png"
@@ -17,6 +35,24 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
       aria-label="De Voordeelmarkt – naar de homepage"
       className="inline-flex shrink-0"
     >
+      {OFFICIEEL ? (
+        <Image
+          src={`/logo/${OFFICIEEL.naam}`}
+          alt=""
+          width={300}
+          height={176}
+          priority
+          className={`${className} object-contain`}
+        />
+      ) : (
+        <Natekening className={className} />
+      )}
+    </Link>
+  );
+}
+
+function Natekening({ className }: { className: string }) {
+  return (
       <svg viewBox="0 0 300 176" className={className} aria-hidden>
         <defs>
           <clipPath id="vdm-logo-clip">
@@ -45,7 +81,7 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
         <text
           x="24"
           y="50"
-          fontFamily="'Muller', var(--font-vdm), 'Arial Black', Arial, sans-serif"
+          fontFamily="'Muller Logo', 'Muller', var(--font-vdm), 'Arial Black', Arial, sans-serif"
           fontWeight="900"
           fontSize="34"
           fill="#FFFFFF"
@@ -57,7 +93,7 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
         <text
           x="24"
           y="150"
-          fontFamily="'Muller', var(--font-vdm), 'Arial Black', Arial, sans-serif"
+          fontFamily="'Muller Logo', 'Muller', var(--font-vdm), 'Arial Black', Arial, sans-serif"
           fontWeight="900"
           fontSize="66"
           fill="#FFFFFF"
@@ -67,7 +103,6 @@ export function Logo({ className = "h-11 w-auto" }: { className?: string }) {
           MARKT
         </text>
       </svg>
-    </Link>
   );
 }
 

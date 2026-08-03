@@ -144,7 +144,7 @@ function regelVoor(product: Product, kleur: PaintColor): string | null {
       `${product.id}-${idVorm(kleur.code || kleur.key)}-${vingerafdruk(kleur.key)}`,
     )}</g:id>`,
     `<g:item_group_id>${xml(product.id)}</g:item_group_id>`,
-    `<g:title>${xml(`${product.name} — ${titelKleur}`)}</g:title>`,
+    `<g:title>${xml(`${product.name}, ${titelKleur}`)}</g:title>`,
     `<g:description>${xml(
       `${product.name} in ${titelKleur}, gratis op kleur gemengd door onze verfspecialist. ${
         voorradig ? "Vandaag besteld, morgen in huis of gratis afhalen." : ""
@@ -226,7 +226,7 @@ export async function GET(request: Request) {
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">`,
     "<channel>",
-    `<title>${xml(`${SITE_NAME} — verf op kleur`)}</title>`,
+    `<title>${xml(`${SITE_NAME}, verf op kleur`)}</title>`,
     `<link>${xml(absoluteUrl("/"))}</link>`,
     `<description>${xml(
       "Mengverf per kleur: elke regel is een product in een specifieke kleur, gemengd door onze verfspecialist.",

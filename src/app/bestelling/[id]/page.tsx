@@ -157,7 +157,7 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
               <h2 className="font-black text-ink">Zo werkt het</h2>
               <p className="mt-1 text-sm text-ink-soft">
                 Wacht op het bericht dat je bestelling klaarligt, kom naar de
-                kassa en noem je afhaalcode. Betalen hoeft niet meer — dat is al
+                kassa en noem je afhaalcode. Betalen hoeft niet meer, dat is al
                 gebeurd.
               </p>
             </div>
@@ -262,7 +262,7 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           <div className="p-6 text-sm text-ink-soft">
             <p>
               Test je kleur rustig uit. Bestel je daarna de echte verf bij ons,
-              vul dan deze code in bij het afrekenen — het testerbedrag gaat er
+              vul dan deze code in bij het afrekenen, het testerbedrag gaat er
               direct af. We hebben de code ook gemaild naar{" "}
               <strong className="text-ink">{order.customer.email}</strong>.
             </p>

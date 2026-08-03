@@ -537,7 +537,7 @@ export function CheckoutForm({
                 </span>
                 {opties?.standaard.type === "unavailable" ? (
                   <span className="mt-0.5 block text-sm font-semibold text-amber-700">
-                    Tijdelijk niet leverbaar — dit mandje ligt nu nergens op
+                    Tijdelijk niet leverbaar, dit mandje ligt nu nergens op
                     voorraad.
                   </span>
                 ) : (
@@ -745,7 +745,7 @@ export function CheckoutForm({
                   )}
                   {viesStatus === "geldig" && (
                     <p className="mt-1 text-xs font-semibold text-green-700">
-                      ✓ Geldig BTW-nummer{viesNaam ? ` — ${viesNaam}` : ""}
+                      ✓ Geldig BTW-nummer{viesNaam ? `, ${viesNaam}` : ""}
                     </p>
                   )}
                   {viesStatus === "ongeldig" && (
@@ -769,7 +769,7 @@ export function CheckoutForm({
                   />
                   <span className="text-sm">
                     <span className="font-bold text-ink">
-                      Ik wil een Profpas — korting direct verrekend
+                      Ik wil een Profpas, korting direct verrekend
                     </span>
                     <span className="block text-ink-soft">
                       {country === "NL"
@@ -916,7 +916,7 @@ export function CheckoutForm({
           <section className="card p-6">
             <h2 className="text-lg font-black text-ink">3. Kies je afhaalwinkel</h2>
             <p className="mt-1 text-sm text-ink-soft">
-              Afhalen is gratis en je bestelling staat binnen 2 uur klaar — mits
+              Afhalen is gratis en je bestelling staat binnen 2 uur klaar, mits
               alles in die winkel op voorraad ligt. Dat controleren we hieronder
               live voor je.
             </p>
@@ -1066,7 +1066,7 @@ export function CheckoutForm({
                 <Icon name="tag" className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                 {kortingActief
                   ? `Profpas-korting van ${euro(kluspasKorting)} is verrekend.`
-                  : `Met een Profpas betaal je ${euro(kluspasKorting)} minder — vink hierboven aan en vul je BTW-nummer in.`}
+                  : `Met een Profpas betaal je ${euro(kluspasKorting)} minder, vink hierboven aan en vul je BTW-nummer in.`}
               </p>
             ) : (
               <>
@@ -1079,7 +1079,7 @@ export function CheckoutForm({
                   />
                   <span className="text-sm">
                     <span className="font-bold text-ink">
-                      Maak gratis een account aan — {euro(kluspasKorting)} korting,
+                      Maak gratis een account aan, {euro(kluspasKorting)} korting,
                       direct verrekend
                     </span>
                     <span className="block text-ink-soft">
@@ -1306,7 +1306,7 @@ export function CheckoutForm({
         <div className="space-y-3 p-5">
           <h2 className="font-black text-ink">Hulp nodig bij je bestelling?</h2>
           <p className="text-sm text-ink-soft">
-            Onze verfspecialisten helpen je zo — ook met kleuradvies.
+            Onze verfspecialisten helpen je zo, ook met kleuradvies.
           </p>
           <div className="space-y-2 text-sm font-semibold">
             <a

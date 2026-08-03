@@ -76,7 +76,7 @@ export function CartUpsell() {
         Hier heb je dit ook bij nodig
       </h2>
       <p className="mt-1 text-sm text-ink-soft">
-        Passend bij wat er in je mandje ligt — bezorgen en afhalen blijven gratis.
+        Passend bij wat er in je mandje ligt, bezorgen en afhalen blijven gratis.
       </p>
       <ul className="mt-4 grid gap-3 sm:grid-cols-2">
         {zichtbaar.map((product) => {

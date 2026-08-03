@@ -17,8 +17,8 @@ import { VOUCHER_GELDIG_MAANDEN } from "@/lib/vouchers";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: `Kleurtesters — elke kleur voor ${STAAL_PRIJS_TEKST}, bedrag terug als voucher`,
-  description: `Twijfel je over een verfkleur? Bestel een kleurtester van 30 ml, gemengd in elke kleur die wij voeren — ook alle RAL-kleuren. Het testerbedrag krijg je terug als voucher bij aankoop van je verf.`,
+  title: `Kleurtesters: elke kleur voor ${STAAL_PRIJS_TEKST}, bedrag terug als voucher`,
+  description: `Twijfel je over een verfkleur? Bestel een kleurtester van 30 ml, gemengd in elke kleur die wij voeren, ook alle RAL-kleuren. Het testerbedrag krijg je terug als voucher bij aankoop van je verf.`,
   alternates: { canonical: "/kleurstalen" },
 };
 
@@ -56,19 +56,19 @@ export default async function KleurstalenPage() {
   const faqs = [
     {
       q: "Hoe werkt de voucher?",
-      a: `Bij elke betaalde bestelling met kleurtesters krijg je per mail een vouchercode ter waarde van het volledige testerbedrag. Die vul je in bij het afrekenen zodra je de echte verf bestelt — het bedrag gaat er direct af. De voucher is ${VOUCHER_GELDIG_MAANDEN} maanden geldig en geldt bij een bestelling met mengverf.`,
+      a: `Bij elke betaalde bestelling met kleurtesters krijg je per mail een vouchercode ter waarde van het volledige testerbedrag. Die vul je in bij het afrekenen zodra je de echte verf bestelt, het bedrag gaat er direct af. De voucher is ${VOUCHER_GELDIG_MAANDEN} maanden geldig en geldt bij een bestelling met mengverf.`,
     },
     {
       q: "Welke kleuren kan ik testen?",
-      a: `Alle ${totaalKleuren.toLocaleString("nl-NL")} kleuren uit onze waaiers: de complete RAL Classic-waaier en de merkenwaaiers van onder meer Sikkens, Flexa en Histor. Elke tester wordt door onze verfspecialist gemengd — je test dus echte verf, geen gedrukt kaartje.`,
+      a: `Alle ${totaalKleuren.toLocaleString("nl-NL")} kleuren uit onze waaiers: de complete RAL Classic-waaier en de merkenwaaiers van onder meer Sikkens, Flexa en Histor. Elke tester wordt door onze verfspecialist gemengd, je test dus echte verf, geen gedrukt kaartje.`,
     },
     {
       q: "Wat kost verzenden?",
-      a: `Verzenden kost ${tariefTekst("NL")} en is gratis vanaf ${GRATIS_VANAF_TEKST}. Afhalen in een van onze vijf winkels is altijd gratis — daar staat de tester binnen 2 uur voor je klaar.`,
+      a: `Verzenden kost ${tariefTekst("NL")} en is gratis vanaf ${GRATIS_VANAF_TEKST}. Afhalen in een van onze vijf winkels is altijd gratis, daar staat de tester binnen 2 uur voor je klaar.`,
     },
     {
       q: "Kan ik een tester retourneren?",
-      a: "Nee — een tester wordt speciaal voor jou op kleur gemengd en is daarmee maatwerk. Daarom krijg je het bedrag als voucher terug zodra je de verf koopt: zo kost proberen je per saldo niets.",
+      a: "Nee, een tester wordt speciaal voor jou op kleur gemengd en is daarmee maatwerk. Daarom krijg je het bedrag als voucher terug zodra je de verf koopt: zo kost proberen je per saldo niets.",
     },
   ];
 
@@ -100,8 +100,8 @@ export default async function KleurstalenPage() {
         </h1>
         <p className="mt-3 text-ink-soft">
           Schermkleuren liegen; natte verf niet. Bestel een tester van 30 ml in{" "}
-          <strong className="text-ink">elke kleur die wij voeren</strong> — ook
-          alle RAL-kleuren — voor {STAAL_PRIJS_TEKST} per stuk. En het mooiste:{" "}
+          <strong className="text-ink">elke kleur die wij voeren</strong>, ook
+          alle RAL-kleuren, voor {STAAL_PRIJS_TEKST} per stuk. En het mooiste:{" "}
           <strong className="text-ink">
             het testerbedrag krijg je terug als voucher
           </strong>{" "}
@@ -114,7 +114,7 @@ export default async function KleurstalenPage() {
           {
             icon: "palette",
             title: "1. Kies je kleuren",
-            text: `Uit ${totaalKleuren.toLocaleString("nl-NL")} kleuren — RAL én merkenwaaiers. Wij mengen elke tester met echte verf.`,
+            text: `Uit ${totaalKleuren.toLocaleString("nl-NL")} kleuren, RAL én merkenwaaiers. Wij mengen elke tester met echte verf.`,
           },
           {
             icon: "truck",

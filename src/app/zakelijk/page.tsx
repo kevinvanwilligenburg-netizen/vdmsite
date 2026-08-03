@@ -11,7 +11,7 @@ import { getStores } from "@/lib/tilroy";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Zakelijk inkopen — binnen 2 minuten besteld, ook op rekening",
+  title: "Zakelijk inkopen: binnen 2 minuten besteld, ook op rekening",
   description:
     "Zakelijk verf inkopen zonder wachten op een accountmanager: KvK-nummer invullen, Profpas-korting direct verrekend, op rekening betalen via Billie en altijd gratis bezorgd.",
   alternates: { canonical: "/zakelijk" },
@@ -73,7 +73,7 @@ export default async function BusinessPage() {
           Zakelijk
         </p>
         <h1 className="mt-4 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">
-          Binnen 2 minuten zakelijk bestellen — zonder wachten op een
+          Binnen 2 minuten zakelijk bestellen, zonder wachten op een
           accountmanager
         </h1>
         <p className="mt-4 max-w-2xl text-lg font-semibold text-white/80">
@@ -95,7 +95,7 @@ export default async function BusinessPage() {
           </a>
         </div>
         <p className="mt-4 text-sm text-white/60">
-          Prijzen liever exclusief btw? Zet de btw-schakelaar om — rechtsboven
+          Prijzen liever exclusief btw? Zet de btw-schakelaar om, rechtsboven
           in de balk, of hieronder.
         </p>
       </section>
@@ -139,14 +139,14 @@ export default async function BusinessPage() {
           {[
             {
               t: "Vul je mandje en kies 'Zakelijk' bij het afrekenen",
-              d: "Gewoon in de webshop, wanneer het jou uitkomt — geen apart account nodig vooraf.",
+              d: "Gewoon in de webshop, wanneer het jou uitkomt, geen apart account nodig vooraf.",
             },
             {
-              t: "Vul je KvK-nummer in — wij checken het direct",
+              t: "Vul je KvK-nummer in, wij checken het direct",
               d: "Een Nederlands bedrijf legitimeert zich met zijn KvK-nummer; een Belgisch bedrijf met een btw-nummer dat we live bij het EU-register (VIES) controleren. Vink Profpas aan en je korting wordt meteen verrekend.",
             },
             {
-              t: "Betaal zoals het jou past — ook op rekening",
+              t: "Betaal zoals het jou past, ook op rekening",
               d: "iDEAL, creditcard, of op rekening met 30 dagen betaaltermijn via Billie zodra je bedrijfsnaam is ingevuld. Bezorging is voor zakelijke klanten gratis; afhalen kan binnen 2 uur in vijf winkels.",
             },
           ].map((stap, index) => (
@@ -170,7 +170,7 @@ export default async function BusinessPage() {
           >
             {CONTACT_EMAIL}
           </a>{" "}
-          — we nemen dezelfde werkdag contact op.
+, we nemen dezelfde werkdag contact op.
         </p>
       </section>
 

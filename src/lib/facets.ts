@@ -238,7 +238,7 @@ function matches(product: Product, filters: ProductFilters): boolean {
  * Kevin's voorbeeld: klik je op Sikkens, dan hoort Rubbol boven een partijblik
  * te staan.
  */
-function hardloperScore(product: Product): number {
+export function hardloperScore(product: Product): number {
   let score = 0;
   if (product.inStock !== false) score += 4;
   if (product.image) score += 3;

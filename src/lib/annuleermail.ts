@@ -44,7 +44,7 @@ export async function stuurAnnuleermail(
   const voucherRegels: string[] = [];
   if (opties.voucherHersteld && order.voucherCode) {
     voucherRegels.push(
-      `Je voucher ${order.voucherCode} is weer bruikbaar — de korting uit deze bestelling is immers niet doorgegaan.`,
+      `Je voucher ${order.voucherCode} is weer bruikbaar, de korting uit deze bestelling is immers niet doorgegaan.`,
     );
   }
   if (opties.staalIngetrokken && order.staalVoucher?.code) {

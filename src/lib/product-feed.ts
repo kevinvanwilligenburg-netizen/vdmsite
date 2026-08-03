@@ -771,6 +771,10 @@ function metEnigeMaat(naam: string, variants: ProductVariant[]): string {
   if (!maat || !bruikbareVerpakkingsmaat(maat)) return naam;
   const genormaliseerd = (tekst: string) => tekst.toLowerCase().replace(/[\s.,]/g, "");
   if (genormaliseerd(naam).includes(genormaliseerd(maat))) return naam;
+  // Staat er al een inhoud in de naam, dan is die van de kassa en de onze een
+  // andere schrijfwijze van hetzelfde blik: "Sikkens Cetol Novatech 2,475L"
+  // met daarachter nog eens "2,5 L" leest als twee maten.
+  if (/\d+(?:[.,]\d+)?\s*(?:ml|l|liter|kg|gram|gr)\b/i.test(naam)) return naam;
   return `${naam} ${maat}`;
 }
 
@@ -869,6 +873,29 @@ function lijnZonderBasis(productlijn: string): string {
     naam = korter;
   }
   return naam;
+}
+
+/**
+ * Basiscodes ergens midden in een naam.
+ *
+ * `lijnZonderBasis` pakt alleen het staartje van de productlijn, maar in de
+ * webnaam die de kassa meegeeft staat de code overal: "Histor P.B. Afbijt TR
+ * 0,75L", "Flexa Creations Lak Zijdeglans 1L base N00", "Fitex Creative
+ * Excellent Muur/Plafond TR 2,5 liter". Op 48 mengverven stonden er 25 met
+ * een code in de naam — de helft van de kleurkiezer dus.
+ *
+ * Alleen bij mengverf toepassen: buiten die groep is "D" gewoon een letter.
+ * "Perfect Base" blijft heel, want "base" gaat er alleen af als er een code
+ * achter staat.
+ */
+const MENGBASIS_CODES = "w05|n00|ln|zn|zx|tr|tu|d";
+
+function zonderMengbasis(naam: string): string {
+  return naam
+    .replace(new RegExp(`\\b(?:basis|base)\\s+(?:${MENGBASIS_CODES})\\b`, "gi"), " ")
+    .replace(new RegExp(`\\b(?:${MENGBASIS_CODES})\\b`, "gi"), " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function groupKeyFor(item: FeedItem): string {
@@ -1254,7 +1281,9 @@ function webTekstUit(item: FeedItem): string | undefined {
 }
 
 function webNaamUit(item: FeedItem): string | undefined {
-  const naam = (item.webnaam ?? "").trim().replace(/\s+/g, " ");
+  // Een pijp betekent dat er een kassaregel in het webnaamveld is geplakt:
+  // "BL Ventura Satin | W05 1L". Links staat de naam, rechts de administratie.
+  const naam = (item.webnaam ?? "").split("|")[0].trim().replace(/\s+/g, " ");
   return naam.length > 3 ? naam : undefined;
 }
 
@@ -1304,7 +1333,7 @@ function buildProduct(
       const witKluspas = witItem ? toCents(witItem.kluspas_prijs) : 0;
       return {
         id: item.id,
-        name: verpakking ? `${item.maat} — ${verpakking}` : item.maat,
+        name: verpakking ? `${item.maat}, ${verpakking}` : item.maat,
         price: eigenPrijs,
         ...(eigenAdvies > eigenPrijs ? { compareAtPrice: eigenAdvies } : {}),
         ...(isGeloofwaardigeKluspasPrijs(eigenPrijs, eigenKluspas)
@@ -1398,7 +1427,11 @@ function buildProduct(
   // daar al met de hand opgeschoond. De slug verandert dan mee — de
   // productpagina vangt oude slugs op via het groepsnummer aan het eind.
   const webNaam = webNaamUit(leader);
-  const basisNaam = webNaam ? schoneNaam(metGlans(webNaam, leader.glans)) : name;
+  const ruweNaam = webNaam ? schoneNaam(metGlans(webNaam, leader.glans)) : name;
+  // Ook de webnaam bevat de mengbasis: "Histor Perfect Finish Acryl
+  // Zijdeglans Basis ZN 1L". De basis kiezen wij op de kleur, dus in de
+  // naam hoort hij niet.
+  const basisNaam = isBaseFamily ? zonderMengbasis(ruweNaam) : ruweNaam;
   // Heeft een artikel maar één maat, dan is er geen maatkiezer en zegt de
   // pagina nergens hoeveel je koopt: "Glitsa vloerlak — € 84,85" kan net zo
   // goed een literblik als een emmer zijn. Bij meerdere maten hoort de maat
@@ -1420,7 +1453,7 @@ function buildProduct(
     sku: leader.id,
     category: categorySlugFor(leader),
     shortDescription: isBaseFamily
-      ? `${definitieveNaam} in elke gewenste kleur — wij mengen gratis in de juiste basis.`
+      ? `${definitieveNaam} in elke gewenste kleur, wij mengen gratis in de juiste basis.`
       : // De eerste zin van de handgeschreven webtekst zegt wat het artikel
         // ís. Het regeltje dat de kassa zelf maakt plakt merk, productlijn en
         // ondergrond aan elkaar, en dat gaat mis zodra een van die velden
@@ -1429,7 +1462,7 @@ function buildProduct(
         eersteZin(webTekst) ??
         (leader.description && leader.description !== name
           ? leader.description
-          : `${definitieveNaam} — voordelig online bestellen bij De Voordeelmarkt.`),
+          : `${definitieveNaam}, voordelig online bestellen bij De Voordeelmarkt.`),
     // De handgeschreven webtekst uit Tilroy gaat vóór alles wat wij afleiden
     // of laten genereren; zie webTekstUit().
     description:
@@ -1718,7 +1751,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v48";
+const KV_KEY = "catalog:products:v49";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

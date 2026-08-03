@@ -147,7 +147,7 @@ export function PaintCalculator({ coveragePerLiter, sizesInLiters }: Props) {
           )}
           <p className="mt-2 text-xs text-ink-soft">
             Gerekend met {coveragePerLiter.toString().replace(".", ",")} m² per
-            liter. Op een ruwe of donkere ondergrond gaat er meer verf in — houd
+            liter. Op een ruwe of donkere ondergrond gaat er meer verf in, houd
             dan wat marge aan.
           </p>
         </div>

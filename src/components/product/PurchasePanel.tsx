@@ -207,7 +207,7 @@ export function PurchasePanel({
           ? {
               key: "wit",
               code: "100% Wit",
-              name: "100% Wit — direct uit voorraad",
+              name: "100% Wit, direct uit voorraad",
               hex: "#FFFFFF",
             }
           : color
@@ -446,7 +446,7 @@ export function PurchasePanel({
               <strong className="font-semibold text-ink">
                 {PAINT_BASES[activeBase].label.toLowerCase()}
               </strong>{" "}
-              — dat kiezen wij voor je.
+, dat kiezen wij voor je.
             </p>
           )}
           {!color && !wit100 && basesInPlay && (
@@ -485,7 +485,7 @@ export function PurchasePanel({
                 >
                   Bestel eerst een kleurtester ({STAAL_PRIJS_TEKST})
                 </Link>{" "}
-                — het bedrag krijg je terug als voucher bij je verf.
+, het bedrag krijg je terug als voucher bij je verf.
               </>
             ) : (
               <>
@@ -569,8 +569,8 @@ export function PurchasePanel({
       <ul className="space-y-1.5 border-t border-ink/10 pt-4 text-sm text-ink-soft">
         {[
           product.colorMixable
-            ? "Gratis aangemengd in elke kleur — ruim 18.000 kleuren, door onze verfspecialist"
-            : "Verf, gereedschap en bevestiging onder één dak — je klus in één bestelling",
+            ? "Gratis aangemengd in elke kleur, ruim 18.000 kleuren, door onze verfspecialist"
+            : "Verf, gereedschap en bevestiging onder één dak, je klus in één bestelling",
           "Advies van een verfspecialist, en gratis afhalen in onze 5 winkels",
           "14 dagen bedenktijd, gratis terug te brengen naar elke winkel",
         ].map((usp) => (

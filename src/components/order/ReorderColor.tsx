@@ -74,7 +74,7 @@ export function ReorderColor({ colors }: { colors: SavedColor[] }) {
         Jouw kleur, bewaard
       </h2>
       <p className="mt-1 text-sm text-ink-soft">
-        Verf op? Bestel exact dezelfde kleur opnieuw — wij weten in welke basis
+        Verf op? Bestel exact dezelfde kleur opnieuw, wij weten in welke basis
         hij gemengd moet worden.
       </p>
       <ul className="mt-4 space-y-2">

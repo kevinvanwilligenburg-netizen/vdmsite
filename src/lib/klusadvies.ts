@@ -147,7 +147,7 @@ const PROFIELEN: Record<Exclude<KlusSoort, "onbekend">, KlusProfiel> = {
       { termen: ["afdekfolie", "afdekzeil"], waarom: "Plafondverf spat altijd" },
     ],
     stappen: [
-      "Vloer volledig afdekken — plafondverf spat.",
+      "Vloer volledig afdekken, plafondverf spat.",
       "Plafond stofvrij maken.",
       "Randen langs de muur voorsnijden met de kwast.",
       "In banen rollen, haaks op het licht van het raam.",
@@ -200,7 +200,7 @@ const PROFIELEN: Record<Exclude<KlusSoort, "onbekend">, KlusProfiel> = {
     stappen: [
       "Losse verf verwijderen en houtrot herstellen.",
       "Grondig schuren en stofvrij maken.",
-      "Kale plekken gronden — buiten altijd.",
+      "Kale plekken gronden, buiten altijd.",
       "Twee laklagen, met droogtijd ertussen.",
       "Schilder niet in de volle zon of bij kans op regen.",
     ],
@@ -259,7 +259,7 @@ const PROFIELEN: Record<Exclude<KlusSoort, "onbekend">, KlusProfiel> = {
       "Radiator uitzetten en volledig laten afkoelen.",
       "Ontvetten en licht schuren; roest helemaal wegnemen.",
       "Kale plekken gronden met een metaalprimer.",
-      "Twee dunne lagen radiatorlak — dik smeren geeft zakkers.",
+      "Twee dunne lagen radiatorlak, dik smeren geeft zakkers.",
     ],
   },
   vloer: {
@@ -547,7 +547,7 @@ function grondverfCheck(vraag: KlusVraag): { nodig: boolean; reden: string | nul
     return { nodig: true, reden: "Kaal hout zuigt de verf op; zonder grondlaag krijg je een vlekkerig resultaat." };
   }
   if (vraag.ondergrond === "gestuukt") {
-    return { nodig: true, reden: "Vers stucwerk is poreus — eerst voorstrijken, anders trekt de muurverf ongelijk in." };
+    return { nodig: true, reden: "Vers stucwerk is poreus, eerst voorstrijken, anders trekt de muurverf ongelijk in." };
   }
   if (vraag.ondergrond === "metaal" || vraag.klus === "metaal" || vraag.klus === "radiator") {
     return { nodig: true, reden: "Op metaal hecht lak alleen goed met een primer, en die houdt roest buiten." };
@@ -562,7 +562,7 @@ function grondverfCheck(vraag: KlusVraag): { nodig: boolean; reden: string | nul
     if (donkerNaarLicht) {
       return {
         nodig: true,
-        reden: "Van donker naar licht dekt zelden in twee lagen — met een grondlaag ben je sneller klaar en gebruik je minder verf.",
+        reden: "Van donker naar licht dekt zelden in twee lagen, met een grondlaag ben je sneller klaar en gebruik je minder verf.",
       };
     }
   }
@@ -817,7 +817,7 @@ export async function maakAdvies(vraag: KlusVraag): Promise<Advies> {
     extraAannames.push(`We rekenen met ${fmt(rendement)} m² per liter per laag.`);
   }
   if (vraag.bijzonderheden?.includes("vochtige ruimte")) {
-    extraAannames.push("Voor een badkamer of keuken adviseren we een vochtbestendige, afwasbare verf — vraag er even naar in de winkel.");
+    extraAannames.push("Voor een badkamer of keuken adviseren we een vochtbestendige, afwasbare verf, vraag er even naar in de winkel.");
   }
 
   const stappen = [...profiel.stappen];

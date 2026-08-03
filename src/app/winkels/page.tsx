@@ -23,7 +23,7 @@ export default async function StoresPage() {
         <p className="mt-3 text-ink-soft">
           Bestel online en haal gratis op in een van onze {stores.length}{" "}
           winkels. Je krijgt bericht met een afhaalcode zodra je bestelling
-          klaarstaat — meestal al binnen een paar uur.
+          klaarstaat, meestal al binnen een paar uur.
         </p>
       </header>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

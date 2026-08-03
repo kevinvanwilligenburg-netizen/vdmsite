@@ -105,6 +105,7 @@ export function KleurTrechter({
   const [kleur, setKleur] = useState<PaintColor | null>(null);
   const [klus, setKlus] = useState<Kleurklus | null>(null);
   const [verf, setVerf] = useState<Product | null>(null);
+  const [merk, setMerk] = useState<string | null>(null);
   const [maat, setMaat] = useState<string | undefined>();
   const [toegevoegd, setToegevoegd] = useState<string[]>([]);
 
@@ -128,7 +129,11 @@ export function KleurTrechter({
    * voordeliger.
    */
   const verven = useMemo(() => {
-    const lijst = klus ? verfVoorKlus(producten, klus).slice(0, 8) : [];
+    const alles = klus ? verfVoorKlus(producten, klus) : [];
+    const opMerk = merk ? alles.filter((product) => product.brand === merk) : alles;
+    // Zonder merkkeuze acht regels: meer is een muur van blikken. Kiest de
+    // klant wél een merk, dan wil hij het hele rijtje van dat merk zien.
+    const lijst = (opMerk.length > 0 ? opMerk : alles).slice(0, merk ? 24 : 8);
     const metBerekening = lijst.map((product) => ({
       product,
       berekening: klusInvoer ? berekenVoorKlus(product, klusInvoer) : null,
@@ -140,7 +145,32 @@ export function KleurTrechter({
       if (!b.berekening) return -1;
       return a.berekening.totaal - b.berekening.totaal;
     });
-  }, [klus, producten, klusInvoer]);
+  }, [klus, producten, klusInvoer, merk]);
+
+  /*
+   * De merken die voor deze klus mengverf hebben.
+   *
+   * Kevin: "ik heb een kleur in gedachten en merk (sikkens) maar weet ik niet
+   * welk product. Bij stap 2 krijg ik alleen maar keuze histor of fitex."
+   * Dat klopte: de lijst stond op prijs en werd op acht regels afgekapt, en
+   * dan valt een duurder merk er altijd buiten. Wie al een merk in zijn hoofd
+   * heeft, klikt het nu aan; wie niets weet, laat het op "Alle merken" staan.
+   */
+  const merken = useMemo(() => {
+    if (!klus) return [];
+    const tel = new Map<string, number>();
+    for (const product of verfVoorKlus(producten, klus)) {
+      if (!product.brand) continue;
+      tel.set(product.brand, (tel.get(product.brand) ?? 0) + 1);
+    }
+    return [...tel.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "nl"))
+      .map(([naam, aantal]) => ({ naam, aantal }));
+  }, [klus, producten]);
+
+  // Heeft het gekozen merk niets voor deze klus, dan is de knop een dood
+  // spoor: dan laten we hem los in plaats van een lege lijst te tonen.
+  const merkGeldt = merk ? merken.some((entry) => entry.naam === merk) : true;
 
   const maten = verf ? sizesOf(verf) : [];
   const variant = verf ? pickVariant(verf, maat ?? maten[0], kleur) : undefined;
@@ -317,7 +347,7 @@ export function KleurTrechter({
         <section>
           <h2 className="text-xl font-black uppercase text-ink">Wat ga je verven?</h2>
           <p className="mt-1 text-ink-soft">
-            Zo weten we welke verf bij je klus hoort — en welke basis we voor
+            Zo weten we welke verf bij je klus hoort, en welke basis we voor
             {" "}
             {kleurNaam} moeten gebruiken.
           </p>
@@ -356,6 +386,53 @@ export function KleurTrechter({
             Deze verf mengen wij gratis in {kleurNaam}
             {basis ? `, in de ${PAINT_BASES[basis].label.toLowerCase()}` : ""}.
           </p>
+
+          {merken.length > 1 && (
+            <div className="mt-4">
+              <p className="text-xs font-black uppercase tracking-wide text-ink-soft">
+                Merk in gedachten?
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMerk(null)}
+                  aria-pressed={!merk || !merkGeldt}
+                  className={`rounded-full border-2 px-3 py-1.5 text-sm font-bold transition ${
+                    !merk || !merkGeldt
+                      ? "border-brand bg-brand text-white"
+                      : "border-ink/10 text-ink hover:border-brand hover:text-brand"
+                  }`}
+                >
+                  Alle merken
+                </button>
+                {merken.map((entry) => (
+                  <button
+                    key={entry.naam}
+                    type="button"
+                    onClick={() => {
+                      setMerk(entry.naam === merk ? null : entry.naam);
+                      setVerf(null);
+                    }}
+                    aria-pressed={merk === entry.naam}
+                    className={`rounded-full border-2 px-3 py-1.5 text-sm font-bold transition ${
+                      merk === entry.naam
+                        ? "border-brand bg-brand text-white"
+                        : "border-ink/10 text-ink hover:border-brand hover:text-brand"
+                    }`}
+                  >
+                    {entry.naam}
+                    <span className="ml-1 text-xs font-normal opacity-70">{entry.aantal}</span>
+                  </button>
+                ))}
+              </div>
+              {merk && !merkGeldt && (
+                <p className="mt-2 text-sm text-ink-soft">
+                  {merk} heeft geen mengverf voor deze klus. Hieronder staat wat er
+                  wel bij past.
+                </p>
+              )}
+            </div>
+          )}
 
           {/*
             Eén vraag, want meer vragen haakt af. Met het oppervlak erbij
@@ -420,7 +497,7 @@ export function KleurTrechter({
           </div>
           {verven.length === 0 ? (
             <p className="card mt-4 p-6 text-ink-soft">
-              Voor deze klus staat geen mengverf online. Loop even binnen — in de
+              Voor deze klus staat geen mengverf online. Loop even binnen, in de
               winkel mengen we vrijwel elke kleur.
             </p>
           ) : (
@@ -516,7 +593,7 @@ export function KleurTrechter({
                             }}
                             className="btn btn-primary mt-3 w-full py-2 text-sm"
                           >
-                            In winkelwagen — {euro(variant?.price ?? product.price)}
+                            In winkelwagen, {euro(variant?.price ?? product.price)}
                           </button>
                         </div>
                       )}

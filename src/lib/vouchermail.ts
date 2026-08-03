@@ -30,7 +30,7 @@ export async function stuurVoucherMail(order: Order, voucher: Voucher): Promise<
   const tekst = [
     naam ? `Hoi ${naam},` : "Hoi,",
     "",
-    `Je kleurtesters zijn onderweg — en dit is je voucher ter waarde van ${bedrag}:`,
+    `Je kleurtesters zijn onderweg, en dit is je voucher ter waarde van ${bedrag}:`,
     "",
     `    ${voucher.code}`,
     "",
@@ -49,9 +49,9 @@ export async function stuurVoucherMail(order: Order, voucher: Voucher): Promise<
 
   const html = [
     `<p>${naam ? `Hoi ${naam},` : "Hoi,"}</p>`,
-    `<p>Je kleurtesters zijn onderweg — en dit is je voucher ter waarde van <strong>${bedrag}</strong>:</p>`,
+    `<p>Je kleurtesters zijn onderweg, en dit is je voucher ter waarde van <strong>${bedrag}</strong>:</p>`,
     `<p style="font-size:24px;font-weight:bold;letter-spacing:2px;background:#FFF3E6;padding:14px 18px;border-radius:10px;display:inline-block">${voucher.code}</p>`,
-    `<p>Zo werkt het: test je kleur rustig uit. Koop je daarna de echte verf bij ons, vul dan deze code in bij het afrekenen — het testerbedrag van ${bedrag} gaat er direct af. Zo kost proberen je niets.</p>`,
+    `<p>Zo werkt het: test je kleur rustig uit. Koop je daarna de echte verf bij ons, vul dan deze code in bij het afrekenen, het testerbedrag van ${bedrag} gaat er direct af. Zo kost proberen je niets.</p>`,
     `<p>De voucher is ${VOUCHER_GELDIG_MAANDEN} maanden geldig (tot ${geldigTotTekst(voucher)}) en geldt bij een bestelling met mengverf.</p>`,
     `<p><a href="${kleurenUrl}">Kleur gekozen? Bestel je verf</a></p>`,
     `<p>Vragen? Mail <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> of bel ${CONTACT_PHONE}.</p>`,
@@ -60,7 +60,7 @@ export async function stuurVoucherMail(order: Order, voucher: Voucher): Promise<
 
   const resultaat = await verstuurMail({
     aan: order.customer.email,
-    onderwerp: `Je kleurvoucher van ${bedrag} — ${voucher.code}`,
+    onderwerp: `Je kleurvoucher van ${bedrag}, ${voucher.code}`,
     tekst,
     html,
   });
@@ -106,7 +106,7 @@ export async function stuurVoucherHerinnering(voucher: Voucher): Promise<boolean
 
   const resultaat = await verstuurMail({
     aan: voucher.email,
-    onderwerp: `Je hebt nog ${bedrag} kleurtegoed — ${voucher.code}`,
+    onderwerp: `Je hebt nog ${bedrag} kleurtegoed, ${voucher.code}`,
     tekst,
     html,
   });

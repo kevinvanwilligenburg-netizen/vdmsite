@@ -1,4 +1,5 @@
 import { demoCategories, demoProducts, demoStockFor } from "@/lib/catalog";
+import { hardloperScore } from "@/lib/facets";
 import { isEchtMerk, merknaam } from "@/lib/merken";
 import { categorieenUit, loadFeedProducts } from "@/lib/product-feed";
 import { toonbareRubriek } from "@/lib/rubrieken";
@@ -248,10 +249,16 @@ export async function getMenu(): Promise<MenuCategory[]> {
   });
 }
 
-/** Aanbiedingen voor de homepage: hoogste voordeel eerst. */
+/**
+ * Aanbiedingen voor de homepage: hoogste voordeel eerst.
+ *
+ * Met een cap van twee per merk. Puur op kortingspercentage stonden er drie
+ * spaarlampen van hetzelfde merk bovenaan de homepage van een verfzaak — dat
+ * is geen etalage, dat is een toevalstreffer van de kassa.
+ */
 export async function getDeals(limit = 8): Promise<Product[]> {
   const products = await getProducts();
-  return products
+  const gesorteerd = products
     .filter(
       (product) =>
         product.compareAtPrice &&
@@ -263,7 +270,47 @@ export async function getDeals(limit = 8): Promise<Product[]> {
       (a, b) =>
         (b.compareAtPrice! - b.price) / b.compareAtPrice! -
         (a.compareAtPrice! - a.price) / a.compareAtPrice!,
+    );
+
+  const perMerk = new Map<string, number>();
+  const gekozen: Product[] = [];
+  for (const product of gesorteerd) {
+    const merk = (product.brand ?? "").toLowerCase();
+    const aantal = perMerk.get(merk) ?? 0;
+    if (aantal >= 2) continue;
+    perMerk.set(merk, aantal + 1);
+    gekozen.push(product);
+    if (gekozen.length >= limit) break;
+  }
+  // Zijn er te weinig merken voor een gevulde rij, dan vullen we aan met de
+  // rest: een halve rij ziet er kapot uit.
+  if (gekozen.length < limit) {
+    for (const product of gesorteerd) {
+      if (gekozen.length >= limit) break;
+      if (!gekozen.includes(product)) gekozen.push(product);
+    }
+  }
+  return gekozen;
+}
+
+/**
+ * De etalage van één merk, voor de homepage.
+ *
+ * Kevin over de topdeals: "willen we hier niet ook sikkens?" Sikkens staat er
+ * nooit tussen, want op Sikkens zit geen korting — dat merk verkoopt op naam,
+ * niet op een rode vlag. Daarom een eigen rij in plaats van een neppe deal.
+ */
+export async function getMerkEtalage(merk: string, limit = 4): Promise<Product[]> {
+  const products = await getProducts();
+  const naam = merk.toLowerCase();
+  return products
+    .filter(
+      (product) =>
+        product.brand?.toLowerCase() === naam &&
+        product.image &&
+        product.inStock !== false,
     )
+    .sort((a, b) => hardloperScore(b) - hardloperScore(a) || a.price - b.price)
     .slice(0, limit);
 }
 

@@ -147,6 +147,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="nl" className={robotoCondensed.variable}>
       <head>
+        {/* Het logo wacht op deze letter (font-display: block in globals.css),
+            dus die moet meteen mee en niet pas als de CSS hem tegenkomt. */}
+        <link
+          rel="preload"
+          href="/fonts/MullerBlack.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         {/* Moet vóór elke Google-tag staan; zie ConsentMode. */}
         <ConsentMode cookieWaarde={consentCookie} />
       </head>

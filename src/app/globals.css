@@ -16,6 +16,22 @@
   font-display: swap;
 }
 
+/*
+ * Hetzelfde bestand, maar dan voor het logo. Kevin: "tekst verspringt."
+ * Dat komt door `swap`: de browser tekent de logoletters eerst in Arial Black,
+ * perst ze met textLength in de vakjes, en herschikt ze zodra Muller binnen is.
+ * Voor lopende koppen is dat de juiste afweging, voor een logo niet — daar
+ * wacht je liever een fractie dan dat het ding voor je ogen verspringt.
+ * Zelfde URL, dus geen extra download.
+ */
+@font-face {
+  font-family: "Muller Logo";
+  src: url("/fonts/MullerBlack.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: block;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

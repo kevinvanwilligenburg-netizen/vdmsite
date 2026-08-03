@@ -105,7 +105,7 @@ export function StaalBestellen({ initialColors }: { initialColors: PaintColor[] 
     <div className="card p-6">
       <h2 className="text-lg font-black text-ink">Kies je kleuren</h2>
       <p className="mt-1 text-sm text-ink-soft">
-        Elke tester is 30 ml, gemengd in de kleur die jij kiest —{" "}
+        Elke tester is 30 ml, gemengd in de kleur die jij kiest.{" "}
         {euro(STAAL_PRIJS)} per stuk, maximaal {MAX_STALEN_PER_ORDER} per
         bestelling.
       </p>
@@ -169,7 +169,7 @@ export function StaalBestellen({ initialColors }: { initialColors: PaintColor[] 
           <Link href="/winkelwagen" className="underline">
             Bekijk winkelwagen
           </Link>{" "}
-          — je voucher krijg je per mail zodra de betaling binnen is.
+, je voucher krijg je per mail zodra de betaling binnen is.
         </p>
       )}
 

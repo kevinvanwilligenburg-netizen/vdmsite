@@ -56,7 +56,7 @@ export default function KlusadviesPage({
         <h1 className="text-3xl font-black uppercase text-ink sm:text-4xl">Klusadvies</h1>
         <p className="mt-3 text-ink-soft">
           Vertel in gewone taal wat je gaat doen. Wij rekenen uit hoeveel verf je nodig
-          hebt, of er grondverf bij moet en welk gereedschap erbij hoort — en zetten het
+          hebt, of er grondverf bij moet en welk gereedschap erbij hoort, en zetten het
           boodschappenlijstje in één klik in je mandje. Net als aan de balie, alleen dan
           om drie uur 's nachts ook.
         </p>

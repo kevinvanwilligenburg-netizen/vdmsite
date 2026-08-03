@@ -34,17 +34,17 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Hoe werkt afhalen in de winkel (Click & Collect)?",
     answer:
-      "Kies bij het afrekenen je winkel: Nijverdal, Apeldoorn, Deventer, Zutphen of Emmen. Je krijgt bericht zodra je bestelling klaarstaat — vaak dezelfde dag nog. Meld je bij de kassa met je afhaalcode; betalen is al gebeurd.",
+      "Kies bij het afrekenen je winkel: Nijverdal, Apeldoorn, Deventer, Zutphen of Emmen. Je krijgt bericht zodra je bestelling klaarstaat, vaak dezelfde dag nog. Meld je bij de kassa met je afhaalcode; betalen is al gebeurd.",
   },
   {
     question: "Kan ik verf in elke kleur bestellen?",
     answer:
-      "Ja. Kies je kleur online met de kleurkiezer; onze verfspecialist mengt je muurverf of lak gratis aan. Je krijgt hem bezorgd of haalt hem op — je hoeft er dus niet voor langs te komen. De kleuren op je scherm zijn een indicatie; wij mengen op de officiële kleurcode, niet op wat jouw scherm toont.",
+      "Ja. Kies je kleur online met de kleurkiezer; onze verfspecialist mengt je muurverf of lak gratis aan. Je krijgt hem bezorgd of haalt hem op, je hoeft er dus niet voor langs te komen. De kleuren op je scherm zijn een indicatie; wij mengen op de officiële kleurcode, niet op wat jouw scherm toont.",
   },
   {
     question: "Hoe kan ik betalen?",
     answer:
-      "Je rekent veilig af via Mollie met iDEAL, Bancontact, KBC of Belfius (België), creditcard, Apple Pay, Google Pay of PayPal. Liever achteraf betalen? Dat kan met Klarna. Bestel je zakelijk, vul dan je bedrijfsnaam in — dan kun je op rekening betalen via Billie, met 30 dagen betaaltermijn.",
+      "Je rekent veilig af via Mollie met iDEAL, Bancontact, KBC of Belfius (België), creditcard, Apple Pay, Google Pay of PayPal. Liever achteraf betalen? Dat kan met Klarna. Bestel je zakelijk, vul dan je bedrijfsnaam in, dan kun je op rekening betalen via Billie, met 30 dagen betaaltermijn.",
   },
   {
     question: "Kan ik mijn bestelling retourneren?",
@@ -82,7 +82,7 @@ export default async function CustomerServicePage() {
             Klantenservice
           </h1>
           <p className="mt-3 text-ink-soft">
-            We helpen je graag — online én in de winkel. Bekijk de veelgestelde
+            We helpen je graag, online én in de winkel. Bekijk de veelgestelde
             vragen of neem direct contact op.
           </p>
         </div>

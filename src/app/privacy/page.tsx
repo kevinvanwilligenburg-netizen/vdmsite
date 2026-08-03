@@ -14,7 +14,7 @@ const SECTIONS: { title: string; paragraphs: string[] }[] = [
   {
     title: "Welke gegevens verwerken we?",
     paragraphs: [
-      "Als je een bestelling plaatst, verwerken we je naam, e-mailadres, telefoonnummer en — bij bezorging — je adresgegevens. Daarnaast bewaren we wat je hebt besteld, het bedrag en de status van je betaling.",
+      "Als je een bestelling plaatst, verwerken we je naam, e-mailadres, telefoonnummer en, bij bezorging, je adresgegevens. Daarnaast bewaren we wat je hebt besteld, het bedrag en de status van je betaling.",
       "Kies je voor afhalen, dan bewaren we ook de gekozen winkel en je afhaalcode.",
     ],
   },

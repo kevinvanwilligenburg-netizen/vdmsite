@@ -181,7 +181,7 @@ export function CartPageClient() {
             </p>
             <p className="mt-1 text-sm text-ink-soft">
               Dat scheelt <strong className="text-ink">{euro(kluspasKorting)}</strong> op
-              dit mandje. Een account maken kost niets en gaat met je e-mailadres —
+              dit mandje. Een account maken kost niets en gaat met je e-mailadres,
               geen wachtwoord.
             </p>
           </div>

@@ -160,7 +160,7 @@ export function StockList({
           {pickup && pickupStore ? (
             <>
               <p className="mt-1.5 font-black text-green-700">
-                {pickupStore.city} — {pickup.label.toLowerCase()}
+                {pickupStore.city}, {pickup.label.toLowerCase()}
               </p>
               <p className="mt-0.5 text-sm text-ink-soft">{pickup.detail}</p>
               {!favourite && (

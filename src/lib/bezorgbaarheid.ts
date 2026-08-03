@@ -77,7 +77,7 @@ export function bezorgbaarheid(artikel: TeBezorgenArtikel): Bezorgbaarheid {
     if (kilo !== null && kilo >= MAX_PAKKETGEWICHT_KG) {
       return {
         verzendbaar: false,
-        reden: `Dit artikel weegt ${String(kilo).replace(".", ",")} kg en gaat niet met de pakketdienst mee — je haalt het op in de winkel.`,
+        reden: `Dit artikel weegt ${String(kilo).replace(".", ",")} kg en gaat niet met de pakketdienst mee, je haalt het op in de winkel.`,
       };
     }
   }
@@ -88,13 +88,13 @@ export function bezorgbaarheid(artikel: TeBezorgenArtikel): Bezorgbaarheid {
     if (liters > MAX_VLOEISTOF_L && VLOEISTOF.test(artikel.subcategorie ?? "")) {
       return {
         verzendbaar: false,
-        reden: `${String(liters).replace(".", ",")} liter is te zwaar voor een pakket — dit formaat haal je op in de winkel.`,
+        reden: `${String(liters).replace(".", ",")} liter is te zwaar voor een pakket, dit formaat haal je op in de winkel.`,
       };
     }
     if (liters >= MAX_VOLUME_L) {
       return {
         verzendbaar: false,
-        reden: "Dit artikel is te groot voor een pakket — je haalt het op in de winkel.",
+        reden: "Dit artikel is te groot voor een pakket, je haalt het op in de winkel.",
       };
     }
   }

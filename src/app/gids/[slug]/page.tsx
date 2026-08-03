@@ -83,7 +83,7 @@ export default async function GidsPage({ params }: Props) {
             <Link href="/kleurstalen" className="font-bold text-brand hover:underline">
               kleurtester
             </Link>{" "}
-            — het bedrag krijg je terug als voucher bij je verf.
+, het bedrag krijg je terug als voucher bij je verf.
           </p>
         )}
       </header>
@@ -117,7 +117,7 @@ export default async function GidsPage({ params }: Props) {
           <Link href="/klusadvies" className="font-bold text-brand hover:underline">
             klusadviseur
           </Link>{" "}
-          en je krijgt een boodschappenlijstje op maat — inclusief het aantal
+          en je krijgt een boodschappenlijstje op maat, inclusief het aantal
           liters. Of loop binnen bij een van onze{" "}
           <Link href="/winkels" className="font-bold text-brand hover:underline">
             vijf winkels

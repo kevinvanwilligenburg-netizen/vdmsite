@@ -25,7 +25,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const store = await getStore(params.slug);
   if (!store) return {};
-  const title = `Verfwinkel ${store.city} — ${store.name}`;
+  const title = `Verfwinkel ${store.city}: ${store.name}`;
   const description = `Verf, gereedschap en klusmateriaal in ${store.city}: ${store.address}. Verf gratis gemengd in elke kleur, gratis parkeren en online bestellingen gratis afhalen. Open ma t/m vr 08:00–18:00, za 08:00–17:00.`;
   return {
     title,
@@ -97,7 +97,7 @@ export default async function StorePage({ params }: Props) {
     },
     {
       q: `Kan ik online bestellen en afhalen in ${store.city}?`,
-      a: `Dat kan. Kies bij het afrekenen voor afhalen en selecteer ${store.city}. Je krijgt bericht met een afhaalcode zodra je bestelling klaarstaat — vaak dezelfde dag nog. Afhalen is gratis.`,
+      a: `Dat kan. Kies bij het afrekenen voor afhalen en selecteer ${store.city}. Je krijgt bericht met een afhaalcode zodra je bestelling klaarstaat, vaak dezelfde dag nog. Afhalen is gratis.`,
     },
     {
       q: `Wat zijn de openingstijden van ${store.name}?`,

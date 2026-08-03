@@ -556,7 +556,7 @@ export function ColorPicker({
         {loading
           ? "Kleuren laden…"
           : total > colors.length
-            ? `${colors.length} van ${total.toLocaleString("nl-NL")} kleuren getoond — zoek op naam of code om te verfijnen.`
+            ? `${colors.length} van ${total.toLocaleString("nl-NL")} kleuren getoond, zoek op naam of code om te verfijnen.`
             : `${colors.length.toLocaleString("nl-NL")} ${colors.length === 1 ? "kleur" : "kleuren"}. De kleuren op je scherm zijn een indicatie.`}
       </p>
     </div>
