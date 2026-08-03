@@ -17,6 +17,21 @@ import type { Order } from "@/lib/types";
  * kleur is bij te bestellen.
  */
 
+/**
+ * Wat deze bestelling met de kluspunten doet.
+ *
+ * De winkel zag de punten tot nu toe op de pakbon staan en printte daar een
+ * bon van. Online staat het saldo op de accountpagina; deze regel wijst de
+ * klant daarheen.
+ *
+ * Bewust GEEN uitgerekend aantal punten erbij. Tilroy kent per verkoop een
+ * `LoyaltyMultiplierFactor`, dus tijdens een dubbele-puntenactie klopt
+ * "bedrag maal een vast getal" niet meer. Een verkeerd aantal in een
+ * bevestigingsmail is erger dan geen aantal.
+ */
+const KLUSPUNTEN_TEKST =
+  "Je kluspunten voor deze bestelling worden automatisch bijgeschreven op je Kluspas. Je saldo zie je in je account.";
+
 function regel(order: Order): string[] {
   return order.items.map((item) => {
     const extra = [
@@ -82,6 +97,7 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     `Totaal betaald: ${euros(order.total)} (incl. btw)`,
     "",
     levering(order),
+    ...(order.kluspasNumber ? ["", KLUSPUNTEN_TEKST] : []),
     "",
     `Je bestelling volgen: ${orderUrl}`,
     `Je factuur: ${factuurUrl}`,
@@ -106,6 +122,14 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
         : ""
     }<br><strong>Totaal betaald: ${euros(order.total)}</strong> (incl. btw)</p>`,
     `<p>${levering(order)}</p>`,
+    ...(order.kluspasNumber
+      ? [
+          `<p>${KLUSPUNTEN_TEKST.replace(
+            "in je account",
+            `in <a href="${absoluteUrl("/account")}">je account</a>`,
+          )}</p>`,
+        ]
+      : []),
     `<p><a href="${orderUrl}">Volg je bestelling</a> · <a href="${factuurUrl}">Bekijk je factuur</a></p>`,
     `<p>Vragen? Mail <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> of bel ${CONTACT_PHONE}.</p>`,
     `<p>Groet,<br>${SITE_NAME}</p>`,
