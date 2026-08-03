@@ -88,6 +88,28 @@ function vereenvoudig(tekst: string): string {
     .trim();
 }
 
+const VULWOORDEN = new Set(["en", "de", "het", "een", "of", "voor"]);
+
+function woorden(tekst: string): string[] {
+  return vereenvoudig(tekst)
+    .split(" ")
+    .filter((woord) => woord && !VULWOORDEN.has(woord));
+}
+
+/**
+ * Past deze rubrieknaam bij deze zoekterm?
+ *
+ * Op hele woorden, niet op deelstrings. Met `includes` sloeg de rubriek
+ * "Verf" aan op de term "verfbenodigheden", en belandde elke kwasten- en
+ * tapepagina op de kale Verf-rubriek van 34 artikelen.
+ */
+function rubriekPast(naam: string, term: string): boolean {
+  const naamWoorden = woorden(naam);
+  const termWoorden = new Set(woorden(term));
+  if (naamWoorden.length === 0 || termWoorden.size === 0) return false;
+  return naamWoorden.every((woord) => termWoorden.has(woord));
+}
+
 /**
  * Oude categorie-, kleur- en themapagina's naar de pagina die er nu voor in
  * de plaats is gekomen.
@@ -131,12 +153,12 @@ async function resolveLegacyCategory(path: string): Promise<string | null> {
 
   const categorieen = await getCategories();
   for (const term of termen) {
-    const gezocht = vereenvoudig(OUDE_CATEGORIE_TERMEN[term.replace(/ /g, "-")] ?? term);
+    const gezocht = OUDE_CATEGORIE_TERMEN[term.replace(/ /g, "-")] ?? term;
     if (!gezocht) continue;
-    const treffer =
-      categorieen.find((categorie) => vereenvoudig(categorie.name) === gezocht) ??
-      categorieen.find((categorie) => vereenvoudig(categorie.name).includes(gezocht)) ??
-      categorieen.find((categorie) => gezocht.includes(vereenvoudig(categorie.name)));
+    // Langste naam eerst: "Lijmen, Kitten en Vulmiddelen" wint van "Lijmen".
+    const treffer = [...categorieen]
+      .sort((a, b) => woorden(b.name).length - woorden(a.name).length)
+      .find((categorie) => rubriekPast(categorie.name, gezocht));
     if (treffer) return `/categorie/${treffer.slug}`;
   }
 
@@ -155,11 +177,22 @@ async function resolveLegacyCategory(path: string): Promise<string | null> {
     }
   }
 
-  // 5. Duidelijk een assortimentspagina ("…-kopen") maar geen rubriek die
-  //    past: dan is de zoekpagina met die term nog altijd een antwoord, en
-  //    de homepage niet.
-  if (/-kopen$/.test(laatste) && termen[0]) {
-    return `/zoeken?q=${encodeURIComponent(termen[0])}`;
+  // 5. Geen rubriek die zo heet ("kwasten", "schilderstape"), maar het
+  //    assortiment kent het woord wel. Kijk in welke rubriek die artikelen
+  //    vooral zitten en stuur daarheen: een echte, indexeerbare rubriekpagina
+  //    is voor Google en klant beter dan de zoekpagina (die op noindex staat).
+  const term = termen[0];
+  if (term && term.length >= 4) {
+    const kern = vereenvoudig(term).replace(/(en|s)$/, "");
+    const perRubriek = new Map<string, number>();
+    for (const product of producten) {
+      if (!vereenvoudig(product.name).includes(kern)) continue;
+      perRubriek.set(product.category, (perRubriek.get(product.category) ?? 0) + 1);
+    }
+    const beste = [...perRubriek.entries()].sort((a, b) => b[1] - a[1])[0];
+    // Een handvol treffers kan toeval zijn; pas vanaf tien is het een rubriek.
+    if (beste && beste[1] >= 10) return `/categorie/${beste[0]}`;
+    if (/-kopen$/.test(laatste)) return `/zoeken?q=${encodeURIComponent(term)}`;
   }
 
   return null;
