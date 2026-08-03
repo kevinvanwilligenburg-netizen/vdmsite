@@ -17,6 +17,59 @@ import type { PaintColor, Product } from "@/lib/types";
 
 type Stap = 1 | 2 | 3 | 4;
 
+/**
+ * Snelknoppen voor het oppervlak, per soort klus.
+ *
+ * Kevin: bij "hout binnen" bood ik slaapkamer 40 m² en woonkamer 70 m² aan,
+ * terwijl je daar deuren en kozijnen verft. Een knop die niet over jouw klus
+ * gaat, is een knop die je niet gebruikt — en dan blijft het veld leeg en
+ * rekent de site niets uit. De maten zijn vuistregels uit de winkel: een
+ * binnendeur is met kozijn en aan twee kanten zo'n 4 m².
+ */
+const SNELMATEN: Record<string, { label: string; waarde: string }[]> = {
+  binnenmuur: [
+    { label: "Slaapkamer ±40 m²", waarde: "40" },
+    { label: "Woonkamer ±70 m²", waarde: "70" },
+    { label: "Eén muur ±12 m²", waarde: "12" },
+  ],
+  plafond: [
+    { label: "Klein plafond ±12 m²", waarde: "12" },
+    { label: "Woonkamer ±30 m²", waarde: "30" },
+    { label: "Hele verdieping ±60 m²", waarde: "60" },
+  ],
+  "hout-binnen": [
+    { label: "1 deur ±4 m²", waarde: "4" },
+    { label: "Deur + kozijn ±6 m²", waarde: "6" },
+    { label: "Trap ±15 m²", waarde: "15" },
+  ],
+  "hout-buiten": [
+    { label: "1 kozijn ±3 m²", waarde: "3" },
+    { label: "Alle kozijnen ±25 m²", waarde: "25" },
+    { label: "Schutting ±40 m²", waarde: "40" },
+  ],
+  gevel: [
+    { label: "Eén gevel ±35 m²", waarde: "35" },
+    { label: "Voor- en achtergevel ±70 m²", waarde: "70" },
+    { label: "Hele woning ±140 m²", waarde: "140" },
+  ],
+  vloer: [
+    { label: "Kamer ±20 m²", waarde: "20" },
+    { label: "Garage ±35 m²", waarde: "35" },
+    { label: "Hal ±8 m²", waarde: "8" },
+  ],
+  metaal: [
+    { label: "Radiator ±3 m²", waarde: "3" },
+    { label: "Hekwerk ±15 m²", waarde: "15" },
+    { label: "Garagedeur ±8 m²", waarde: "8" },
+  ],
+};
+
+const STANDAARD_SNELMATEN = [
+  { label: "Klein ±10 m²", waarde: "10" },
+  { label: "Gemiddeld ±40 m²", waarde: "40" },
+  { label: "Groot ±70 m²", waarde: "70" },
+];
+
 const STAPPEN: { nummer: Stap; label: string }[] = [
   { nummer: 1, label: "Kleur" },
   { nummer: 2, label: "Klus" },
@@ -330,11 +383,7 @@ export function KleurTrechter({
                 className="input w-28"
               />
               <span className="text-sm font-semibold text-ink-soft">m²</span>
-              {[
-                { label: "Slaapkamer ±40 m²", waarde: "40" },
-                { label: "Woonkamer ±70 m²", waarde: "70" },
-                { label: "Plafond ±20 m²", waarde: "20" },
-              ].map((snel) => (
+              {(SNELMATEN[klus.id] ?? STANDAARD_SNELMATEN).map((snel) => (
                 <button
                   key={snel.waarde}
                   type="button"

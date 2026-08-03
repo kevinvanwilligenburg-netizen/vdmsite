@@ -70,6 +70,16 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const alle = await getProductsByCategory(category.slug);
   const filters = parseFilters(searchParams);
   const gefilterd = applyFilters(alle, filters);
+
+  // Hoeveel houdt elk snelfilter over? Een filter dat niets wegneemt (of
+  // alles) hoort niet in de kolom te staan — zie ProductFiltersPanel.
+  const snelfilters = {
+    voorraad: alle.filter((product) => product.inStock !== false).length,
+    aanbieding: alle.filter(
+      (product) => product.compareAtPrice && product.compareAtPrice > product.price,
+    ).length,
+    mengverf: alle.filter((product) => product.colorMixable).length,
+  };
   const facets = buildFacets(alle, filters);
   const actief = activeFilterCount(filters);
 
@@ -149,6 +159,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             filters={filters}
             total={gefilterd.length}
             activeCount={actief}
+            snelfilters={snelfilters}
           >
             <div className="space-y-6">
               {zichtbaar.length === 0 ? (

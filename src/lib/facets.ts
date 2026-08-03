@@ -229,6 +229,29 @@ function matches(product: Product, filters: ProductFilters): boolean {
   return true;
 }
 
+/**
+ * Hoe "hardlopend" een artikel is, zonder verkoopcijfers.
+ *
+ * Die cijfers zitten in de kassa en niet in de feed, dus we leiden het af uit
+ * wat we wél weten. Wat een winkel op voorraad legt en fotografeert, verkoopt;
+ * wat mengbaar is, is de kern van het assortiment; een restpartij is dat niet.
+ * Kevin's voorbeeld: klik je op Sikkens, dan hoort Rubbol boven een partijblik
+ * te staan.
+ */
+function hardloperScore(product: Product): number {
+  let score = 0;
+  if (product.inStock !== false) score += 4;
+  if (product.image) score += 3;
+  if (product.colorMixable) score += 3;
+  // Meerdere maten betekent een lijn die de winkel echt voert.
+  if ((product.variants?.length ?? 0) > 1) score += 2;
+  if (product.compareAtPrice) score += 1;
+  // Restpartijen en uitverkoopregels naar achteren.
+  if (/partij|restant|opruiming|foutief|tweede keus/i.test(product.name)) score -= 6;
+  if (!isEchtMerk(product.brand)) score -= 2;
+  return score;
+}
+
 /** Pas de filters toe en sorteer. */
 export function applyFilters(products: Product[], filters: ProductFilters): Product[] {
   const filtered = products.filter((product) => matches(product, filters));
@@ -247,12 +270,10 @@ export function applyFilters(products: Product[], filters: ProductFilters): Prod
         return kortingB - kortingA;
       });
     default:
-      // Standaard: leverbaar en met foto eerst, dan de scherpste aanbiedingen.
-      return [...filtered].sort((a, b) => {
-        const scoreA = (a.image ? 2 : 0) + (a.inStock !== false ? 2 : 0) + (a.compareAtPrice ? 1 : 0);
-        const scoreB = (b.image ? 2 : 0) + (b.inStock !== false ? 2 : 0) + (b.compareAtPrice ? 1 : 0);
-        return scoreB - scoreA || a.price - b.price;
-      });
+      // Standaard: de hardlopers bovenaan. Zonder dit stond bij "Sikkens"
+      // een partijblik net zo hoog als Rubbol, en dat is niet wat iemand
+      // zoekt die op een merk klikt.
+      return [...filtered].sort((a, b) => hardloperScore(b) - hardloperScore(a) || a.price - b.price);
   }
 }
 

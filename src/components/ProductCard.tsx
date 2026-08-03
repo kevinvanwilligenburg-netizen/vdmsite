@@ -45,9 +45,12 @@ export function ProductCard({ product }: { product: Product }) {
             −{discountPct(product.price, product.compareAtPrice!)}%
           </span>
         )}
+        {/* "Elke RAL-kleur" verkocht goed maar sloot te veel uit: klanten die
+            een Farrow & Ball of Little Greene willen, dachten dat wij dat niet
+            konden. We mengen uit 245 waaiers, dus dat zeggen we ook. */}
         {product.colorMixable && (
           <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md bg-ink px-2 py-1 text-xs font-bold text-white shadow">
-            <Icon name="palette" className="h-3.5 w-3.5" /> Elke RAL-kleur
+            <Icon name="palette" className="h-3.5 w-3.5" /> In elke kleur
           </span>
         )}
       </div>

@@ -83,6 +83,16 @@ export default async function SearchPage({ searchParams }: Props) {
     : eigenResultaten;
   const filters = parseFilters(searchParams);
   const gefilterd = applyFilters(results.all, filters);
+
+  // Hoeveel houdt elk snelfilter over? Een filter dat niets wegneemt (of
+  // alles) hoort niet in de kolom te staan — zie ProductFiltersPanel.
+  const snelfilters = {
+    voorraad: results.all.filter((product) => product.inStock !== false).length,
+    aanbieding: results.all.filter(
+      (product) => product.compareAtPrice && product.compareAtPrice > product.price,
+    ).length,
+    mengverf: results.all.filter((product) => product.colorMixable).length,
+  };
   const facets = buildFacets(results.all, filters);
   const actief = activeFilterCount(filters);
   const zichtbaar = gefilterd.slice(0, 48);
@@ -193,6 +203,7 @@ export default async function SearchPage({ searchParams }: Props) {
               filters={filters}
               total={gefilterd.length}
               activeCount={actief}
+              snelfilters={snelfilters}
             >
               {zichtbaar.length === 0 ? (
                 <div className="card p-8 text-center">

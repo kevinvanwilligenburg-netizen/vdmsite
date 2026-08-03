@@ -109,6 +109,22 @@ export function PurchasePanel({
       ? activeVariant.inStock === false
       : product.inStock === false;
 
+  /*
+   * Kost een donkere kleur meer dan een lichte?
+   *
+   * Bij muurverf wel: de donkere basis is een duurder blik. "Gratis gemengd"
+   * klopt dan nog steeds voor het mengen zelf, maar het leest als "elke kleur
+   * kost hetzelfde" — en dat is niet zo. We zeggen het alleen waar het waar
+   * is, en noemen het prijsverschil waar dat er is.
+   */
+  const basisPrijsVerschilt = useMemo(() => {
+    const vanMaat = variants.filter(
+      (variant) => (variant.size ?? variant.name) === (size ?? sizes[0]) && variant.base,
+    );
+    const prijzen = new Set(vanMaat.map((variant) => variant.kluspasPrice ?? variant.price));
+    return prijzen.size > 1;
+  }, [variants, size, sizes]);
+
   // Vertel het voorraadblok welk exact artikel de klant nu voor zich heeft:
   // dezelfde sku die straks in de winkelwagen belandt. Zonder dit toonde de
   // voorraad de optelsom van alle maten samen — 2,5 L "op voorraad" terwijl
@@ -332,7 +348,11 @@ export function PurchasePanel({
         <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-black/5">
           <p className="inline-flex items-center gap-1.5 text-sm font-bold text-ink">
             <Icon name="palette" className="h-4 w-4 text-brand" /> Jouw kleur{" "}
-            <span className="font-normal text-ink-soft">(gratis gemengd door onze verfspecialist)</span>
+            <span className="font-normal text-ink-soft">
+              {basisPrijsVerschilt
+                ? "(mengen is gratis; donkere kleuren gaan in een duurdere basis)"
+                : "(gratis gemengd door onze verfspecialist)"}
+            </span>
           </p>
 
           {wit && (
@@ -378,7 +398,9 @@ export function PurchasePanel({
                   <Icon name="palette" className="h-4 w-4 shrink-0 text-brand" />
                   Andere kleur
                 </span>
-                <span className="mt-0.5 block text-xs text-ink-soft">gratis gemengd</span>
+                <span className="mt-0.5 block text-xs text-ink-soft">
+                  {basisPrijsVerschilt ? "prijs volgt de basis" : "gratis gemengd"}
+                </span>
               </button>
             </div>
           )}

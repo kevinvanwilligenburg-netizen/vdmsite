@@ -13,7 +13,9 @@ import {
 } from "@/lib/facets";
 
 const SORT_LABELS: { value: SortKey; label: string }[] = [
-  { value: "relevantie", label: "Relevantie" },
+  // "Relevantie" zegt niets; dit sorteert op wat de winkel het meest
+  // verkoopt (voorraad, foto, mengbaar, geen restpartij).
+  { value: "relevantie", label: "Populair" },
   { value: "prijs-op", label: "Prijs laag → hoog" },
   { value: "prijs-af", label: "Prijs hoog → laag" },
   { value: "korting", label: "Hoogste korting" },
@@ -125,12 +127,20 @@ export function ProductFiltersPanel({
   filters,
   total,
   activeCount,
+  snelfilters,
   children,
 }: {
   facets: Facet[];
   filters: ProductFilters;
   total: number;
   activeCount: number;
+  /**
+   * Hoeveel artikelen elk snelfilter zou overhouden. Zonder dit stond
+   * "Mengbaar in elke kleur" ook op de Mack-pagina, waar geen enkel artikel
+   * mengbaar is: aanvinken deed dan niets zichtbaars behalve de lijst legen.
+   * Een filter dat niets filtert hoort er niet te staan.
+   */
+  snelfilters?: { voorraad: number; aanbieding: number; mengverf: number };
   /** De productlijst (en paginering) die naast de filters komt. */
   children: React.ReactNode;
 }) {
@@ -223,10 +233,34 @@ export function ProductFiltersPanel({
       {/* Snelfilters */}
       <div className="space-y-2 rounded-xl border border-ink/10 px-3 py-3">
         {[
-          { key: "voorraad", label: "Direct leverbaar", on: Boolean(filters.opVoorraad) },
-          { key: "aanbieding", label: "In de aanbieding", on: Boolean(filters.aanbieding) },
-          { key: "mengverf", label: "Mengbaar in elke kleur", on: Boolean(filters.mengverf) },
-        ].map((flag) => (
+          {
+            key: "voorraad",
+            label: "Direct leverbaar",
+            on: Boolean(filters.opVoorraad),
+            aantal: snelfilters?.voorraad,
+          },
+          {
+            key: "aanbieding",
+            label: "In de aanbieding",
+            on: Boolean(filters.aanbieding),
+            aantal: snelfilters?.aanbieding,
+          },
+          {
+            key: "mengverf",
+            label: "Mengbaar in elke kleur",
+            on: Boolean(filters.mengverf),
+            aantal: snelfilters?.mengverf,
+          },
+        ]
+          // Weglaten als het niets oplevert of juist alles doorlaat; een
+          // aangevinkt filter blijft staan, anders kun je het niet uitzetten.
+          .filter(
+            (flag) =>
+              flag.on ||
+              flag.aantal === undefined ||
+              (flag.aantal > 0 && flag.aantal < total),
+          )
+          .map((flag) => (
           <label key={flag.key} className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="checkbox"
