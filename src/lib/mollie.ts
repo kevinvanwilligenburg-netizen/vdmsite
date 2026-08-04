@@ -51,6 +51,102 @@ function isPubliclyReachable(baseUrl: string): boolean {
   return !/localhost|127\.0\.0\.1|\[::1\]/.test(baseUrl);
 }
 
+/** Twee decimalen, zonder de afrondingsfouten van drijvende komma. */
+function r2(bedrag: number): number {
+  return Math.round(bedrag * 100) / 100;
+}
+
+/**
+ * Orderregels voor Mollie.
+ *
+ * Hierop liep Klarna stuk. Achteraf betalen is een kredietbeoordeling: Klarna
+ * wil weten wát iemand koopt, niet alleen voor hoeveel. Mollie eist daarvoor
+ * `lines`, en zonder die regels weigert het de betaling met een 4xx — waarna
+ * onze terugval de methode laat vallen en de klant op het keuzescherm belandt
+ * zonder de methode die hij net koos. Precies wat Kevin meldde, en precies het
+ * verschil met de Klus=r-checkout, die de regels wél meestuurt.
+ *
+ * De regels moeten tot op de cent optellen tot het totaal. Doen ze dat niet,
+ * dan geven we niets terug: liever geen Klarna dan een iDEAL-betaling die
+ * struikelt over een rekenfout van een cent.
+ *
+ * Btw: alles wat wij verkopen valt in het hoge tarief, en de prijzen in de
+ * order zijn inclusief. Het btw-bedrag is dus het deel boven het kale bedrag.
+ */
+const BTW_TARIEF = 0.21;
+
+function mollieRegels(order: Order): unknown[] | undefined {
+  const btw = (bedrag: number) => r2(bedrag - r2(bedrag / (1 + BTW_TARIEF)));
+  const regel = (
+    type: string,
+    omschrijving: string,
+    aantal: number,
+    stuk: number,
+    totaal: number,
+  ) => ({
+    type,
+    description: omschrijving.slice(0, 100) || "Artikel",
+    quantity: aantal,
+    unitPrice: { currency: "EUR", value: stuk.toFixed(2) },
+    totalAmount: { currency: "EUR", value: totaal.toFixed(2) },
+    vatRate: (BTW_TARIEF * 100).toFixed(2),
+    vatAmount: { currency: "EUR", value: btw(totaal).toFixed(2) },
+  });
+
+  const regels: ReturnType<typeof regel>[] = order.items.map((item) => {
+    const stuk = r2(item.price);
+    return regel(
+      "physical",
+      [item.title, item.variantLabel].filter(Boolean).join(" · "),
+      item.quantity,
+      stuk,
+      r2(stuk * item.quantity),
+    );
+  });
+
+  // De staal-voucher als eigen regel met een negatief bedrag; anders tellen de
+  // regels hoger uit dan er betaald wordt.
+  if (order.voucherKorting && order.voucherKorting > 0) {
+    const korting = -r2(order.voucherKorting);
+    regels.push(
+      regel(
+        "discount",
+        `Staal-voucher${order.voucherCode ? ` ${order.voucherCode}` : ""}`,
+        1,
+        korting,
+        korting,
+      ),
+    );
+  }
+
+  if (order.shipping > 0) {
+    const kosten = r2(order.shipping);
+    regels.push(regel("shipping_fee", "Bezorgkosten", 1, kosten, kosten));
+  }
+
+  const som = r2(regels.reduce((totaal, r) => totaal + Number(r.totalAmount.value), 0));
+  if (Math.abs(som - r2(order.total)) >= 0.005) {
+    console.error(
+      `[mollie] orderregels tellen op tot ${som.toFixed(2)} maar het totaal is ${order.total.toFixed(
+        2,
+      )}; regels niet meegestuurd (achteraf betalen valt dan af).`,
+    );
+    return undefined;
+  }
+  return regels;
+}
+
+/**
+ * De Mollie-locale bij het factuurland.
+ *
+ * Niet vast op nl_NL zetten: bij achteraf betalen bepaalt de locale in welke
+ * markt Klarna de aanvraag doet, en een Belgisch adres komt op de Nederlandse
+ * markt niet door.
+ */
+function localeVoorLand(land: string | undefined): string {
+  return (land ?? "NL").trim().toUpperCase().slice(0, 2) === "BE" ? "nl_BE" : "nl_NL";
+}
+
 export async function createMolliePayment(
   order: Order,
   baseUrl: string,
@@ -68,19 +164,26 @@ export async function createMolliePayment(
   const gekozenMethod = method === "googlepay" ? undefined : method;
 
   /*
-   * Wie een factuuradres nodig heeft.
+   * Factuuradres en orderregels: altijd meesturen als we ze compleet hebben.
    *
-   * Billie (op rekening) eist het mét bedrijfsnaam. Maar Klarna eist het ook,
-   * en dat stond hier niet: Mollie weigerde de betaling dan met een 4xx, wij
-   * vielen terug op het keuzescherm, en de klant zag daar alle methoden
-   * behalve degene die hij net had gekozen. Precies wat Kevin meldde.
+   * Dit stond eerst alleen aan bij Billie en Klarna, en dat was te krap. Mollie
+   * negeert allebei bij methoden die er niets mee doen, maar zonder deze twee
+   * ís er geen achteraf betalen: Klarna eist een factuuradres én de regels
+   * waaruit blijkt wát er gekocht wordt. Zonder dat weigert Mollie met een
+   * 4xx, valt onze code terug op het keuzescherm, en staat juist de methode
+   * die de klant koos daar niet meer tussen.
    *
-   * Een adres meesturen kan bij elke methode; Mollie negeert het waar het niet
-   * nodig is. Alleen doen als we een compleet adres hebben — een half adres
-   * levert dezelfde weigering op als geen adres.
+   * De Klus=r-checkout doet het al zo en daar werkt Klarna wél. Dit is dat
+   * verschil, meer niet.
    */
   const zakelijk = gekozenMethod === "billie";
-  const wilAdres = zakelijk || gekozenMethod === "klarna";
+  const heeftAdres = Boolean(
+    order.customer.street &&
+      order.customer.postalCode &&
+      order.customer.city &&
+      (!zakelijk || order.customer.company),
+  );
+  const regels = mollieRegels(order);
 
   const body: Record<string, unknown> = {
     amount: {
@@ -89,14 +192,11 @@ export async function createMolliePayment(
     },
     description: `De Voordeelmarkt bestelling ${order.reference}`,
     redirectUrl: `${baseUrl}/bestelling/${order.reference}`,
-    locale: "nl_NL",
+    locale: localeVoorLand(order.customer.country),
     metadata: { orderId: order.id },
     ...(gekozenMethod ? { method: gekozenMethod } : {}),
-    ...(wilAdres &&
-    order.customer.street &&
-    order.customer.postalCode &&
-    order.customer.city &&
-    (!zakelijk || order.customer.company)
+    ...(regels ? { lines: regels } : {}),
+    ...(heeftAdres
       ? {
           billingAddress: {
             ...(order.customer.company
