@@ -12,8 +12,8 @@ import { houtsoortUit, pakInhoudM2, tintUit } from "@/lib/vloer";
 /**
  * Echte productcatalogus van De Voordeelmarkt, via de productfeed van het
  * VDM-dashboard. Bij voorkeur de gepagineerde JSON-feed
- * (GET /api/doofinder/json); is die niet bereikbaar, dan de XML-feed
- * (GET /api/doofinder/feed) als terugval. De prijzen komen daar sinds
+ * (GET /api/catalogus/json); is die niet bereikbaar, dan de XML-feed
+ * (GET /api/catalogus/feed) als terugval. De prijzen komen daar sinds
  * juli 2026 rechtstreeks uit de Tilroy Price API, dus ze zijn actueel in
  * plaats van zo vers als de laatste feedgeneratie.
  *
@@ -30,14 +30,19 @@ import { houtsoortUit, pakInhoudM2, tintUit } from "@/lib/vloer";
  * en pagina's die 'm gebruiken draaien op ISR (revalidate 1 uur).
  */
 
-const FEED_URL = `${DASHBOARD_API_URL}/api/doofinder/feed`;
+const FEED_URL = `${DASHBOARD_API_URL}/api/catalogus/feed`;
 /**
  * De gepagineerde JSON-feed. Let op het ontbreken van een punt in het pad:
  * bij `feed.json` ziet Vercel het als een statisch bestand en wordt de route
  * nooit uitgevoerd — dat gaf maandenlang een 404 op code die wél gedeployd
  * was. Niet "verbeteren" naar een bestandsnaam met extensie.
+ *
+ * Heette tot 4 augustus 2026 /api/doofinder/json. We werken niet meer met
+ * Doofinder, maar dit was en is gewoon onze productcatalogus — alleen de naam
+ * verwees nog naar de zoekleverancier van de oude site. De oude paden werken
+ * nog even door als alias; die verdwijnen zodra deze omzetting is bevestigd.
  */
-const FEED_JSON_URL = `${DASHBOARD_API_URL}/api/doofinder/json`;
+const FEED_JSON_URL = `${DASHBOARD_API_URL}/api/catalogus/json`;
 const CACHE_MS = 60 * 60 * 1000;
 /** Aantal artikelen per pagina uit de JSON-feed. */
 const PAGE_SIZE = 500;
