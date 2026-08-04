@@ -67,9 +67,20 @@ export async function createMolliePayment(
   // toont Mollie zelf de knop.
   const gekozenMethod = method === "googlepay" ? undefined : method;
 
-  // Billie is betalen op rekening voor bedrijven; Mollie eist daarvoor het
-  // volledige factuuradres mét bedrijfsnaam.
+  /*
+   * Wie een factuuradres nodig heeft.
+   *
+   * Billie (op rekening) eist het mét bedrijfsnaam. Maar Klarna eist het ook,
+   * en dat stond hier niet: Mollie weigerde de betaling dan met een 4xx, wij
+   * vielen terug op het keuzescherm, en de klant zag daar alle methoden
+   * behalve degene die hij net had gekozen. Precies wat Kevin meldde.
+   *
+   * Een adres meesturen kan bij elke methode; Mollie negeert het waar het niet
+   * nodig is. Alleen doen als we een compleet adres hebben — een half adres
+   * levert dezelfde weigering op als geen adres.
+   */
   const zakelijk = gekozenMethod === "billie";
+  const wilAdres = zakelijk || gekozenMethod === "klarna";
 
   const body: Record<string, unknown> = {
     amount: {
@@ -81,14 +92,16 @@ export async function createMolliePayment(
     locale: "nl_NL",
     metadata: { orderId: order.id },
     ...(gekozenMethod ? { method: gekozenMethod } : {}),
-    ...(zakelijk &&
-    order.customer.company &&
+    ...(wilAdres &&
     order.customer.street &&
     order.customer.postalCode &&
-    order.customer.city
+    order.customer.city &&
+    (!zakelijk || order.customer.company)
       ? {
           billingAddress: {
-            organizationName: order.customer.company,
+            ...(order.customer.company
+              ? { organizationName: order.customer.company }
+              : {}),
             givenName: order.customer.firstName,
             familyName: order.customer.lastName,
             email: order.customer.email,
