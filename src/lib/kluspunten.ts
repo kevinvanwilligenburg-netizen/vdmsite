@@ -31,8 +31,15 @@ export const EURO_PER_PUNT = 0.05;
 /** Bij dit saldo staat er een volle korting klaar. */
 export const PUNTEN_VOOR_KORTING = 250;
 
-/** Wat die korting is, in centen. */
-export const KORTING_BIJ_DREMPEL = Math.round(PUNTEN_VOOR_KORTING * EURO_PER_PUNT * 100);
+/**
+ * Wat die korting is, in EURO'S.
+ *
+ * Bewust in euro's en niet in centen, want `euros()` uit lib/format rekent in
+ * euro's. Hier stond het eerst in centen en dat leverde op de accountpagina en
+ * op /kluspunten "€ 1.250,00" op in plaats van "€ 12,50" — honderd keer te
+ * veel, op een pagina die klanten zien. Eén eenheid door de hele keten dus.
+ */
+export const KORTING_BIJ_DREMPEL = PUNTEN_VOOR_KORTING * EURO_PER_PUNT;
 
 /**
  * Sparen webshopbestellingen punten?

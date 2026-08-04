@@ -1,4 +1,5 @@
 import { haalKluspunten } from "@/lib/account";
+import { KORTING_BIJ_DREMPEL, PUNTEN_VOOR_KORTING } from "@/lib/kluspunten";
 import { kvDel, kvGetJSON, kvSetJSON, kvSMembers } from "@/lib/kv";
 import { verstuurMail } from "@/lib/mail";
 import { getOrder } from "@/lib/orders";
@@ -33,10 +34,12 @@ import { absoluteUrl, DASHBOARD_API_URL, SITE_NAME } from "@/lib/site";
 
 /** Vanaf hier is het "bijna". */
 export const HERINNER_VANAF = 200;
-/** Bij dit aantal is de voucher er. */
-export const VOUCHER_VANAF = 250;
-/** Wat de voucher waard is, in euro's. */
-export const VOUCHER_WAARDE = 12.5;
+
+// De drempel en het bedrag komen uit lib/kluspunten, zodat de mail, de
+// accountpagina en /kluspunten nooit uiteen kunnen lopen. Twee eigen
+// constanten voor hetzelfde bedrag is hoe die duizend euro te veel kon ontstaan.
+export const VOUCHER_VANAF = PUNTEN_VOOR_KORTING;
+export const VOUCHER_WAARDE = KORTING_BIJ_DREMPEL;
 
 interface Stempel {
   /** Hoeveel punten iemand had toen we mailden. */

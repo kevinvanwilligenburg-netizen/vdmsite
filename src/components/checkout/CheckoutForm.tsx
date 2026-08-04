@@ -361,6 +361,12 @@ export function CheckoutForm({
           (kortingActief ? subtotal - kluspasKorting : subtotal) - voucherKorting,
         ),
         country,
+        // Profpas geeft altijd gratis bezorging, dus de prijsopgave hier moet
+        // dat meenemen. De server controleert het KvK- of BTW-nummer zelf nog
+        // voordat hij de korting echt toepast.
+        ...(klantType === "zakelijk" && profpas && zakelijkGecontroleerd
+          ? { profpas: true }
+          : {}),
       }),
     })
       .then((response) => (response.ok ? response.json() : null))

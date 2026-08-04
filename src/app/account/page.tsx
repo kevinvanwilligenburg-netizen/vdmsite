@@ -163,10 +163,14 @@ export default async function AccountPage() {
                       }}
                     />
                   </div>
+                  {/* euros() rekent in EURO'S, niet in centen — dat is te zien
+                      aan de regel hierboven, die `kluspunten.waarde` ongewijzigd
+                      doorgeeft. Met een maal-honderd erbij stond hier
+                      "€ 1.250,00" in plaats van "€ 12,50". */}
                   <p className="mt-1.5 text-sm font-bold text-ink">
                     Nog{" "}
-                    {Math.round((VOUCHER_VANAF - kluspunten.punten) * 10) / 10} punten tot{" "}
-                    {euros(VOUCHER_WAARDE * 100)} korting.
+                    {Math.round((VOUCHER_VANAF - kluspunten.punten) * 10) / 10} punten
+                    en je hebt {euros(VOUCHER_WAARDE)} korting.
                   </p>
                 </>
               )}

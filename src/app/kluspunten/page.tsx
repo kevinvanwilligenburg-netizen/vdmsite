@@ -95,7 +95,7 @@ export default function KluspuntenPage() {
               icon: "palette",
               kop: "Je spaart",
               tekst: `Je punten komen op je pas te staan. Eén punt is ${euros(
-                Math.round(EURO_PER_PUNT * 100),
+                EURO_PER_PUNT,
               )} waard.`,
             },
             {

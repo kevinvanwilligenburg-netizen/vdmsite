@@ -199,7 +199,11 @@ export async function POST(request: Request) {
   // Profpas-vinkje (NL: geldige KvK; buitenland: VIES-bevestigde BTW —
   // hierboven al afgedwongen, anders was de bestelling geweigerd).
   let kluspas = Boolean(sessieEmail) || accountAanmaken;
-  if (klantType === "zakelijk" && input.profpas === true) {
+  // Apart bijhouden of het écht een Profpas is: die geeft naast de korting
+  // ook altijd gratis bezorging. Het `kluspas`-vlaggetje hieronder dekt beide
+  // passen, dus daar kun je dat niet aan aflezen.
+  const profpasActief = klantType === "zakelijk" && input.profpas === true;
+  if (profpasActief) {
     kluspas = true;
   }
 
@@ -450,7 +454,10 @@ export async function POST(request: Request) {
   // een merk in het mandje ligt dat we franco versturen (Sikkens). Dat
   // bepalen we hier en niet op de client: anders kan iemand het meesturen.
   // De gratis-grens rekent over wat de klant écht betaalt, dus ná de voucher.
-  const gratisOngeachtBedrag = franco(items.map((item) => item.brand));
+  // Kevin (3 augustus 2026): een Profpas geeft áltijd gratis bezorging,
+  // ongeacht het orderbedrag. Punten levert die pas juist niet op; dat is de
+  // ruil. Dus hier wel meetellen, bij de kluspunten niet.
+  const gratisOngeachtBedrag = franco(items.map((item) => item.brand)) || profpasActief;
   const verzendkostenCents =
     fulfilment === "pickup"
       ? 0

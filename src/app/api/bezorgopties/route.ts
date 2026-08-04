@@ -27,6 +27,10 @@ export async function POST(request: Request) {
     items?: { sku?: string; quantity?: number }[];
     subtotal?: number;
     country?: string;
+    /* Een Profpas geeft altijd gratis bezorging; het formulier stuurt dat mee
+       zodat de prijsopgave hier klopt met wat de checkout straks rekent. Die
+       checkt het zelf nog een keer, dus dit is een weergave en geen besluit. */
+    profpas?: boolean;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -87,7 +91,7 @@ export async function POST(request: Request) {
     const product = await getProductBySku(regel.sku!);
     if (product) merken.push(product.brand);
   }
-  const gratisOngeachtBedrag = franco(merken);
+  const gratisOngeachtBedrag = franco(merken) || body.profpas === true;
   const verzendkosten = shippingCost(subtotalCents, land, gratisOngeachtBedrag);
 
   return NextResponse.json({
