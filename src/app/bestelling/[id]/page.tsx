@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Icon } from "@/components/icons";
 import { Mark } from "@/components/Mark";
+import { ProductArt } from "@/components/ProductArt";
 import { AankoopMeten } from "@/components/order/AankoopMeten";
 import { OrderClientActions } from "@/components/order/OrderClientActions";
 import { ReorderColor, type SavedColor } from "@/components/order/ReorderColor";
@@ -322,15 +323,19 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
         <ul className="mt-4 divide-y divide-ink/5">
           {order.items.map((item) => (
             <li key={item.key} className="flex items-center gap-4 py-3">
-              <span
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg"
-                style={{
-                  background: `linear-gradient(135deg, hsl(${item.hue ?? 25} 85% 94%), hsl(${item.hue ?? 25} 70% 86%))`,
-                  color: `hsl(${item.hue ?? 25} 45% 38%)`,
-                }}
-                aria-hidden
-              >
-                <Icon name={item.icon ?? "box"} className="h-6 w-6" />
+              {/* De foto van het artikel, niet een gekleurd icoontje. Die zat
+                  al in de order (de winkelwagen bewaart hem), maar deze pagina
+                  gebruikte hem niet — dus stond er bij een bestelling met foto
+                  toch een generiek symbool. Geen foto? Dan valt ProductArt
+                  vanzelf terug op het icoon. */}
+              <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-black/5">
+                <ProductArt
+                  icon={item.icon ?? "box"}
+                  hue={item.hue ?? 25}
+                  image={item.image}
+                  size="sm"
+                  label={item.title}
+                />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-ink">{item.title}</p>
