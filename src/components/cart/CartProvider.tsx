@@ -10,6 +10,36 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  euroWaarde,
+  volgToegevoegd,
+  volgVerwijderd,
+  type AnalyticsItem,
+} from "@/lib/analytics";
+
+/**
+ * Een winkelwagenregel in de vorm die de meettags verwachten.
+ *
+ * De prijs gaat naar euro's: onze bedragen staan in centen, GA4 en Meta
+ * rekenen in de valuta zelf. Een mandje van € 24,95 dat als 2495 doorkomt,
+ * maakt van je Ads-rapport een fantasie.
+ */
+function alsAnalyticsItem(item: {
+  productId: string;
+  name: string;
+  variantName?: string;
+  unitPrice: number;
+  qty: number;
+}): AnalyticsItem {
+  return {
+    item_id: item.productId,
+    item_name: item.name,
+    ...(item.variantName ? { item_variant: item.variantName } : {}),
+    price: euroWaarde(item.unitPrice),
+    quantity: item.qty,
+  };
+}
+
 import type { CartItem } from "@/lib/types";
 
 const STORAGE_KEY = "vdm-cart-v1";
@@ -76,6 +106,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { ...item, qty: aantal }];
     });
     setLaatstToegevoegd({ ...item, qty: aantal });
+    // Hier en niet in de knoppen: de winkelwagen wordt vanaf de productpagina,
+    // de kleurkiezer, het klusadvies en de bijverkoop gevuld. Eén plek betekent
+    // dat er nooit een route bijkomt die stilletjes niet meet.
+    volgToegevoegd(alsAnalyticsItem({ ...item, qty: aantal }));
   }, []);
 
   const sluitBevestiging = useCallback(() => setLaatstToegevoegd(null), []);
@@ -91,7 +125,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const removeItem = useCallback((key: string) => {
-    setItems((prev) => prev.filter((entry) => entry.key !== key));
+    setItems((prev) => {
+      const weg = prev.find((entry) => entry.key === key);
+      if (weg) volgVerwijderd(alsAnalyticsItem(weg));
+      return prev.filter((entry) => entry.key !== key);
+    });
   }, []);
 
   const clear = useCallback(() => setItems([]), []);

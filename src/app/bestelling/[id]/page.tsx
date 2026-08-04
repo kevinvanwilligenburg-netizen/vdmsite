@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Icon } from "@/components/icons";
 import { Mark } from "@/components/Mark";
+import { AankoopMeten } from "@/components/order/AankoopMeten";
 import { OrderClientActions } from "@/components/order/OrderClientActions";
 import { ReorderColor, type SavedColor } from "@/components/order/ReorderColor";
 import { euros } from "@/lib/format";
@@ -59,6 +60,23 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      {/* De conversie. Alleen bij een betaalde bestelling: een openstaande
+          betaling is geen omzet, en Ads mag daar niet op bieden. */}
+      {paid && (
+        <AankoopMeten
+          bestelnummer={order.reference}
+          waarde={order.total}
+          verzendkosten={order.shipping}
+          items={order.items.map((item) => ({
+            item_id: item.productId,
+            item_name: item.title,
+            ...(item.brand ? { item_brand: item.brand } : {}),
+            ...(item.variantLabel ? { item_variant: item.variantLabel } : {}),
+            price: item.price,
+            quantity: item.quantity,
+          }))}
+        />
+      )}
       <header className="text-center">
         {paid ? (
           <>

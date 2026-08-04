@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
+import { ArtikelBekeken } from "@/components/meten/Paginameting";
 import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
 import { Companions } from "@/components/product/Companions";
@@ -265,6 +266,21 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="space-y-8 pb-20 sm:pb-0">
+      {/* Voedt de remarketinglijsten: zonder view_item weet Google niet welk
+          artikel iemand bekeek en kan het daar ook geen advertentie voor
+          tonen. */}
+      <ArtikelBekeken
+        item={{
+          item_id: product.id,
+          item_name: product.name,
+          ...(product.brand ? { item_brand: product.brand } : {}),
+          ...(product.attributes?.subcategorie
+            ? { item_category: product.attributes.subcategorie.split("|")[0] }
+            : {}),
+          price: product.price / 100,
+          quantity: 1,
+        }}
+      />
       <Breadcrumbs
         items={[
           { name: "Home", href: "/" },

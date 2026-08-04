@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { AfrekenenMeten } from "@/components/meten/AfrekenenMeten";
 import { emailVanSessie, SESSIE_COOKIE, voorkeurWinkel } from "@/lib/account";
 import { getWhatsappNummer } from "@/lib/contact";
 import { pickupPromise } from "@/lib/pickup";
@@ -37,6 +38,7 @@ export default async function CheckoutPage() {
   }));
   return (
     <div className="space-y-8">
+      <AfrekenenMeten />
       <Breadcrumbs
         items={[
           { name: "Home", href: "/" },
