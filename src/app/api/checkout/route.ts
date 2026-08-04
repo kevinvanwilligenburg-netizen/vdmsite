@@ -1,7 +1,13 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { emailVanSessie, haalPas, kluspasNummerVan, SESSIE_COOKIE } from "@/lib/account";
+import {
+  emailVanSessie,
+  haalKlant,
+  haalPas,
+  kluspasNummerVan,
+  SESSIE_COOKIE,
+} from "@/lib/account";
 import { controleerBtw } from "@/lib/vies";
 import { btwFormaatGeldig, isBedrijfsType, kvkGeldig, normaliseerBtw } from "@/lib/zakelijk";
 import { isBetaalmethode } from "@/lib/betaalmethoden";
@@ -199,6 +205,25 @@ export async function POST(request: Request) {
   // Profpas-vinkje (NL: geldige KvK; buitenland: VIES-bevestigde BTW —
   // hierboven al afgedwongen, anders was de bestelling geweigerd).
   let kluspas = Boolean(sessieEmail) || accountAanmaken;
+
+  /*
+   * Bestaande klant die niet inlogde: ook korting.
+   *
+   * De regels vielen omgekeerd uit. Wie inlogt krijgt 5%, wie "maak een
+   * account aan" aanvinkt ook — maar wie hier al jaren klant is, niet inlogt
+   * en niets aanvinkt, betaalde de volle prijs. Precies de trouwe klant dus.
+   *
+   * Dat maakt niets losser dan het al was: het aanvinkvakje geeft die korting
+   * nu al aan iedereen die erom vraagt. Hier komt geen nieuwe manier bij om
+   * hem te pakken, er verdwijnt alleen een manier om hem mis te lopen.
+   *
+   * Bewust geen melding op het scherm dat we het adres kennen. Dat zou aan
+   * iedereen die een adres intikt verklappen of die persoon bij ons koopt.
+   */
+  if (!kluspas && EMAIL_PATTERN.test(email)) {
+    const bekend = await haalKlant(email).catch(() => null);
+    if (bekend?.inTilroy) kluspas = true;
+  }
 
   /*
    * Een Profpas uit het portaal telt altijd, ook zonder vinkje.
