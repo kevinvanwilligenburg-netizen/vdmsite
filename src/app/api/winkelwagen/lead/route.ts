@@ -43,6 +43,11 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         shop: "vdmsite",
+        // Het dashboard splitst de rapportage per webshop en zocht op `site`;
+        // wij stuurden alleen `shop`. Allebei meesturen kost niets en
+        // voorkomt dat de verlaten wagens van VDM en Klus=r op één hoop
+        // belanden.
+        site: "vdm",
         email,
         items: (body.items ?? []).slice(0, 50),
         total: body.total ?? 0,

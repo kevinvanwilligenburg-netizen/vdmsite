@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { AddedToCart } from "@/components/cart/AddedToCart";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { Analytics } from "@vercel/analytics/react";
 import { ConsentMode } from "@/components/consent/ConsentMode";
 import { ConsentProvider } from "@/components/consent/ConsentProvider";
 import { CookieBanner } from "@/components/consent/CookieBanner";
@@ -197,6 +198,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <CookieBanner />
         </PrijsProvider>
         </ConsentProvider>
+        {/* Vercel Web Analytics. De schakelaar stond al aan in het
+            Vercel-dashboard, maar dat zet alleen de opslagkant aan: zonder dit
+            component wordt er niets verstuurd. Gevolg was dat er zeven dagen
+            lang nul bezoekers geteld werden terwijl er gewoon besteld is.
+            Cookieloos, dus het valt buiten de toestemmingsvraag. */}
+        <Analytics />
       </body>
     </html>
   );
