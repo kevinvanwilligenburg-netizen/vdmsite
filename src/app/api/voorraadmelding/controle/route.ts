@@ -10,7 +10,14 @@ export const maxDuration = 60;
 
 /**
  * Loopt de wachtlijst langs en mailt iedereen wiens artikel weer op voorraad
- * ligt. Bedoeld voor een cron (bijvoorbeeld één keer per uur).
+ * ligt.
+ *
+ * ⚠️ STAAT NIET MEER IN DE CRON (4 augustus 2026). Het dashboard houdt de
+ * wachtlijst nu voor beide shops bij en mailt elke ochtend om 06:45; twee
+ * lijsten naast elkaar betekent dat dezelfde klant twee keer bericht krijgt.
+ * De route blijft bestaan om hem met de hand te kunnen draaien zolang er nog
+ * aanmeldingen in ónze KV staan — draai hem niet zomaar, want dan mailt hij
+ * mensen die het dashboard óók al heeft gemaild.
  *
  * Afgeschermd met SITE_API_KEY of CRON_SECRET: deze route verstuurt mail, en
  * zonder slot zou iemand hem in een lus kunnen aanroepen. Vercel Cron stuurt
