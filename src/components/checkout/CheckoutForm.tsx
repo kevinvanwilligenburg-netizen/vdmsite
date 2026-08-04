@@ -39,6 +39,8 @@ type Fulfilment = "delivery" | "pickup";
 
 /** Antwoord van /api/bezorgopties: wat kan er, en wat kost het? */
 interface BezorgOpties {
+  /* Wat Mollie op dit bedrag aankan; null als het ophalen mislukte. */
+  betaalmethoden?: string[] | null;
   standaard: { type: string; label: string; kosten: number };
   sameDay: { beschikbaar: boolean; toeslag?: number; label?: string; cutoffUur: number };
   verzending: {
@@ -106,6 +108,9 @@ export function CheckoutForm({
   const [sameDay, setSameDay] = useState(false);
   const [opties, setOpties] = useState<BezorgOpties | null>(null);
   const [betaalmethode, setBetaalmethode] = useState("ideal");
+  // Wat Mollie op dit mandje aankan. Null zolang we het niet weten of het
+  // ophalen mislukte; dan tonen we onze eigen lijst en laat Mollie beslissen.
+  const molliesMethoden = opties?.betaalmethoden ?? null;
 
   // Particulier of zakelijk; bepaalt de velden én de kortingsgrond. De
   // korting zelf beslist de server — dit stuurt alleen wat we meesturen en
@@ -177,6 +182,19 @@ export function CheckoutForm({
   const methoden = useMemo(
     () =>
       betaalmethodenVoor(country).filter((methode) => {
+        // Wat Mollie op dit bedrag niet aankan, tonen we niet. Klarna stond
+        // hier als tegel terwijl het profiel hem weigerde: je klikte erop en
+        // belandde op Mollie's keuzescherm waar hij ook niet tussen stond.
+        // Apple en Google Pay staan niet in die lijst omdat Mollie ze pas op
+        // zijn eigen pagina aanbiedt; die blijven we zelf beoordelen.
+        if (
+          molliesMethoden &&
+          methode.id !== "applepay" &&
+          methode.id !== "googlepay" &&
+          !molliesMethoden.includes(methode.id)
+        ) {
+          return false;
+        }
         if (methode.id === "applepay") return applePay;
         // Google Pay werkt via Mollie in elke browser mét een Google-account,
         // maar op een Apple Pay-apparaat is dat de vreemde eend: daar tonen we
@@ -187,7 +205,7 @@ export function CheckoutForm({
         if (methode.zakelijk) return company.trim().length >= 2;
         return true;
       }),
-    [country, applePay, company],
+    [country, applePay, company, molliesMethoden],
   );
   // Verdwijnt de gekozen methode (ander land, geen Apple Pay), val dan terug
   // op de eerste die er wél is.

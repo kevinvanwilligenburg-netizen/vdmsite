@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { combinePromises, deliveryPromise, SAME_DAY_CUTOFF_HOUR } from "@/lib/delivery";
+import { beschikbareMethoden } from "@/lib/mollie";
 import {
   franco,
   gratisVanaf,
@@ -94,7 +95,13 @@ export async function POST(request: Request) {
   const gratisOngeachtBedrag = franco(merken) || body.profpas === true;
   const verzendkosten = shippingCost(subtotalCents, land, gratisOngeachtBedrag);
 
+  // Welke betaalmethoden Mollie op dít bedrag aankan. Meeliften op deze
+  // aanroep scheelt een extra ronde vanaf de checkout, en het bedrag is hier
+  // toch al bekend 2014 Klarna heeft drempels, dus het antwoord hangt ervan af.
+  const methoden = await beschikbareMethoden(subtotalCents + verzendkosten, land);
+
   return NextResponse.json({
+    betaalmethoden: methoden,
     standaard: {
       type: promise.type,
       label: promise.label,

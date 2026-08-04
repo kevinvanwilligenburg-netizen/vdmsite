@@ -146,3 +146,44 @@ export async function createMolliePayment(
 export async function getMolliePayment(paymentId: string): Promise<MolliePayment> {
   return mollieFetch<MolliePayment>(`/payments/${encodeURIComponent(paymentId)}`);
 }
+
+/**
+ * Welke betaalmethoden kan dít profiel op dít bedrag?
+ *
+ * Kevin klikte Klarna en belandde op Mollie's keuzescherm, waar Klarna óók
+ * niet tussen stond. Onze tegels kwamen uit een vaste lijst in de code, en die
+ * wist niets van wat er in het Mollie-profiel is aangezet. Een methode
+ * aanbieden die geweigerd wordt kost precies één klant per keer, op het
+ * duurste moment van het bezoek.
+ *
+ * Mollie kan dat gewoon vertellen, inclusief de drempels waar wij niets van
+ * weten: Klarna heeft minimum- en maximumbedragen, en sommige methoden gelden
+ * per land. Door het bedrag mee te geven krijgen we het antwoord voor dít
+ * mandje, niet in het algemeen.
+ *
+ * Faalt de aanroep, dan geven we null terug en houdt de aanroeper zijn eigen
+ * lijst aan: liever te veel keuze dan een lege betaalstap.
+ */
+export async function beschikbareMethoden(
+  bedragInCenten: number,
+  land: "NL" | "BE",
+): Promise<string[] | null> {
+  if (!mollieEnabled()) return null;
+  const bedrag = Math.max(1, Math.round(bedragInCenten)) / 100;
+  const query = new URLSearchParams({
+    "amount[value]": bedrag.toFixed(2),
+    "amount[currency]": "EUR",
+    billingCountry: land,
+    locale: land === "BE" ? "nl_BE" : "nl_NL",
+  });
+  try {
+    const data = await mollieFetch<{ _embedded?: { methods?: { id: string }[] } }>(
+      `/methods?${query.toString()}`,
+    );
+    const ids = (data._embedded?.methods ?? []).map((methode) => methode.id);
+    return ids.length > 0 ? ids : null;
+  } catch (error) {
+    console.error("[mollie] methodenlijst ophalen mislukt:", error);
+    return null;
+  }
+}

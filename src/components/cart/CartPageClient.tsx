@@ -163,19 +163,32 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
               </dd>
             </div>
           )}
+          {/* Ingelogd? Dan is de korting geen belofte meer maar een regel, en
+              hoort hij in het totaal te zitten. Kevin: "dan moet je
+              kluspaskorting zien als regel en dan totaal het bedrag met
+              korting." Een totaal dat hoger is dan wat je straks afrekent,
+              laat de klant twijfelen op precies het verkeerde moment. */}
+          {ingelogd && kluspasKorting > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-ink-soft">Kluspas-korting</dt>
+              <dd className="font-bold text-green-700">− {euro(kluspasKorting)}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-ink-soft">Afhalen in de winkel</dt>
             <dd className="font-bold text-green-700">Gratis</dd>
           </div>
           <div className="flex justify-between border-t border-ink/10 pt-3 text-base">
             <dt className="font-black text-ink">Totaal (incl. btw)</dt>
-            <dd className="font-black text-brand">{euro(subtotal)}</dd>
+            <dd className="font-black text-brand">
+              {euro(ingelogd ? subtotal - kluspasKorting : subtotal)}
+            </dd>
           </div>
         </dl>
 
         {/* Alleen voor wie nog géén account heeft. Een ingelogde klant kreeg
             hier de uitnodiging om een account te maken voor korting die hij al
-            krijgt 2014 dat leest als een fout in de webshop. */}
+            krijgt, en dat leest als een fout in de webshop. */}
         {kluspasKorting > 0 && !ingelogd && (
           <div className="mt-4 rounded-xl bg-brand-light p-4">
             <p className="flex items-center gap-2 font-black text-ink">
