@@ -547,6 +547,9 @@ export async function POST(request: Request) {
           kluspasSavings: kluspasSavingCents / 100,
         }
       : {}),
+    // ProfPas apart vastleggen: die telt hierboven als pashouder, maar spaart
+    // geen kluspunten. De bevestigingsmail moet dat onderscheid kunnen maken.
+    ...(profpasActief ? { profpas: true } : {}),
     ...(voucherCode
       ? { voucherCode, voucherKorting: voucherKortingCents / 100 }
       : {}),

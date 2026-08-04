@@ -276,6 +276,14 @@ export interface Order {
   total: number; // euro's
   /** Kluspas-nummer van de klant; de korting zit al in de bedragen. */
   kluspasNumber?: string;
+  /**
+   * Afgerekend met ProfPas (10%, altijd gratis bezorgd).
+   *
+   * Staat los van `kluspasNumber`: een ProfPas-houder telt intern ook als
+   * pashouder, maar spaart géén kluspunten. Zonder dit veld kon de
+   * bevestigingsmail dat verschil niet zien.
+   */
+  profpas?: boolean;
   /** Verzilverde staal-voucher: code en korting (euro's) op deze bestelling. */
   voucherCode?: string;
   voucherKorting?: number;

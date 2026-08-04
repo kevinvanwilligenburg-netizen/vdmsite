@@ -1,5 +1,12 @@
+import { haalKluspunten } from "@/lib/account";
 import { feestdagWinkelUren } from "@/lib/feestdagen";
 import { euros } from "@/lib/format";
+import {
+  KLUSPUNTEN_ONLINE,
+  KORTING_BIJ_DREMPEL,
+  PUNTEN_VOOR_KORTING,
+  puntenVoor,
+} from "@/lib/kluspunten";
 import { klusUitBestelling, type Klusblok } from "@/lib/klustips";
 import { verstuurMail } from "@/lib/mail";
 import {
@@ -384,6 +391,69 @@ function tipsBlok(klus: Klusblok | null): string {
 }
 
 /**
+ * Kluspunten: wat deze bestelling oplevert en waar de klant staat.
+ *
+ * Kevin: "misschien in de mail ook de kluspunten laten zien, gespaard en
+ * totaal?" Kan — maar alleen als het waar is. Webshopbonnen boekten nul
+ * punten (54 bonnen, € 5.428, gemeten door het dashboard) omdat ze op
+ * vestiging 8934 staan, waar Tilroy het puntensysteem niet aanraakt. Daarom
+ * hangt dit blok aan `KLUSPUNTEN_ONLINE`: staat die vlag uit, dan schrijft
+ * deze functie niets. Gaat de schakelaar in de Tilroy-backoffice om, dan
+ * zet je NEXT_PUBLIC_KLUSPUNTEN_ONLINE=1 in Vercel en staat het er meteen.
+ *
+ * Het saldo is het saldo van vóór deze bestelling — de punten hiervan zijn
+ * op het moment van mailen nog niet geboekt. Dat staat er ook zo bij; een
+ * totaal dat niet klopt met de kassabon is erger dan geen totaal.
+ */
+function kluspuntenBlok(
+  order: Order,
+  saldo: { punten: number; waarde: number } | null,
+): string {
+  if (!KLUSPUNTEN_ONLINE) return "";
+  // ProfPas krijgt 10% korting maar spaart niet; en zonder pas valt er niets
+  // te sparen.
+  if (order.profpas || !order.kluspasNumber) return "";
+
+  const verdiend = puntenVoor(Math.round(order.total * 100));
+  if (verdiend <= 0) return "";
+
+  const straks = (saldo?.punten ?? 0) + verdiend;
+  const tekort = Math.max(0, PUNTEN_VOOR_KORTING - (straks % PUNTEN_VOOR_KORTING));
+  const bijna = straks >= PUNTEN_VOOR_KORTING;
+
+  const regels = [
+    `<tr>
+       <td style="padding:2px 0;font-size:14px;color:${zacht};">Deze bestelling</td>
+       <td align="right" style="padding:2px 0;font-size:14px;font-weight:bold;color:#1B7F3B;">+ ${verdiend} punten</td>
+     </tr>`,
+    saldo
+      ? `<tr>
+           <td style="padding:2px 0;font-size:14px;color:${zacht};">Je saldo hiervoor</td>
+           <td align="right" style="padding:2px 0;font-size:14px;font-weight:bold;color:${inkt};">${saldo.punten} punten</td>
+         </tr>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const slot = bijna
+    ? `Je hebt genoeg voor ${euros(KORTING_BIJ_DREMPEL)} korting. Laat je Kluspas zien aan de kassa, dan verzilveren we hem.`
+    : `Nog ${tekort} punten tot ${euros(KORTING_BIJ_DREMPEL)} korting.`;
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:18px;background:${vlak};border-radius:10px;">
+      <tr>
+        <td style="padding:14px 16px;">
+          <span style="display:block;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;color:${oranje};padding-bottom:6px;">Kluspunten</span>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${regels}</table>
+          <p style="margin:8px 0 0 0;font-size:13px;line-height:1.5;color:${zacht};">
+            ${esc(slot)} <a href="${absoluteUrl("/kluspunten")}" style="color:${oranje};font-weight:bold;">Hoe het werkt</a>
+          </p>
+        </td>
+      </tr>
+    </table>`;
+}
+
+/**
  * Hulp bij deze bestelling.
  *
  * Stond eerst als losse zin onderaan ("Vragen over je bestelling? Mail …");
@@ -468,6 +538,7 @@ export function bevestigingsHtml(
   order: Order,
   klus: Klusblok | null,
   winkel: Store | null = null,
+  puntensaldo: { punten: number; waarde: number } | null = null,
 ): string {
   const orderUrl = absoluteUrl(`/bestelling/${order.reference}`);
   const factuurUrl = absoluteUrl(`/bestelling/${order.reference}/factuur`);
@@ -501,6 +572,7 @@ export function bevestigingsHtml(
       ${artikelrijen(order)}
     </table>
     ${totalen(order)}
+    ${kluspuntenBlok(order, puntensaldo)}
 
     <p style="margin:22px 0 0 0;">
       ${mailKnop({ href: orderUrl, label: "Volg je bestelling" })}
@@ -534,6 +606,13 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     winkel = (await getStore(order.store.id).catch(() => undefined)) ?? null;
   }
 
+  // Het puntensaldo alleen ophalen als we het ook gaan tonen; anders is het
+  // een dashboard-aanroep voor niets, midden in de betaalafhandeling.
+  let puntensaldo: { punten: number; waarde: number } | null = null;
+  if (KLUSPUNTEN_ONLINE && order.kluspasNumber && !order.profpas) {
+    puntensaldo = await haalKluspunten(order.customer.email).catch(() => null);
+  }
+
   const tekst = [
     naam ? `Hoi ${naam},` : "Hoi,",
     "",
@@ -555,6 +634,13 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
       : []),
     `Totaal betaald: ${euros(order.total)} (incl. btw)`,
     "",
+    ...(KLUSPUNTEN_ONLINE && order.kluspasNumber && !order.profpas
+      ? [
+          `Kluspunten met deze bestelling: + ${puntenVoor(Math.round(order.total * 100))}`,
+          ...(puntensaldo ? [`Je saldo hiervoor: ${puntensaldo.punten} punten`] : []),
+          "",
+        ]
+      : []),
     levering(order, winkel),
     "",
     ...(klus
@@ -572,7 +658,7 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     `Groet, ${SITE_NAME}`,
   ].join("\n");
 
-  const html = bevestigingsHtml(order, klus, winkel);
+  const html = bevestigingsHtml(order, klus, winkel, puntensaldo);
 
   // Trustpilot leest de bevestiging mee via BCC en nodigt de klant uit voor
   // een review. Alleen op deze mail: een inlogcode of verzendmail met een
