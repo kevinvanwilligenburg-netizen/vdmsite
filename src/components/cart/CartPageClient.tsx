@@ -15,7 +15,7 @@ import { GRATIS_VANAF_TEKST } from "@/lib/shipping";
 import { STAAL_PRODUCT_ID } from "@/lib/stalen";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 
-export function CartPageClient() {
+export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}) {
   const { items, subtotal, hydrated, setQty, removeItem } = useCart();
 
   // Wie op de rest van de site excl. btw kijkt, moet hier niet ineens hogere
@@ -173,7 +173,10 @@ export function CartPageClient() {
           </div>
         </dl>
 
-        {kluspasKorting > 0 && (
+        {/* Alleen voor wie nog géén account heeft. Een ingelogde klant kreeg
+            hier de uitnodiging om een account te maken voor korting die hij al
+            krijgt 2014 dat leest als een fout in de webshop. */}
+        {kluspasKorting > 0 && !ingelogd && (
           <div className="mt-4 rounded-xl bg-brand-light p-4">
             <p className="flex items-center gap-2 font-black text-ink">
               <Icon name="tag" className="h-5 w-5 shrink-0 text-brand" />

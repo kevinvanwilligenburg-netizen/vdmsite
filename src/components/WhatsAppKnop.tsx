@@ -22,9 +22,19 @@ export function WhatsAppKnop({ nummer }: { nummer?: string } = {}) {
   if (!nr) return null;
   if (NIET_OP.some((patroon) => patroon.test(pathname))) return null;
 
-  // Op de productpagina staat onderaan de mobiele koopbalk; daar plaatsen we
-  // de knop hoger zodat hij die niet overlapt.
-  const bovenKoopbalk = pathname.startsWith("/product/");
+  /*
+   * Pagina's met een vastgeplakte actiebalk onderaan op mobiel. Daar schuift
+   * de knop omhoog, anders ligt hij op de knop waar het om draait.
+   *
+   * Kevin stuurde een foto van de winkelwagen op zijn telefoon: het speldje
+   * en de chatballon lagen precies over "Afrekenen", zodat het woord half
+   * wegviel. De productpagina stond hier al in, de winkelwagen niet — en juist
+   * daar staat de knop die geld oplevert.
+   *
+   * Dat er ook nog een Freshchat-ballon naast staat lost dit niet op; dat is
+   * een tweede chatkanaal dat via Tag Manager binnenkomt.
+   */
+  const bovenKoopbalk = /^\/(product\/|winkelwagen)/.test(pathname);
 
   return (
     <a
