@@ -57,6 +57,7 @@ export function CheckoutForm({
   ingelogdAls,
   voorkeurWinkel,
   whatsappNummer,
+  bekend,
 }: {
   stores: StoreOption[];
   /** E-mailadres van de ingelogde klant; korting hangt hieraan. */
@@ -65,20 +66,37 @@ export function CheckoutForm({
   voorkeurWinkel?: string;
   /** WhatsApp-nummer uit het portal; env-variabele als terugval. */
   whatsappNummer?: string;
+  /**
+   * Wat we al van deze klant weten, uit zijn account.
+   *
+   * De accountpagina belooft "Bij het afrekenen vullen we dit vast voor je
+   * in". Dat gebeurde niet: iemand die net had ingelogd moest naam en adres
+   * alsnog overtikken. Alleen als beginwaarde gebruikt — daarna is het veld
+   * gewoon van de klant, want hij mag naar een ander adres laten bezorgen.
+   */
+  bekend?: {
+    voornaam?: string;
+    achternaam?: string;
+    telefoon?: string;
+    straat?: string;
+    huisnummer?: string;
+    postcode?: string;
+    plaats?: string;
+  };
 }) {
   const { items, subtotal, hydrated } = useCart();
   const { favourite } = useStore();
   const [fulfilment, setFulfilment] = useState<Fulfilment>("delivery");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(bekend?.voornaam ?? "");
+  const [lastName, setLastName] = useState(bekend?.achternaam ?? "");
   const [company, setCompany] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [street, setStreet] = useState("");
-  const [houseNumber, setHouseNumber] = useState("");
+  const [email, setEmail] = useState(ingelogdAls ?? "");
+  const [phone, setPhone] = useState(bekend?.telefoon ?? "");
+  const [street, setStreet] = useState(bekend?.straat ?? "");
+  const [houseNumber, setHouseNumber] = useState(bekend?.huisnummer ?? "");
   const [houseNumberSuffix, setHouseNumberSuffix] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState(bekend?.postcode ?? "");
+  const [city, setCity] = useState(bekend?.plaats ?? "");
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
