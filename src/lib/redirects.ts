@@ -240,6 +240,28 @@ export async function resolveLegacyPath(segments: string[]): Promise<string | nu
   const fixed = STATIC_REDIRECTS[path];
   if (fixed) return fixed;
 
+  /*
+   * De landingspagina's van de lokale Google Ads-campagnes: /verf/apeldoorn,
+   * /verf/nijverdal en zo verder. Vijf zoekcampagnes van € 80 tot € 90 per dag
+   * sturen daarheen.
+   *
+   * Die kwamen alle vijf uit op /categorie/g1000 — dezelfde algemene
+   * verfrubriek, zonder één woord over de stad. De advertentie belooft "Verf
+   * kopen in Apeldoorn, kom langs bij Voordeelmarkt Apeldoorn" en de bezoeker
+   * krijgt een productlijst zonder adres of openingstijden. Google rekent dat
+   * aan als slechte bestemmingservaring, en dat is precies wat er in het
+   * account stond: "advertentiekwaliteit is slecht" bij Emmen en beperkingen
+   * bij de rest.
+   *
+   * De winkelpagina is wél lokaal: adres, openingstijden, route, voorraad van
+   * die vestiging. Daar horen ze naartoe.
+   */
+  const verfStadMatch = path.match(/^(?:\/nl)?\/verf\/([a-z-]+)$/);
+  if (verfStadMatch) {
+    const winkel = demoStores.find((entry) => entry.slug === verfStadMatch[1]);
+    if (winkel) return `/winkels/${winkel.slug}`;
+  }
+
   // Winkelpagina's: /nl/shop/de-voordeelmarkt-nijverdal/7827 of /shop/…
   const shopMatch = path.match(/^(?:\/nl)?\/shop\/([a-z0-9-]+)(?:\/(\d+))?$/);
   if (shopMatch) {
