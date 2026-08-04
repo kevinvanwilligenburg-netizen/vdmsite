@@ -271,6 +271,58 @@ export async function haalKluspunten(email: string): Promise<Kluspunten | null> 
   }
 }
 
+export type PasSoort = "profpas" | "kluspas" | "geen";
+
+export interface PasStatus {
+  pas: PasSoort;
+  /** Alleen gevuld bij een Profpas-dossier; "aanvraag" is nog géén pas. */
+  fase?: string;
+  kluspashouder: boolean;
+}
+
+/**
+ * Welke pas heeft deze klant écht?
+ *
+ * De Profpas-aanvraag landt in de opslag van het dashboard en wordt in het
+ * portaal door kantoor goedgekeurd. Wij kunnen dat nergens anders uit
+ * afleiden, dus zonder deze route toonde de site altijd "Kluspas" — ook bij
+ * iemand die allang een Profpas heeft.
+ *
+ * ⚠️ Kijk naar `pas`, nooit naar de aanwezigheid van een profpas-dossier. Wie
+ * het formulier invult krijgt fase "aanvraag" en is nog geen pashouder; toon
+ * je dan al Profpas, dan beloof je 10% korting die de kassa niet geeft. De
+ * pas vervalt bovendien na een maand zonder aankoop, en dan valt `pas`
+ * vanzelf terug op kluspas.
+ *
+ * Bij twijfel of storing geven we "kluspas" noch "profpas" cadeau: we
+ * antwoorden null en de aanroeper valt terug op wat hij al wist.
+ */
+export async function haalPas(email: string): Promise<PasStatus | null> {
+  const kop = dashboardKop();
+  if (!kop) return null;
+  try {
+    const res = await fetch(
+      `${DASHBOARD_API_URL}/api/klanten/pas?email=${encodeURIComponent(normaliseerEmail(email))}`,
+      { headers: kop, signal: AbortSignal.timeout(8000), cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      pas?: string;
+      profpas?: { fase?: string };
+      kluspashouder?: boolean;
+    };
+    const pas: PasSoort =
+      data.pas === "profpas" ? "profpas" : data.pas === "kluspas" ? "kluspas" : "geen";
+    return {
+      pas,
+      ...(data.profpas?.fase ? { fase: data.profpas.fase } : {}),
+      kluspashouder: Boolean(data.kluspashouder),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function haalKlant(email: string): Promise<Klant> {
   const adres = normaliseerEmail(email);
   const basis: Klant = { email: adres, inTilroy: false };

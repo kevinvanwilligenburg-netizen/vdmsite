@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { emailVanSessie, kluspasNummerVan, SESSIE_COOKIE } from "@/lib/account";
+import { emailVanSessie, haalPas, kluspasNummerVan, SESSIE_COOKIE } from "@/lib/account";
 import { controleerBtw } from "@/lib/vies";
 import { btwFormaatGeldig, isBedrijfsType, kvkGeldig, normaliseerBtw } from "@/lib/zakelijk";
 import { isBetaalmethode } from "@/lib/betaalmethoden";
@@ -199,10 +199,28 @@ export async function POST(request: Request) {
   // Profpas-vinkje (NL: geldige KvK; buitenland: VIES-bevestigde BTW —
   // hierboven al afgedwongen, anders was de bestelling geweigerd).
   let kluspas = Boolean(sessieEmail) || accountAanmaken;
-  // Apart bijhouden of het écht een Profpas is: die geeft naast de korting
-  // ook altijd gratis bezorging. Het `kluspas`-vlaggetje hieronder dekt beide
-  // passen, dus daar kun je dat niet aan aflezen.
-  const profpasActief = klantType === "zakelijk" && input.profpas === true;
+
+  /*
+   * Een Profpas uit het portaal telt altijd, ook zonder vinkje.
+   *
+   * Kevin: "de mensen die in de portal een profpas hebben moeten de korting
+   * wel krijgen." Dat lukte niet, want de korting hing alleen aan het
+   * aanvinkvakje plus een KvK-controle in dit formulier. Wie zijn pas al had
+   * maar niets aanvinkte — of gewoon particulier afrekende — betaalde de volle
+   * prijs.
+   *
+   * Het dashboard weet welke pas iemand écht heeft. Alleen fase "actief" telt:
+   * een aanvraag die nog bij kantoor ligt is geen pas, en 10% geven op iets
+   * dat de kassa niet erkent levert een klant op die zich terecht bekocht
+   * voelt. Zie haalPas.
+   */
+  const pasStatus = sessieEmail ? await haalPas(sessieEmail) : null;
+  const profpasUitPortaal = pasStatus?.pas === "profpas";
+
+  // Het vinkje bij het afrekenen blijft bestaan voor wie nog geen pas heeft
+  // maar zich wel als bedrijf legitimeert.
+  const profpasActief =
+    profpasUitPortaal || (klantType === "zakelijk" && input.profpas === true);
   if (profpasActief) {
     kluspas = true;
   }
