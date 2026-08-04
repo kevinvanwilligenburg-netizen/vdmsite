@@ -14,7 +14,7 @@ import { isBetaalmethode } from "@/lib/betaalmethoden";
 import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
-import { kluspasUnitPrice } from "@/lib/kluspas";
+import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import {
@@ -374,7 +374,14 @@ export async function POST(request: Request) {
         : variant
           ? variant.kluspasPrice
           : product.kluspasPrice;
-    const unitCents = kluspas ? kluspasUnitPrice(listCents, listKluspas) : listCents;
+    // Profpas rekent 10% van de gewone prijs, maar nooit duurder dan de
+    // Kluspas-prijs — bij de actieartikelen van 30% en 50% zou die 10% een
+    // verhoging zijn. Zie profpasUnitPrice.
+    const unitCents = profpasActief
+      ? profpasUnitPrice(listCents, listKluspas)
+      : kluspas
+        ? kluspasUnitPrice(listCents, listKluspas)
+        : listCents;
     subtotalCents += unitCents * qty;
     kluspasSavingCents += (listCents - unitCents) * qty;
 

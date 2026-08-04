@@ -71,3 +71,29 @@ export function kluspasUnitPrice(price: number, kluspasPrice?: number): number {
 export function kluspasSaving(price: number, kluspasPrice?: number): number {
   return Math.max(0, price - kluspasUnitPrice(price, kluspasPrice));
 }
+
+/**
+ * Profpas: 10% korting voor zakelijke klanten.
+ *
+ * Regel van Kevin (4 augustus 2026): de Profpas geeft 10% van de gewone prijs.
+ * Anders dan bij de Kluspas staat die prijs NIET in de feed — Tilroy levert
+ * maar één kortingsprijs per artikel, en dat is de Kluspas-prijs. Daarom
+ * rekenen we hem hier uit.
+ *
+ * ⚠️ Dat betekent dat deze 10% een afspraak is en geen bron. Rekent de kassa
+ * iets anders af, dan ziet de klant online een andere prijs dan in de winkel.
+ * Komt er ooit een `profpas_prijs` in de feed, gebruik die dan en gooi deze
+ * som weg.
+ *
+ * De laagste van de twee wint. Op ruim 500 artikelen staat een actie van 30%
+ * of 50% in de Kluspas-prijs; 10% van de gewone prijs zou daar duurder zijn.
+ * Een pashouder die méér betaalt dan een gewone klant is het enige echt
+ * onvergeeflijke uitgangspunt hier.
+ */
+export const PROFPAS_KORTING = 0.1;
+
+export function profpasUnitPrice(price: number, kluspasPrice?: number): number {
+  const viaProfpas = Math.round(price * (1 - PROFPAS_KORTING));
+  const viaKluspas = kluspasUnitPrice(price, kluspasPrice);
+  return Math.min(viaProfpas, viaKluspas);
+}
