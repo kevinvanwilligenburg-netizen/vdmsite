@@ -117,6 +117,13 @@ export async function createMolliePayment(
     // beschikbaar): de bestelling mag daar niet op stuklopen. Zonder method
     // krijgt de klant Mollie's keuzescherm — een extra klik, geen dode order.
     if (gekozenMethod && error instanceof Error && /status 4\d\d/.test(error.message)) {
+      // Luid loggen. Dit terugvalpad is precies wat de klant ziet als "ik koos
+      // iDEAL en moest bij Mollie alsnog kiezen", en het stond nergens in de
+      // logboeken — dus een methode die in het Mollie-profiel uit staat bleef
+      // maanden onopgemerkt. Eén regel per keer is genoeg om het te vinden.
+      console.error(
+        `[mollie] methode "${gekozenMethod}" geweigerd, klant krijgt het keuzescherm: ${error.message}`,
+      );
       const { method: _weg, ...zonderMethode } = body as { method?: unknown } & Record<
         string,
         unknown
