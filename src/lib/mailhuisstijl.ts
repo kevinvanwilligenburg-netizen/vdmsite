@@ -10,6 +10,7 @@ import {
   WHATSAPP_WEERGAVE,
 } from "@/lib/site";
 import { getStores } from "@/lib/tilroy";
+import type { Store } from "@/lib/types";
 
 /**
  * Eén huisstijl voor alle mail.
@@ -29,18 +30,90 @@ import { getStores } from "@/lib/tilroy";
  * "waar moet ik zijn" hoeft dan niet terug naar de site.
  */
 
-const ORANJE = "#F5821F";
-const INKT = "#141414";
-const ZACHT = "#5B6167";
-const LIJN = "#E4E7EA";
+/**
+ * De huisstijlkleuren, ook los bruikbaar. Mails zetten hun eigen blokken in
+ * elkaar (een orderbevestiging is geen inlogcode), en dan moet het oranje
+ * overal hetzelfde oranje zijn.
+ */
+export const MAIL_KLEUREN = {
+  oranje: "#F5821F",
+  /** Zachte oranje ondergrond voor koppen en accentblokken. */
+  oranjeLicht: "#FFF3E6",
+  inkt: "#141414",
+  zacht: "#5B6167",
+  lijn: "#E4E7EA",
+  vlak: "#F7F8FA",
+} as const;
+
+const ORANJE = MAIL_KLEUREN.oranje;
+const INKT = MAIL_KLEUREN.inkt;
+const ZACHT = MAIL_KLEUREN.zacht;
+const LIJN = MAIL_KLEUREN.lijn;
 
 /** Tekst veilig in HTML zetten. Namen en plaatsnamen kunnen alles bevatten. */
-function esc(tekst: string): string {
+export function esc(tekst: string): string {
   return tekst
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+const DAG_KORT: Record<string, string> = {
+  maandag: "ma",
+  dinsdag: "di",
+  woensdag: "wo",
+  donderdag: "do",
+  vrijdag: "vr",
+  zaterdag: "za",
+  zondag: "zo",
+};
+
+/**
+ * Zeven regels openingstijden samengevat tot drie.
+ *
+ * "Maandag 08:00 – 18:00 / Dinsdag 08:00 – 18:00 / …" is zeven keer hetzelfde
+ * en leest niemand. Dit maakt er "ma t/m vr 08:00 – 18:00 · za 08:00 – 17:00 ·
+ * zo gesloten" van, door dagen met gelijke tijden samen te nemen.
+ */
+export function openingstijdenKort(store: Store): string[] {
+  const reeksen: { van: string; tot: string; uren: string }[] = [];
+  for (const dag of store.openingHours) {
+    const kort = DAG_KORT[dag.day.toLocaleLowerCase("nl")] ?? dag.day.slice(0, 2).toLowerCase();
+    const laatste = reeksen[reeksen.length - 1];
+    if (laatste && laatste.uren === dag.hours) laatste.tot = kort;
+    else reeksen.push({ van: kort, tot: kort, uren: dag.hours });
+  }
+  return reeksen.map(
+    ({ van, tot, uren }) =>
+      `${van === tot ? van : `${van} t/m ${tot}`} ${uren.toLocaleLowerCase("nl") === "gesloten" ? "gesloten" : uren}`,
+  );
+}
+
+/**
+ * Eén winkel, overal op dezelfde manier.
+ *
+ * Kevin: "in beide de winkels op dezelfde manier tonen." Stond de afhaalwinkel
+ * eerst met alleen zijn naam in de mail terwijl de voet van diezelfde mail
+ * vijf keer een compleet adres liet zien, nu komt allebei uit deze functie.
+ */
+export function winkelRegels(
+  store: Store,
+  opties: { tijden?: boolean; email?: boolean } = {},
+): string {
+  const tijden = opties.tijden
+    ? `<br><span style="color:${ZACHT};">${openingstijdenKort(store)
+        .map((regel) => esc(regel))
+        .join("<br>")}</span>`
+    : "";
+  const email =
+    opties.email && store.email
+      ? `<br><a href="mailto:${esc(store.email)}" style="color:${ORANJE};">${esc(store.email)}</a>`
+      : "";
+  return `<strong style="color:${INKT};">${esc(store.city)}</strong><br>
+    ${esc(store.address)}<br>
+    ${esc(store.postalCode)} ${esc(store.city)}<br>
+    ${esc(store.phone)}${email}${tijden}`;
 }
 
 async function winkelblok(): Promise<string> {
@@ -57,10 +130,7 @@ async function winkelblok(): Promise<string> {
     .map(
       (winkel) => `
         <td style="padding:0 12px 12px 0;vertical-align:top;font-size:12px;line-height:1.5;color:${ZACHT};">
-          <strong style="color:${INKT};">${esc(winkel.city)}</strong><br>
-          ${esc(winkel.address)}<br>
-          ${esc(winkel.postalCode)} ${esc(winkel.city)}<br>
-          ${esc(winkel.phone)}
+          ${winkelRegels(winkel)}
         </td>`,
     )
     .join("");
@@ -128,6 +198,37 @@ function mailLogoUrl(): string {
   const eigen = process.env.MAIL_LOGO_URL?.trim();
   if (eigen) return eigen;
   return absoluteUrl("/logo/logo-vdm.png");
+}
+
+/**
+ * Een knop die ook in Outlook een knop blijft.
+ *
+ * Een `<a>` met padding en een achtergrond wordt door de Word-engine als
+ * gewone link getekend: geen vlak, geen vorm, alleen blauwe onderstreepte
+ * tekst. Een tabelcel met een achtergrondkleur overleeft dat wél, dus staat
+ * de knop hier als tabel van één cel.
+ */
+export function mailKnop({
+  href,
+  label,
+  soort = "vol",
+}: {
+  href: string;
+  label: string;
+  soort?: "vol" | "leeg";
+}): string {
+  const vol = soort === "vol";
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="display:inline-block;margin:0 8px 8px 0;">
+    <tr>
+      <td align="center" style="border-radius:8px;background:${vol ? ORANJE : "#FFFFFF"};border:1px solid ${
+        vol ? ORANJE : LIJN
+      };">
+        <a href="${href}" style="display:inline-block;padding:11px 20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;line-height:1;color:${
+          vol ? "#FFFFFF" : INKT
+        };text-decoration:none;">${esc(label)}</a>
+      </td>
+    </tr>
+  </table>`;
 }
 
 /**

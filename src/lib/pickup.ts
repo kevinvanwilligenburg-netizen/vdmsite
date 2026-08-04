@@ -98,7 +98,11 @@ export function pickupPromise(store: Store, now: Date = new Date()): PickupPromi
     return {
       today: true,
       label: `Vandaag klaar, rond ${formatMinutes(readyAt)}`,
-      detail: `Binnen ${PICKUP_READY_HOURS} uur klaar om op te halen in ${store.city}. Je krijgt bericht met een afhaalcode.`,
+      // Niet "je krijgt bericht met een afhaalcode": die code staat in de
+      // bevestigingsmail die de klant meteen na het betalen krijgt, en een
+      // tweede melding ("je bestelling staat klaar") bestaat niet. Beloof
+      // alleen wat er ook echt gebeurt.
+      detail: `Binnen ${PICKUP_READY_HOURS} uur klaar om op te halen in ${store.city}. Je afhaalcode staat in je bevestigingsmail.`,
     };
   }
 
@@ -107,7 +111,7 @@ export function pickupPromise(store: Store, now: Date = new Date()): PickupPromi
     return {
       today: false,
       label: "Klaar zodra de winkel open is",
-      detail: `Je krijgt bericht met een afhaalcode zodra je bestelling in ${store.city} klaarstaat.`,
+      detail: `Je bestelling staat klaar in ${store.city} zodra de winkel weer open is. Je afhaalcode staat in je bevestigingsmail.`,
     };
   }
 

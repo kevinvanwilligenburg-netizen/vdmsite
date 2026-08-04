@@ -405,7 +405,11 @@ export async function POST(request: Request) {
       ean: product.ean,
       title: product.name,
       brand: product.brand,
-      image: "",
+      // De productfoto hoort in de bestelling, niet alleen in de winkelwagen.
+      // Dit veld stond sinds de eerste opzet op een lege string, en daardoor
+      // tekenden de bestelpagina en de bevestigingsmail altijd het generieke
+      // icoontje — ook bij artikelen die gewoon een foto hebben.
+      image: product.image ?? "",
       variantLabel: variantLabel || undefined,
       slug: product.slug,
       quantity: qty,

@@ -118,6 +118,22 @@ info-pagina's; de site blijft gewoon werken.
    trace via `shipment.trackTrace`).
 6. `/bestelling/[reference]` toont status, afhaalcode óf bezorginfo.
 
+### Webhooks vanuit het dashboard
+
+Alle drie met `Authorization: Bearer <SITE_API_KEY>` en idempotent op
+`reference` — het dashboard mag herhalen, de klant hoort het één keer.
+
+| Route | Body | Wat er gebeurt |
+| --- | --- | --- |
+| `POST /api/webhooks/verzonden` | `{reference, carrier, trackTrace}` | status → `shipped`, verzendmail met track & trace |
+| `POST /api/webhooks/klaar` | `{reference}` | `readyForPickupAt` gezet, afhaalmail met code, adres en openingstijden |
+| `POST /api/webhooks/geannuleerd` | `{reference, reason?}` | status → `canceled`, annuleringsmail |
+
+⚠️ `/api/webhooks/klaar` bestaat sinds 4 augustus 2026 en **wordt nog niet
+aangeroepen**. Tot dat gebeurt, belooft de bevestigingsmail bewust géén
+"je krijgt bericht zodra je bestelling klaarstaat" — die zin stond er wel,
+maar er was niets dat hem waarmaakte.
+
 ### Bezorgen en afhalen
 
 Beide modules zijn puur en deterministisch testbaar (geef `now` mee):

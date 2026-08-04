@@ -310,6 +310,13 @@ export interface Order {
   store?: { id: string; name: string; city: string };
   pickupCode?: string;
   readyForPickupAt?: string;
+  /**
+   * Wanneer de "je bestelling ligt klaar"-mail is verstuurd.
+   *
+   * Zelfde rol als `shippedMailSentAt`: het dashboard mag de webhook herhalen
+   * tot dit stempel er staat, en de klant hoort het precies één keer.
+   */
+  readyMailSentAt?: string;
   pickedUpAt?: string;
   /**
    * Alleen bij bezorgen: de belofte op het bestelmoment.
