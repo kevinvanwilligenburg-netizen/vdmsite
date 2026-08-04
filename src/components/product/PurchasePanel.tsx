@@ -99,6 +99,31 @@ export function PurchasePanel({
   const wit = witVariant?.wit && witVariant.wit.inStock ? witVariant.wit : undefined;
   const wit100 = Boolean(wit && witGekozen && !color);
 
+  /**
+   * Wit bij mengverf zonder fabriekswit-artikel.
+   *
+   * Kevin: "ik mis hier dat je direct 100% wit kan kiezen, dat moet bij alle
+   * mengverf." Klopt, en de reden dat het er niet stond is de voorraad: alleen
+   * Sikkens heeft in Tilroy een écht wit artikel naast de mengbare broer.
+   * Gemeten op de hele feed (5.102 regels): Sikkens 44 gekoppelde witten,
+   * Fitex 0 van 343, Drenth 0 van 77, Histor 0 van 67, Flexa 0 van 19.
+   * Die witten bestáán daar simpelweg niet als apart blik.
+   *
+   * Wit is bij die merken dus geen ander artikel maar een mengkleur, en dat
+   * kan de klant nu met één klik kiezen in plaats van via de waaier. Wel met
+   * het eerlijke bijschrift: gemengd, niet uit voorraad.
+   */
+  const witGemengd = useMemo(
+    () =>
+      product.colorMixable && !wit
+        ? colors.find((kleur) => kleur.key === "ral:9010") ??
+          colors.find((kleur) => /\b9010\b/.test(kleur.code ?? "")) ??
+          null
+        : null,
+    [product.colorMixable, wit, colors],
+  );
+  const witGemengdGekozen = Boolean(witGemengd && color?.key === witGemengd.key);
+
   // Uitverkocht op het niveau waar de klant naar kijkt: de gekozen maat als
   // de feed die per maat kent, anders het product als geheel. Uitverkochte
   // maten blijven in de lijst staan — wie op "2,5 L" zoekt moet zien dat we
@@ -355,21 +380,27 @@ export function PurchasePanel({
             </span>
           </p>
 
-          {wit && (
-            /* 100% wit is een écht artikel met eigen voorraad, en vaak
-               goedkoper dan mengen. Daarom is het een keuze naast de kiezer,
-               niet een kleur erin. */
+          {(wit || witGemengd) && (
+            /* Wit staat als eigen knop naast de kiezer, niet als kleur erin.
+               Bij Sikkens is het een écht artikel met eigen voorraad en vaak
+               een lagere prijs; bij de andere merken is het een mengkleur die
+               je hier met één klik pakt in plaats van via de waaier. */
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 type="button"
-                aria-pressed={wit100}
+                aria-pressed={wit ? wit100 : witGemengdGekozen}
                 onClick={() => {
-                  setWitGekozen(true);
-                  setColor(null);
+                  if (wit) {
+                    setWitGekozen(true);
+                    setColor(null);
+                  } else if (witGemengd) {
+                    setWitGekozen(false);
+                    setColor(witGemengd);
+                  }
                   setError(null);
                 }}
                 className={`rounded-lg border-2 px-3 py-2.5 text-left transition ${
-                  wit100
+                  (wit ? wit100 : witGemengdGekozen)
                     ? "border-brand bg-brand-light"
                     : "border-ink/10 hover:border-brand"
                 }`}
@@ -379,19 +410,24 @@ export function PurchasePanel({
                   100% Wit
                 </span>
                 <span className="mt-0.5 block text-xs text-ink-soft">
-                  direct uit voorraad
-                  {wit.price !== activeVariant?.price ? ` · ${euro(wit.price)}` : ""}
+                  {wit
+                    ? `direct uit voorraad${
+                        wit.price !== activeVariant?.price ? ` · ${euro(wit.price)}` : ""
+                      }`
+                    : "RAL 9010 · gratis gemengd"}
                 </span>
               </button>
               <button
                 type="button"
-                aria-pressed={!wit100}
+                aria-pressed={wit ? !wit100 : Boolean(color) && !witGemengdGekozen}
                 onClick={() => {
                   setWitGekozen(false);
                   setVensterOpen(true);
                 }}
                 className={`rounded-lg border-2 px-3 py-2.5 text-left transition ${
-                  !wit100 ? "border-brand bg-brand-light" : "border-ink/10 hover:border-brand"
+                  (wit ? !wit100 : Boolean(color) && !witGemengdGekozen)
+                    ? "border-brand bg-brand-light"
+                    : "border-ink/10 hover:border-brand"
                 }`}
               >
                 <span className="flex items-center gap-2 text-sm font-bold text-ink">
@@ -427,7 +463,7 @@ export function PurchasePanel({
                 Wijzig
               </button>
             </div>
-            ) : wit ? null : (
+            ) : wit || witGemengd ? null : (
             /* Eén duidelijke ingang naar het venster. De hele waaier hier
                uitklappen duwde de bestelknop van het scherm. */
             <button
