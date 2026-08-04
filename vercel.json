@@ -8,10 +8,6 @@
     {
       "path": "/api/vouchers/herinnering",
       "schedule": "30 9 * * *"
-    },
-    {
-      "path": "/api/kluspunten/herinnering",
-      "schedule": "0 8 * * 2"
     }
   ]
 }

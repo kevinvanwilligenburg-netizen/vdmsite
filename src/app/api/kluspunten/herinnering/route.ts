@@ -14,9 +14,16 @@ export const maxDuration = 300;
 /**
  * "Je bent er bijna": mailt klanten die tussen de 200 en 250 kluspunten staan.
  *
- * Draait op een cron (zie vercel.json), één keer per week. Vaker heeft geen
- * zin: een puntensaldo beweegt per aankoop, niet per dag, en het stempel zorgt
- * er toch voor dat niemand twee keer dezelfde mail krijgt.
+ * ⚠️ DE CRON STAAT UIT (3 augustus 2026). Het dashboard verstuurt deze mail nu
+ * zelf en bereikt daarmee iedereen die de afgelopen 180 dagen iets kocht — ook
+ * de winkelklant die nooit online besteld heeft. Onze versie kende alleen
+ * webshopklanten met een Kluspas, een fractie daarvan, en die zitten in hún
+ * lijst ook. Twee crons naast elkaar betekent dezelfde klant twee keer
+ * dezelfde mail, en dan meldt hij zich af.
+ *
+ * De route blijft staan: hij is met de hand aan te roepen (en met ?proef=1
+ * zonder te versturen) als de dashboardkant ooit uitvalt. Zet hem alleen weer
+ * op een cron als die van hen uit gaat.
  *
  * Afgeschermd met CRON_SECRET of SITE_API_KEY, net als de andere mailcrons.
  *
