@@ -357,6 +357,8 @@ export interface CreateOrderInput {
   delivery?: Order["delivery"];
   kluspasNumber?: string;
   kluspasSavings?: number;
+  /** Afgerekend met ProfPas: 10% korting, gratis bezorgd, geen kluspunten. */
+  profpas?: boolean;
   /** Verzilverde staal-voucher; de korting zit al in `total`. */
   voucherCode?: string;
   voucherKorting?: number;
@@ -377,9 +379,14 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     isTest: input.isTest,
     ...(input.kluspasNumber ? { kluspasNumber: input.kluspasNumber } : {}),
     ...(input.kluspasSavings ? { kluspasSavings: input.kluspasSavings } : {}),
+    ...(input.profpas ? { profpas: true as const } : {}),
     ...(input.voucherCode ? { voucherCode: input.voucherCode } : {}),
     ...(input.voucherKorting ? { voucherKorting: input.voucherKorting } : {}),
     channel: "web",
+    // Welke webshop dit is. Vast op "vdm": deze code draait maar op één shop.
+    // Het dashboard rapporteert per shop en hoeft het nu niet meer uit de
+    // checkout-URL af te leiden.
+    site: "vdm",
     fulfilment: input.fulfilment,
     ...(input.fulfilment === "pickup"
       ? { store: input.store, pickupCode: generatePickupCode() }

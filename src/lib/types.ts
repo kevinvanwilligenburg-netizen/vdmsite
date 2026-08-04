@@ -309,6 +309,15 @@ export interface Order {
   kluspasSavings?: number;
   isTest?: boolean;
   channel?: "web" | "pos";
+  /**
+   * Welke webshop deze bestelling heeft aangemaakt: "vdm" of "klusr".
+   *
+   * Het dashboard rapporteert sinds 4 augustus 2026 per shop en leidde dat tot
+   * nu toe af uit de checkout-URL. Dat werkt, maar het is raden op iets wat wij
+   * gewoon weten; met dit veld erbij hoeft daar niet meer naar gekeken te
+   * worden.
+   */
+  site?: "vdm" | "klusr";
   refundedAmount?: number;
   molliePaymentId?: string;
   shipment?: { trackTrace?: string };
