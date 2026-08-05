@@ -37,6 +37,18 @@ function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+/**
+ * Hoeveel stuks we achterhouden op de voorraad die we online verkopen.
+ *
+ * Staat bewust op nul: alles wat er ligt mag verkocht worden. Een marge van
+ * bijvoorbeeld 2 vangt de race op waarin de winkel het laatste blik aan de
+ * balie verkoopt terwijl iemand online afrekent, maar hij maakt óók elk
+ * artikel met twee of minder op voorraad onverkoopbaar — en dat is de hele
+ * staart van het assortiment. Dat is een keuze van Kevin, geen technische:
+ * wil hij hem, dan is dit het enige getal dat verandert.
+ */
+const VOORRAAD_MARGE = 0;
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const POSTAL_CODE_PATTERN = /^\d{4}\s?[A-Za-z]{2}$/;
 
@@ -594,6 +606,45 @@ export async function POST(request: Request) {
             return badRequest(
               `${item.title} is tijdelijk uitverkocht en kan nu niet besteld worden. Haal het uit je winkelwagen, of zet er een voorraadmelding op.`,
             );
+          }
+          /*
+           * En niet méér dan er ligt.
+           *
+           * Hier stond alleen de nul-controle, en daar is het op misgegaan:
+           * order VDM-242726, veertig stuks Benson Nylon Koord 6 mm besteld en
+           * betaald, terwijl er in het hele bedrijf acht lagen (Apeldoorn 2,
+           * Emmen 3, Nijverdal 2, Zutphen 1). Nul was het niet, dus deze
+           * controle liet het door. De winkelwagen kapte af op 99 — een vast
+           * getal dat niets met voorraad te maken heeft.
+           *
+           * Alle vestigingen bij elkaar opgeteld, want orders worden met de
+           * hand over de winkels verdeeld; er gaat ook uit Emmen en Zutphen
+           * wat de deur uit. Bij afhalen geldt verderop de strengere eis dat
+           * het in díé winkel moet liggen.
+           *
+           * Antwoordde de hub niet, dan blokkeren we niet: een storing bij ons
+           * mag geen bestellingen tegenhouden van artikelen die er gewoon
+           * liggen.
+           */
+          if (voorraad) {
+            const beschikbaar = Math.max(
+              0,
+              voorraad.webshopQty + voorraad.otherStoresQty - VOORRAAD_MARGE,
+            );
+            if (item.quantity > beschikbaar) {
+              return NextResponse.json(
+                {
+                  error: `Van ${item.title} hebben we er nog ${beschikbaar}, en je bestelt er ${item.quantity}. Pas het aantal aan, dan reken je meteen af.`,
+                  teveel: {
+                    sku: item.sku ?? item.productId,
+                    naam: item.title,
+                    gevraagd: item.quantity,
+                    beschikbaar,
+                  },
+                },
+                { status: 409 },
+              );
+            }
           }
         }
         for (const item of voorraadItems) {
