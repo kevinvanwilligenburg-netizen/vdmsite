@@ -115,6 +115,25 @@ export function ColorPicker({
     if (gecontroleerd) setWaaier(gecontroleerd);
   }, [gevraagdeWaaier, waaiers]);
 
+  /*
+   * Zodra iemand gaat typen: zoeken in álle waaiers, niet in "Populair".
+   *
+   * De kiezer opent op Populair, en dat zijn tien kleuren. Wie daar "groen"
+   * intypt zoekt in die tien en krijgt er twee, terwijl we ruim achttienduizend
+   * kleuren voeren. Kevin zag precies dat: zoeken op "g" gaf zes kleuren.
+   *
+   * We zetten de waaier daarom zichtbaar op "Alle waaiers" in plaats van het
+   * stiekem in de achtergrond te doen — anders staat Populair opgelicht
+   * terwijl er ergens anders gezocht wordt. Wist de klant zijn zoekterm en
+   * had hij zelf geen waaier gekozen, dan staat Populair er weer.
+   */
+  useEffect(() => {
+    if (zelfGekozen.current) return;
+    const zoekt = query.trim().length > 0;
+    if (zoekt && waaier === STANDAARD_WAAIER) setWaaier(ALLE_WAAIERS);
+    else if (!zoekt && waaier === ALLE_WAAIERS) setWaaier(STANDAARD_WAAIER);
+  }, [query, waaier]);
+
   // Kleuren ophalen bij een andere zoekterm of waaier.
   useEffect(() => {
     const term = query.trim();
@@ -166,10 +185,14 @@ export function ColorPicker({
 
   // Wie "sikkens" typt zoekt een waaier: dan filtert de rij mee. Levert dat
   // niets op, dan blijft de hele rij staan — een lege rij helpt niemand.
+  //
+  // Pas vanaf drie letters. Bij "g" of "gr" matcht de halve lijst en springt
+  // de rij alle kanten op terwijl je nog aan het typen bent; dan is meesorteren
+  // geen hulp maar onrust.
   const waaierKnoppen = useMemo(() => {
     const term = query.trim().toLowerCase();
     let zichtbaar = waaiers;
-    if (term) {
+    if (term.length >= 3) {
       const gevonden = waaiers.filter((entry) =>
         waaierNaam(entry).toLowerCase().includes(term),
       );
@@ -203,10 +226,19 @@ export function ColorPicker({
     // "Alle waaiers" staat in de keuzelijst en hoeft er niet ook nog als knop
     // bij; die plek gaat naar een waaier waar iemand echt op klikt.
     const zonderAlles = waaierKnoppen.filter((entry) => entry.id !== ALLE_WAAIERS);
-    const zoekt = query.trim().length > 0;
-    // Tijdens het zoeken zijn de treffers juist het antwoord: dan alles tonen
-    // wat matcht (dat zijn er per definitie weinig).
-    if (zoekt) return { chips: zonderAlles };
+    /*
+     * Ook tijdens het zoeken hooguit acht chips.
+     *
+     * Hier stond dat de treffers "per definitie weinig" zijn en dus allemaal
+     * getoond mochten worden. Bij één letter klopt dat niet: "g" zit in Gamma,
+     * Sigma, Little Greene, Peintagone en Trimetal Colour Guide, en dan vulden
+     * ruim veertig chips het hele venster terwijl er onderaan een streepje van
+     * zes kleuren overbleef. De waaiers kregen alle ruimte, de kleuren geen.
+     *
+     * Wie een waaier zoekt heeft de keuzelijst "Alle waaiers", met een eigen
+     * zoekveld en op naam gesorteerd. De chiprij is voor snel kiezen, niet
+     * voor bladeren.
+     */
     const eerste = zonderAlles.slice(0, CHIPS_ZICHTBAAR);
     const rest = zonderAlles.slice(CHIPS_ZICHTBAAR);
     // De gekozen waaier hoort zichtbaar te zijn, ook als hij achteraan staat.
