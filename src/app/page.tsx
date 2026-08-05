@@ -5,7 +5,9 @@ import { Icon } from "@/components/icons";
 import { Mark } from "@/components/Mark";
 import { ProductCard } from "@/components/ProductCard";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
+import { BannerSlideshow } from "@/components/BannerSlideshow";
 import { BezorgBelofte } from "@/components/BezorgBelofte";
+import { getBanners } from "@/lib/banners";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
 import { getDeals, getMerkEtalage, getNavCategories, getStores } from "@/lib/tilroy";
@@ -47,7 +49,7 @@ const HIGHLIGHTS = [
 ];
 
 export default async function HomePage() {
-  const [deals, sikkens, categories, stores, banner] = await Promise.all([
+  const [deals, sikkens, categories, stores, banner, banners] = await Promise.all([
     getDeals(8),
     getMerkEtalage("Sikkens", 4),
     // Dezelfde selectie als het menu: rubrieken die groot genoeg zijn en écht
@@ -56,6 +58,7 @@ export default async function HomePage() {
     getNavCategories(12),
     getStores(),
     getBanner("home-hero"),
+    getBanners(),
   ]);
   const swatches = popularRalCodes
     .map((code) => ralColors.find((color) => color.code === code))
@@ -71,6 +74,10 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-14">
+      {/* De actiebanners die Kevin in het dashboard zet, bovenaan. Staat er
+          niets klaar, dan begint de pagina gewoon bij de hero eronder — geen
+          lege strook en geen kapot plaatje. */}
+      <BannerSlideshow banners={banners} />
       {/* Hero (oranje, in de stijl van de actiebanners van devoordeelmarkt.nl) */}
       <section className="overflow-hidden rounded-2xl shadow-card">
         <div
