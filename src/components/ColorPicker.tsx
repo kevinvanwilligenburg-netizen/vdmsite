@@ -454,7 +454,15 @@ export function ColorPicker({
                 setLijstOpen((open) => !open);
                 setLijstZoek("");
               }}
-              className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink/10 bg-white px-4 py-1.5 text-sm font-bold text-ink transition hover:border-brand hover:text-brand"
+              /* Oplichten als er écht in alle waaiers gezocht wordt. Zodra je
+                 begint te typen springt de kiezer daarheen, en zonder dit
+                 accent staat er nergens meer iets aan — dan zie je niet waar
+                 je aan het zoeken bent. */
+              className={`inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-1.5 text-sm font-bold transition ${
+                waaier === ALLE_WAAIERS
+                  ? "border-brand bg-brand text-white"
+                  : "border-ink/10 bg-white text-ink hover:border-brand hover:text-brand"
+              }`}
             >
               Alle waaiers ({waaiers.length})
               <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 opacity-60" aria-hidden>
