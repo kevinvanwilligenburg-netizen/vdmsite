@@ -124,6 +124,7 @@ export function PurchasePanel({
   );
   const witGemengdGekozen = Boolean(witGemengd && color?.key === witGemengd.key);
 
+
   // Uitverkocht op het niveau waar de klant naar kijkt: de gekozen maat als
   // de feed die per maat kent, anders het product als geheel. Uitverkochte
   // maten blijven in de lijst staan — wie op "2,5 L" zoekt moet zien dat we
@@ -156,6 +157,50 @@ export function PurchasePanel({
   // alleen de 250 ml ergens lag.
   const { zet: zetGekozenSku } = useGekozenVariant();
   const gekozenSku = wit100 && wit ? wit.sku : activeVariant?.sku ?? product.sku;
+
+  /*
+   * Hoeveel er van dít artikel te koop zijn.
+   *
+   * Kevin legde er tien in zijn mandje terwijl er acht lagen. De checkout
+   * houdt dat inmiddels tegen, maar dat is te laat: dan heb je je bestelling
+   * al samengesteld en loop je bij de betaalknop tegen een melding aan.
+   *
+   * Alle vestigingen bij elkaar, want orders worden met de hand over de
+   * winkels verdeeld. Antwoordt de hub niet, dan blijft het maximum open —
+   * een storing bij ons mag geen bestellingen tegenhouden van artikelen die
+   * er gewoon liggen. De checkout controleert het daarna sowieso nog een keer
+   * tegen de dan actuele voorraad.
+   */
+  const [voorraadMax, setVoorraadMax] = useState<number | null>(null);
+  useEffect(() => {
+    if (!gekozenSku) return;
+    let actief = true;
+    setVoorraadMax(null);
+    fetch(`/api/voorraad?skus=${encodeURIComponent(gekozenSku)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!actief || !data?.live) return;
+        const totaal = (data.stores ?? []).reduce(
+          (som: number, rij: { qty?: number }) => som + (Number(rij.qty) || 0),
+          0,
+        );
+        setVoorraadMax(totaal);
+      })
+      .catch(() => undefined);
+    return () => {
+      actief = false;
+    };
+  }, [gekozenSku]);
+
+  // Bovengrens: wat er ligt, anders de oude harde grens van 99.
+  const maxAantal = voorraadMax === null ? 99 : Math.max(1, voorraadMax);
+
+  // Wisselt de klant naar een maat waar er minder van zijn, dan zakt het
+  // aantal mee. Anders staat er 10 terwijl er 2 kunnen.
+  useEffect(() => {
+    setQtyState((huidig) => Math.min(huidig, maxAantal));
+  }, [maxAantal]);
+
   useEffect(() => {
     zetGekozenSku(gekozenSku ?? null);
   }, [gekozenSku, zetGekozenSku]);
@@ -562,12 +607,24 @@ export function PurchasePanel({
           <button
             type="button"
             aria-label="Aantal verhogen"
-            onClick={() => setQtyState((current) => Math.min(99, current + 1))}
-            className="px-3 py-2 text-lg font-black text-ink hover:text-brand"
+            disabled={qty >= maxAantal}
+            onClick={() => setQtyState((current) => Math.min(maxAantal, current + 1))}
+            className="px-3 py-2 text-lg font-black text-ink hover:text-brand disabled:opacity-30 disabled:hover:text-ink"
           >
             +
           </button>
         </div>
+        {/* Zeggen wanneer je aan het plafond zit, en waarom. Een plusknop die
+            niets doet zonder uitleg leest als een storing. Pas tonen als het
+            bijna raakt: bij tweehonderd op voorraad hoeft niemand dit te
+            weten. */}
+        {voorraadMax !== null && voorraadMax <= 25 && qty >= maxAantal && (
+          <p className="w-full text-sm font-semibold text-ink-soft" aria-live="polite">
+            {voorraadMax === 1
+              ? "Dit is de laatste die we hebben."
+              : `Meer dan ${voorraadMax} hebben we er niet liggen.`}
+          </p>
+        )}
         {/* Nul-voorraad is niet bestelbaar (beslissing Kevin). De pagina zei
             al "Nu even uitverkocht", maar de knop werkte gewoon door — en de
             checkout rekende af voor iets dat nergens ligt. Dit hangt aan de
