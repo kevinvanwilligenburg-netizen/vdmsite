@@ -407,14 +407,20 @@ export function PurchasePanel({
               >
                 <span className="flex items-center gap-2 text-sm font-bold text-ink">
                   <span className="h-4 w-4 shrink-0 rounded-full border border-ink/20 bg-white" aria-hidden />
-                  100% Wit
+                  {/* "100% wit" is wit zó uit het blik, ongemengd — daarom is
+                      het bij Sikkens een eigen artikel met eigen voorraad en
+                      prijs. Wat we bij de andere merken doen is wit mengen in
+                      de lichte basis, en dat is iets anders. Het zo noemen was
+                      een naamfout van mij; Kevin: "is geen 100% wit, noem het
+                      gewoon wit". */}
+                  {wit ? "100% Wit" : "Wit"}
                 </span>
                 <span className="mt-0.5 block text-xs text-ink-soft">
                   {wit
                     ? `direct uit voorraad${
                         wit.price !== activeVariant?.price ? ` · ${euro(wit.price)}` : ""
                       }`
-                    : "RAL 9010 · gratis gemengd"}
+                    : "gratis gemengd"}
                 </span>
               </button>
               <button
