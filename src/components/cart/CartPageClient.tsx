@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { useKorting } from "@/components/cart/useKorting";
@@ -25,6 +26,39 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
   const { modus } = usePrijsModus();
   const toon = (centen: number) =>
     euro(modus === "excl" ? Math.round(centen / (1 + BTW_TARIEF)) : centen);
+
+  /*
+   * Hoeveel er van elk artikel te koop zijn.
+   *
+   * De plusknop hier kende alleen de harde grens van 99. Op de productpagina
+   * en in de checkout staat de voorraadrem inmiddels wel, maar een mandje kan
+   * een dag oud zijn en hier kun je het aantal gewoon ophogen — dan zit de
+   * klant alsnog bij de betaalknop tegen een melding aan te kijken.
+   *
+   * Eén aanvraag voor het hele mandje, en alle vestigingen opgeteld omdat
+   * orders met de hand over de winkels worden verdeeld. Weten we het niet,
+   * dan blijft het maximum open; de checkout toetst het daarna nog een keer.
+   */
+  const skus = items.map((item) => item.sku).filter(Boolean).join(",");
+  const [voorraad, setVoorraad] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!skus) return;
+    let actief = true;
+    fetch(`/api/voorraad/per-sku?skus=${encodeURIComponent(skus)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (actief && data?.perSku) setVoorraad(data.perSku);
+      })
+      .catch(() => undefined);
+    return () => {
+      actief = false;
+    };
+  }, [skus]);
+
+  const maxVoor = (sku: string | undefined) => {
+    const aantal = sku ? voorraad[sku] : undefined;
+    return typeof aantal === "number" ? Math.max(1, aantal) : 99;
+  };
 
   // Wat de korting op dit mandje waard is; de server rekent het uit de
   // catalogus, niet uit de prijzen die in de winkelwagen zijn blijven staan.
@@ -109,6 +143,15 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
                 {toon(item.unitPrice)} per stuk
                 {modus === "excl" && " excl. btw"}
               </p>
+              {/* Zeggen waarom de plusknop niet meer werkt. Zonder die regel
+                  lijkt het een storing, en dan belt iemand de winkel. */}
+              {item.sku && voorraad[item.sku] !== undefined && item.qty >= maxVoor(item.sku) && (
+                <p className="mt-0.5 text-sm font-semibold text-brand-dark">
+                  {voorraad[item.sku] <= 0
+                    ? "Dit artikel is uitverkocht."
+                    : `Hier houdt het op: we hebben er ${voorraad[item.sku]}.`}
+                </p>
+              )}
             </div>
             <div className="col-span-2 flex items-center justify-between gap-3 sm:contents">
             <div className="inline-flex items-center rounded-lg border-2 border-ink/10">
@@ -124,8 +167,11 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
               <button
                 type="button"
                 aria-label={`Aantal van ${item.name} verhogen`}
-                onClick={() => setQty(item.key, item.qty + 1)}
-                className="px-3 py-1.5 text-lg font-black text-ink hover:text-brand"
+                disabled={item.qty >= maxVoor(item.sku)}
+                onClick={() =>
+                  setQty(item.key, Math.min(maxVoor(item.sku), item.qty + 1))
+                }
+                className="px-3 py-1.5 text-lg font-black text-ink hover:text-brand disabled:opacity-30 disabled:hover:text-ink"
               >
                 +
               </button>
