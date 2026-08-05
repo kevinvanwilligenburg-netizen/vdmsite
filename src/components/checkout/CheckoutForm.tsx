@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { InlogInline } from "@/components/account/InlogInline";
 import { useCart } from "@/components/cart/CartProvider";
@@ -276,6 +276,31 @@ export function CheckoutForm({
     return () => window.clearInterval(timer);
   }, []);
 
+  /*
+   * Het kenmerk waarop het dashboard verlaten wagens ontdubbelt.
+   *
+   * Hetzelfde kenmerk ververst een bestaande lead; een ander kenmerk met
+   * hetzelfde adres levert een tweede lead op. Het blijft dus in de browser
+   * staan tot de bestelling rond is — dan gooien we het weg, zodat een
+   * volgende wagen een eigen lead wordt en niet de afgeronde overschrijft.
+   */
+  const leadId = useCallback(() => {
+    try {
+      const sleutel = "vdm-lead";
+      const bestaand = window.localStorage.getItem(sleutel);
+      if (bestaand) return bestaand;
+      const nieuw =
+        typeof crypto?.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `lead-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+      window.localStorage.setItem(sleutel, nieuw);
+      return nieuw;
+    } catch {
+      // Privémodus zonder opslag: dan maar één lead per poging.
+      return `lead-${Math.random().toString(36).slice(2)}`;
+    }
+  }, []);
+
   // Zodra het e-mailadres compleet is, geven we het mandje door aan het
   // dashboard. Haakt de klant daarna af, dan kan die er een herinnering over
   // sturen. Eén keer per adres, en pas als de klant even stil is.
@@ -290,11 +315,13 @@ export function CheckoutForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: leadId(),
           email: adres,
           items: items.map((item) => ({
             title: item.name,
             quantity: item.qty,
             price: item.unitPrice / 100,
+            variant: [item.variantName, item.color?.name].filter(Boolean).join(" · "),
           })),
           total: subtotal / 100,
         }),

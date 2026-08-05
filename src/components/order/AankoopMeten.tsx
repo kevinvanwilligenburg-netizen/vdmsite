@@ -52,6 +52,35 @@ export function AankoopMeten({
     }
 
     volgAankoop({ bestelnummer, waarde, verzendkosten, items });
+
+    /*
+     * En melden dat deze winkelwagen niet verlaten is.
+     *
+     * Zonder dit krijgt iemand die net heeft afgerekend alsnog een mail dat
+     * zijn winkelwagen klaarstaat — het irritantste bericht dat je een
+     * betalende klant kunt sturen.
+     *
+     * Pas hier, en niet bij het doorsturen naar Mollie: wie daar afhaakt is
+     * juist wél een verlaten wagen, en dat is de klant die zo'n herinnering
+     * moet krijgen. Dit draait alleen op een betaalde bestelling.
+     *
+     * Daarna het kenmerk weggooien, zodat een volgende wagen een eigen lead
+     * wordt in plaats van deze afgeronde te overschrijven.
+     */
+    try {
+      const leadId = window.localStorage.getItem("vdm-lead");
+      if (leadId) {
+        window.localStorage.removeItem("vdm-lead");
+        void fetch("/api/winkelwagen/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "complete", id: leadId }),
+          keepalive: true,
+        }).catch(() => undefined);
+      }
+    } catch {
+      // Geen opslag beschikbaar: dan is er ook nooit een lead aangemaakt.
+    }
   }, [bestelnummer, waarde, verzendkosten, items]);
 
   return null;
