@@ -81,24 +81,40 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
         const zichtbaar = index === actief;
         const plaatje = (
           <>
-            {/* Twee bronnen in één <picture>: de browser kiest, dus er wordt
-                er maar één gedownload. */}
-            <picture>
-              {banner.mobielUrl && (
-                <source media="(max-width: 767px)" srcSet={banner.mobielUrl} />
-              )}
-              <Image
-                src={banner.desktopUrl}
-                alt={banner.alt}
-                width={1920}
-                height={640}
-                // De eerste banner staat bovenaan de pagina en is dus het
-                // grootste ding dat de bezoeker als eerste ziet.
-                priority={index === 0}
-                sizes="(max-width: 767px) 100vw, 1200px"
-                className="h-auto w-full"
-              />
-            </picture>
+            {/*
+              Vaste verhouding met een uitsnede, geen meeschalend plaatje.
+
+              Hier stond `h-auto w-full`: de banner nam dan zijn eigen
+              verhouding aan. Dat gaat goed zolang iemand netjes 1920×640
+              aanlevert, maar de bannergenerator levert 1536×1024 — en dat zou
+              als een bijna vierkant blok bovenaan de homepage komen, met de
+              tekstlaag over de volle hoogte.
+
+              Nu ligt de vorm vast (breed 3:1, op een telefoon vierkant, want
+              daar is het vierkante bestand voor) en snijdt de afbeelding zich
+              daarin. Aanleveren in een andere maat kan dus geen scheve pagina
+              meer opleveren.
+            */}
+            <div className="relative aspect-square overflow-hidden md:aspect-[3/1]">
+              {/* Twee bronnen in één <picture>: de browser kiest, dus er wordt
+                  er maar één gedownload. */}
+              <picture>
+                {banner.mobielUrl && (
+                  <source media="(max-width: 767px)" srcSet={banner.mobielUrl} />
+                )}
+                <Image
+                  src={banner.desktopUrl}
+                  alt={banner.alt}
+                  width={1920}
+                  height={640}
+                  // De eerste banner staat bovenaan de pagina en is dus het
+                  // grootste ding dat de bezoeker als eerste ziet.
+                  priority={index === 0}
+                  sizes="(max-width: 767px) 100vw, 1200px"
+                  className="h-full w-full object-cover"
+                />
+              </picture>
+            </div>
             {/*
               De actietekst ligt eróver, niet erin.
 
