@@ -36,7 +36,7 @@ interface LeadItem {
 
 async function naarDashboard(payload: Record<string, unknown>): Promise<void> {
   try {
-    await fetch(`${DASHBOARD_API_URL}/api/cart/lead`, {
+    const res = await fetch(`${DASHBOARD_API_URL}/api/cart/lead`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -50,6 +50,25 @@ async function naarDashboard(payload: Record<string, unknown>): Promise<void> {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(4000),
     });
+    /*
+     * De statuscode wél bekijken.
+     *
+     * Hier stond alleen een try/catch, en die vangt netwerkfouten — geen 400.
+     * Een afgekeurde lead verdween dus geruisloos: onze route antwoordt de
+     * browser altijd 200 (terecht, een checkout mag hier nooit op stuklopen),
+     * dus er was letterlijk nergens iets te zien. Precies zo bleef maandenlang
+     * onopgemerkt dat we de verkeerde veldnamen stuurden.
+     *
+     * De Klus=r-kant wees hierop nadat ze het endpoint zelf hadden getoetst.
+     * Terechte vondst: wat je verstuurt is niet hetzelfde als wat aankomt.
+     */
+    if (!res.ok) {
+      console.error(
+        `[winkelwagen] dashboard weigerde de lead met status ${res.status}: ${(
+          await res.text()
+        ).slice(0, 300)}`,
+      );
+    }
   } catch (error) {
     console.error("[winkelwagen] lead doorgeven mislukt:", error);
   }
