@@ -943,6 +943,38 @@ function glansVan(item: FeedItem): string | undefined {
   return GLANS_UIT_TITEL.find((entry) => entry.patroon.test(titel))?.glans;
 }
 
+/**
+ * Waarop mengverf van elkaar te onderscheiden is.
+ *
+ * De productlijn alleen was niet genoeg, en dat kostte verkeerde pakketten.
+ * Tilroy zet Express, Extra en de gewone primer allemaal onder productlijn
+ * "Sikkens Rubbol Primer". Wij groepeerden daarop, dus stonden ze op één
+ * pagina — met een maatkeuze waarin de 500 ml alleen als gewone primer
+ * bestaat. Wie op de Express-pagina 500 ml koos, kreeg de gewone primer
+ * ingepakt. Het inpakteam meldde het; drie primers op één pagina.
+ *
+ * Gemeten op de hele feed: 24 van de 128 mengverf-groepen voegden zo
+ * verschillende artikelen samen. Histor Perfect Base was de ergste met
+ * zestien — betonverf, tegelverf, trapverf, radiatorlak en grondverf onder
+ * één noemer.
+ *
+ * De titel maakt het onderscheid wél, mits je hem opschoont: maat eraf
+ * (titelRomp), mengbasiscode eraf, en de glansgraad eraf omdat die al een
+ * eigen deel van de sleutel is — anders splitsen "Semi Gloss" en "Semi-Gloss"
+ * hetzelfde product alsnog in tweeën.
+ *
+ * Blijft er te weinig over, dan houden we de productlijn aan: liever maten
+ * samen op één pagina dan een half woord als kenmerk.
+ */
+function mengKenmerk(item: FeedItem): string {
+  const zonderGlans = GLANS_UIT_TITEL.reduce(
+    (naam, entry) => naam.replace(new RegExp(entry.patroon.source, "gi"), " "),
+    item.title ?? "",
+  );
+  const kenmerk = zonderMengbasis(titelRomp(zonderGlans, item.maat)).trim();
+  return kenmerk.length >= 6 ? kenmerk : lijnZonderBasis(item.productlijn ?? "");
+}
+
 function groupKeyFor(item: FeedItem): string {
   if (item.mengverf === "Ja" && item.productlijn && parseBase(item.mengbasis)) {
     // `verfsoort` bewust niet in de sleutel. Dat veld is bij mengverf half
@@ -951,7 +983,7 @@ function groupKeyFor(item: FeedItem): string {
     // een lichte basis — waardoor een klant die zwart koos daar geen donkere
     // basis kon krijgen. Een veld dat maar bij een enkel artikel is ingevuld
     // is een gat in de data, geen productverschil.
-    return `meng:${[lijnZonderBasis(item.productlijn), glansVan(item)]
+    return `meng:${[mengKenmerk(item), glansVan(item)]
       .filter(Boolean)
       .join("|")
       .toLowerCase()}`;
@@ -1802,7 +1834,7 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v51";
+const KV_KEY = "catalog:products:v52";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
