@@ -19,6 +19,14 @@ export interface Banner {
   /** Waar de banner heen linkt; leeg = niet klikbaar. */
   link?: string;
   alt: string;
+  /**
+   * Groot (de slideshow bovenaan) of klein (het rijtje van twee eronder).
+   *
+   * Het dashboard kent dit veld nog niet; tot die tijd is alles groot en
+   * blijft het rijtje kleine banners gewoon leeg. Zodra ze het meesturen,
+   * werkt het hier zonder verdere wijziging.
+   */
+  formaat: "groot" | "klein";
 }
 
 function schoon(waarde: unknown): string {
@@ -71,6 +79,7 @@ export async function getBanners(): Promise<Banner[]> {
           // Alt-tekst is geen bijzaak: bij een banner die niet laadt is dit
           // het enige wat er staat, en een schermlezer heeft niets anders.
           alt: schoon(item.alt) || "Actie bij De Voordeelmarkt",
+          formaat: schoon(item.formaat).toLowerCase() === "klein" ? "klein" : "groot",
         },
       ];
     });

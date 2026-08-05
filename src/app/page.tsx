@@ -2,11 +2,10 @@ import Link from "next/link";
 
 import { CategoryCard } from "@/components/CategoryCard";
 import { Icon } from "@/components/icons";
-import { Mark } from "@/components/Mark";
 import { ProductCard } from "@/components/ProductCard";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { BannerSlideshow } from "@/components/BannerSlideshow";
-import { BezorgBelofte } from "@/components/BezorgBelofte";
+import { KleineBanners } from "@/components/KleineBanners";
 import { getBanners } from "@/lib/banners";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
@@ -68,104 +67,41 @@ export default async function HomePage() {
   const heroSubtitle =
     banner?.subtitle ??
     "Mengverf in elke kleur, gereedschap en alles om te klussen. Gratis bezorgd of gratis afgehaald in de winkel, en verf mengen we gratis.";
-  const heroBadge = banner?.badge;
+  // Groot bovenaan, klein in het rijtje eronder. Het dashboard kent dat
+  // onderscheid nog niet, dus tot die tijd is alles groot en blijft het rijtje
+  // leeg — beter een lege plek dan een kleine banner op een grote plaats.
+  const groteBanners = banners.filter((item) => item.formaat === "groot");
+  const kleineBanners = banners.filter((item) => item.formaat === "klein");
+
   const heroCtaLabel = banner?.ctaLabel ?? "Bekijk de topdeals";
   const heroCtaHref = banner?.ctaHref ?? "#topdeals";
 
   return (
     <div className="space-y-14">
-      {/* De actiebanners die Kevin in het dashboard zet, bovenaan. Staat er
-          niets klaar, dan begint de pagina gewoon bij de hero eronder — geen
-          lege strook en geen kapot plaatje. */}
-      <BannerSlideshow banners={banners} />
-      {/* Hero (oranje, in de stijl van de actiebanners van devoordeelmarkt.nl) */}
-      <section className="overflow-hidden rounded-2xl shadow-card">
-        <div
-          className="relative bg-gradient-to-br from-brand-bright to-brand"
-          style={
-            banner?.imageUrl
-              ? {
-                  backgroundImage: `linear-gradient(100deg, rgba(20,20,20,0.82) 0%, rgba(20,20,20,0.45) 55%, rgba(20,20,20,0.15) 100%), url(${banner.imageUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }
-              : undefined
-          }
-        >
-          <div className="grid items-center gap-8 p-8 sm:p-12 lg:grid-cols-[1.2fr_1fr]">
-            <div>
-              <p className="inline-block rounded-md bg-ink px-3 py-1.5 text-sm font-black uppercase text-white">
-                {/* Zet het dashboard een eigen banner-badge, dan wint die;
-                    anders de levende belofte die na 09:00 en in het weekend
-                    vanzelf omschakelt. */}
-                {heroBadge ?? <BezorgBelofte soort="badge" />}
-              </p>
-              <h1 className="mt-4 text-4xl font-black leading-tight text-white sm:text-5xl">
-                {heroTitle}
-              </h1>
-              <p className="mt-4 max-w-xl text-lg font-semibold text-white/90">
-                {heroSubtitle}
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link href={heroCtaHref} className="btn btn-dark">
-                  {heroCtaLabel} →
-                </Link>
-                <Link
-                  href="/kleurkiezer"
-                  className="btn bg-white text-ink shadow-sm hover:bg-white/90"
-                >
-                  Kies je RAL-kleur
-                </Link>
-              </div>
-              {/* Op de telefoon past er geen kolom naast de tekst, maar juist
-                  daar is de hero het eerste wat iemand ziet. Dus een strook
-                  onder de knoppen. */}
-              {!banner?.imageUrl && (
-                <Mark pose="mengen" hoogte="h-44" className="mt-6 ring-4 ring-white/25 lg:hidden" />
-              )}
-            </div>
-            {/* Een gezicht in de hero. Kevin: "ik mis een hero foto, bijna elke
-                webshop doet dit." Mark staat met het verfblik in de hand op
-                het oranje van de huisstijl, dus de foto loopt door in het vlak
-                en hoeft niet uitgesneden. Zet het dashboard een eigen
-                banner-foto neer, dan wint die. */}
-            {!banner?.imageUrl && (
-              <div className="relative hidden justify-center lg:flex">
-                <div className="relative w-full max-w-xs">
-                  <Mark
-                    pose="mengen"
-                    hoogte="h-80"
-                    className="shadow-lift ring-4 ring-white/25"
-                  />
-                  <div
-                    className="absolute -left-5 bottom-6 -rotate-3 rounded-xl bg-white px-4 py-3 text-center shadow-lift"
-                    aria-hidden
-                  >
-                    <p className="text-4xl font-black leading-none text-brand">−50%</p>
-                    <p className="mt-1 text-xs font-black uppercase text-ink">
-                      op honderden artikelen
-                    </p>
-                  </div>
-                  <div
-                    className="absolute -right-4 top-5 rotate-3 rounded-xl bg-ink px-4 py-2 shadow-lift"
-                    aria-hidden
-                  >
-                    <p className="text-sm font-black text-white">
-                      140+ RAL-kleuren{" "}
-                      <span className="text-brand-bright">gratis gemengd</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        {/* Zwarte onderbalk, zoals op de actiebanners */}
-        <div className="flex items-center justify-center gap-6 bg-ink px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white sm:justify-between sm:px-8">
-          <span>Gratis bezorgd</span>
-          <span className="hidden sm:inline">Gratis afhalen in de winkel</span>
-          <span className="hidden md:inline">Verf op kleur gemengd</span>
-          <span className="text-brand-bright">devoordeelmarkt.nl</span>
+      {/*
+        De indeling die Kevin wil: bovenaan de grote bannerslideshow, daaronder
+        plek voor twee kleine banners, en dan meteen de actieproducten.
+
+        De oranje hero die hier stond is eruit. Die was zelf een actiebanner in
+        de stijl van de oude site, en twee actiebanners boven elkaar vechten om
+        dezelfde aandacht.
+
+        Wat er wél moest blijven: de h1. Zonder die kop heeft de belangrijkste
+        pagina van de winkel geen onderwerp meer voor Google, en dat merk je
+        pas als de posities al weg zijn. Daarom hieronder een smalle regel in
+        plaats van het hele oranje blok.
+      */}
+      <BannerSlideshow banners={groteBanners} />
+      <KleineBanners banners={kleineBanners} />
+      {/* Smalle titelregel in plaats van het oranje heroblok: de homepage
+          houdt zo een h1 en een zin die zegt wat we verkopen, zonder een
+          tweede actiebanner naast die van Kevin. */}
+      <section className="text-center">
+        <h1 className="text-2xl font-black leading-tight text-ink sm:text-3xl">{heroTitle}</h1>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-ink-soft sm:text-base">{heroSubtitle}</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <Link href={heroCtaHref} className="btn btn-primary">{heroCtaLabel} →</Link>
+          <Link href="/kleurkiezer" className="btn border-2 border-ink/10 bg-white text-ink hover:border-brand hover:text-brand">Kies je RAL-kleur</Link>
         </div>
       </section>
 
