@@ -20,6 +20,20 @@ export interface Banner {
   link?: string;
   alt: string;
   /**
+   * Tekst óver de banner, in onze eigen letters.
+   *
+   * Bewust niet in de afbeelding gebakken. Twee redenen: een beeldmodel zet
+   * prijzen en percentages geregeld verkeerd neer ("-40%" terwijl de actie 50%
+   * is), en een tekst die in het plaatje zit kun je niet wijzigen zonder een
+   * nieuwe afbeelding te laten maken. Zo staat er altijd wat er hoort te
+   * staan, in Muller Black, en is het in twee tellen aan te passen.
+   *
+   * Alles optioneel: staat er niets, dan is de banner gewoon een plaatje.
+   */
+  kop?: string;
+  subkop?: string;
+  knopLabel?: string;
+  /**
    * Groot (de slideshow bovenaan) of klein (het rijtje van twee eronder).
    *
    * Het dashboard kent dit veld nog niet; tot die tijd is alles groot en
@@ -79,6 +93,11 @@ export async function getBanners(): Promise<Banner[]> {
           // Alt-tekst is geen bijzaak: bij een banner die niet laadt is dit
           // het enige wat er staat, en een schermlezer heeft niets anders.
           alt: schoon(item.alt) || "Actie bij De Voordeelmarkt",
+          // Kort houden: dit staat over een foto heen en moet op een telefoon
+          // in één oogopslag te lezen zijn.
+          ...(schoon(item.kop) ? { kop: schoon(item.kop).slice(0, 60) } : {}),
+          ...(schoon(item.subkop) ? { subkop: schoon(item.subkop).slice(0, 120) } : {}),
+          ...(schoon(item.knopLabel) ? { knopLabel: schoon(item.knopLabel).slice(0, 30) } : {}),
           formaat: schoon(item.formaat).toLowerCase() === "klein" ? "klein" : "groot",
         },
       ];

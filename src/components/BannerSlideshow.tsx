@@ -99,6 +99,39 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
                 className="h-auto w-full"
               />
             </picture>
+            {/*
+              De actietekst ligt eróver, niet erin.
+
+              Een beeldmodel zet prijzen en percentages geregeld verkeerd neer,
+              en tekst die in het plaatje zit kun je niet wijzigen zonder een
+              nieuwe afbeelding te laten maken. Zo staat er altijd wat er hoort
+              te staan, in onze eigen letter, en past het zich aan het scherm
+              aan in plaats van mee te schalen tot onleesbaar.
+
+              Het donkere verloop staat er alleen als er tekst is: zonder tekst
+              zou het een mooie foto voor niets verduisteren.
+            */}
+            {(banner.kop || banner.subkop) && (
+              <div className="absolute inset-0 flex items-center bg-gradient-to-r from-ink/80 via-ink/45 to-transparent">
+                <div className="max-w-[62%] p-5 sm:p-8 lg:p-12">
+                  {banner.kop && (
+                    <p className="font-kop text-xl leading-tight text-white drop-shadow sm:text-3xl lg:text-5xl">
+                      {banner.kop}
+                    </p>
+                  )}
+                  {banner.subkop && (
+                    <p className="mt-1.5 text-xs font-semibold text-white/90 sm:mt-3 sm:text-base lg:text-lg">
+                      {banner.subkop}
+                    </p>
+                  )}
+                  {banner.knopLabel && (
+                    <span className="mt-3 inline-flex rounded-lg bg-brand px-3 py-1.5 text-xs font-black text-white sm:mt-5 sm:px-5 sm:py-2.5 sm:text-sm">
+                      {banner.knopLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         );
         return (
@@ -107,7 +140,9 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
             // Niet-actieve banners uit de tabvolgorde en uit de schermlezer;
             // anders leest die alle acties achter elkaar voor.
             {...(zichtbaar ? {} : { "aria-hidden": true, inert: true })}
-            className={zichtbaar ? "block" : "hidden"}
+            // `relative` zodat de tekstlaag binnen déze banner valt en niet
+            // over de hele slideshow.
+            className={zichtbaar ? "relative block" : "hidden"}
           >
             {banner.link ? (
               <Link href={banner.link} className="block">
