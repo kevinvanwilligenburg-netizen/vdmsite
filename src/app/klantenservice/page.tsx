@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
+import { GRATIS_VANAF_TEKST, tariefTekst } from "@/lib/shipping";
 import { JsonLd } from "@/components/JsonLd";
 import { Mark } from "@/components/Mark";
 import { getWhatsappNummer } from "@/lib/contact";
@@ -28,8 +29,12 @@ const FAQS: { question: string; answer: string }[] = [
   },
   {
     question: "Wat kost bezorgen?",
-    answer:
-      "Bezorgen is gratis vanaf € 59. Daaronder betaal je € 4,95 in Nederland en € 7,95 in België. Sikkens bezorgen we altijd gratis, ongeacht het bedrag. Afhalen in de winkel is altijd gratis. In België duurt bezorgen 1–2 werkdagen.",
+    // Bedragen uit lib/shipping, niet uitgeschreven. Overal elders op de site
+    // gebeurde dat al; hier stonden ze los in de tekst, en dan is dit precies
+    // de plek die achterblijft als een tarief wijzigt. Een klantenservice­
+    // pagina die een ander bedrag noemt dan de checkout rekent, is erger dan
+    // geen klantenservicepagina.
+    answer: `Bezorgen is gratis vanaf ${GRATIS_VANAF_TEKST}. Daaronder betaal je ${tariefTekst("NL")} in Nederland en ${tariefTekst("BE")} in België. Sikkens bezorgen we altijd gratis, ongeacht het bedrag. Afhalen in de winkel is altijd gratis. In België duurt bezorgen 1–2 werkdagen.`,
   },
   {
     question: "Hoe werkt afhalen in de winkel (Click & Collect)?",
