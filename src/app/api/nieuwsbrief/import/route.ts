@@ -65,11 +65,23 @@ export async function POST(request: Request) {
   let bestond = 0;
   let overgeslagen = 0;
 
-  for (const lid of leden) {
+  /*
+   * In groepjes tegelijk, niet één voor één.
+   *
+   * Elke regel kost een KV-lees plus een KV-schrijf. Achter elkaar zijn dat
+   * 2.000 rondjes voor 1.000 leden, en daar liep de eerste migratiepoging van
+   * het dashboard op vast: hun 30 seconden waren om voordat wij klaar waren.
+   *
+   * Vijftig tegelijk is genoeg om de latency weg te werken zonder de store
+   * plat te leggen. Bewust geen `Promise.all` over álles: dan open je duizend
+   * verbindingen tegelijk en verplaats je het probleem naar de andere kant.
+   */
+  const GROEP = 50;
+  const verwerk = async (lid: { email?: string; timestampOpt?: string; status?: string }) => {
     const email = String(lid.email ?? "").trim().toLowerCase();
     if (!EMAIL_PATROON.test(email)) {
       overgeslagen++;
-      continue;
+      return;
     }
     /*
      * Vangnet, ook al filtert het dashboard al op drie plekken. Deze route
@@ -80,14 +92,14 @@ export async function POST(request: Request) {
      */
     if (lid.status && lid.status !== "subscribed") {
       overgeslagen++;
-      continue;
+      return;
     }
 
     const sleutel = `nieuwsbrief:${normaliseerEmail(email)}`;
     const bestaand = await kvGetJSON<Aanmelding>(sleutel);
     if (bestaand) {
       bestond++;
-      continue;
+      return;
     }
 
     const opgegeven = lid.timestampOpt ? Date.parse(lid.timestampOpt) : Number.NaN;
@@ -110,6 +122,10 @@ export async function POST(request: Request) {
       inResend: true,
     } satisfies Aanmelding);
     nieuw++;
+  };
+
+  for (let i = 0; i < leden.length; i += GROEP) {
+    await Promise.all(leden.slice(i, i + GROEP).map(verwerk));
   }
 
   console.warn(
