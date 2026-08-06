@@ -579,29 +579,16 @@ export function prijzenVan(
   })();
 
   /*
-   * NOODBRUG (6 augustus 2026). Weghalen zodra de feed de acties draagt.
+   * Hier stond een noodbrug die de campagnekorting zelf uitrekende, omdat de
+   * feed de augustusacties nog niet droeg. Weggehaald op 6 augustus 2026 zodra
+   * dat wél zo was — Tilroy heeft nu 2.422 artikelen met een promoprijs en de
+   * brug deed niets meer.
    *
-   * Tilroy hééft de actieprijzen — gemeten via de Price API: Benson standard
-   * 3.25 → promo 1.63, 152.10 → 76.05. Maar de promosync van het dashboard
-   * weigert een uitkomst waarin meer dan 40% van het assortiment in actie is,
-   * en Kevins augustuscampagne raakt 56% van de catalogus. Gevolg: de kassa
-   * rekende 50% op Benson en de webshop de volle prijs.
-   *
-   * Daarom rekenen we hier de campagnekorting zélf uit — maar ALLEEN als de
-   * feed geen `promo_prijs` draagt. Zodra die er wel is wint de feed en is
-   * deze tak dood. Dat is het verschil tussen een brug en een tweede
-   * prijzenbron.
-   *
-   * De percentages zijn getoetst tegen de Price API: ze leveren exact dezelfde
-   * prijs op als Tilroy zelf rekent, dus het ordertotaal klopt bij het
-   * inboeken en er ontstaan geen drafts.
+   * Als er ooit weer een gat valt: bouw hem opnieuw als tijdelijke tak die
+   * wijkt voor `promo_prijs`, niet als tweede prijzenbron. En haal hem weer
+   * weg. Een brug die blijft staan wordt een tweede waarheid, en dan lopen
+   * bon en scherm alsnog uit elkaar.
    */
-  const viaCampagne =
-    !promo && standaard > 0 ? Math.round(standaard * (1 - campagneKorting(item.brand))) : 0;
-  if (viaCampagne > 0 && viaCampagne < standaard) {
-    return { prijs: viaCampagne, vanaf: standaard, kluspas: 0, actie: true };
-  }
-
   if (binnenVenster && promo < standaard) {
     return {
       prijs: promo,

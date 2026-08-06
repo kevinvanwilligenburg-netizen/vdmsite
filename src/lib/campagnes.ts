@@ -87,11 +87,11 @@ const STANDAARD: Campagne[] = [
     id: "mack-benson-hofftech",
     kop: "50%",
     waarop: "Alle Mack, Benson en Hofftech",
-    merken: ["Mack", "Benson", "Hofftech"],
+    merken: ["Mack", "Benson", "Hofftech germany"],
     // Alleen Benson staat in Tilroy; Mack en Hofftech (nog) niet. Korting
     // geven die de kassa niet kent maakt de webshop goedkoper dan de winkel.
     procent: 0.5,
-    alleenMerken: ["Benson"],
+    
     van: "2026-08-06",
     tot: TOT_AUGUSTUS,
   },
@@ -111,7 +111,7 @@ const STANDAARD: Campagne[] = [
     kop: "20%",
     waarop: "Alle Fitex lakken, beits en speciaalverf",
     merken: ["Fitex"],
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_AUGUSTUS,
   },
   {
@@ -129,7 +129,7 @@ const STANDAARD: Campagne[] = [
     waarop: "Alle Drenth en Pastolex, ook muurverf",
     klein: "Drenth is uitlopend — op = op",
     merken: ["Drenth"],
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_DECEMBER,
   },
   {
@@ -138,7 +138,7 @@ const STANDAARD: Campagne[] = [
     waarop: "Sanicur",
     klein: "Op = op",
     merken: ["Sanicur"],
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_DECEMBER,
     staffel: true,
   },
@@ -147,7 +147,7 @@ const STANDAARD: Campagne[] = [
     kop: "1 + 1 gratis",
     waarop: "Sam dubbelzijdig tape en kleefband",
     merken: ["Sam"],
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_AUGUSTUS,
     staffel: true,
   },
@@ -155,7 +155,7 @@ const STANDAARD: Campagne[] = [
     id: "fitex-schilderstape",
     kop: "3 voor € 4,95",
     waarop: "Fitex schilderstape 19 en 25 mm",
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_AUGUSTUS,
     staffel: true,
   },
@@ -167,7 +167,7 @@ const STANDAARD: Campagne[] = [
     // zoals in de aankondiging. Met de juiste spelling krijgt de kaart een
     // knop en klopt de telling.
     merken: ["Led's light"],
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_AUGUSTUS,
     staffel: true,
   },
@@ -175,7 +175,7 @@ const STANDAARD: Campagne[] = [
     id: "metaalspons",
     kop: "Gratis metaalspons",
     waarop: "Bij spuitlakken van BTC, Levis hittebestendig en Fitex metaallak",
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_AUGUSTUS,
     staffel: true,
   },
@@ -183,7 +183,7 @@ const STANDAARD: Campagne[] = [
     id: "handschoenen",
     kop: "€ 4,95 en € 6,95",
     waarop: "Classic vinyl handschoen M (100 st.) en vitril poedervrij blauw XL (100 st.)",
-    van: "2026-08-10",
+    van: "2026-08-06",
     tot: TOT_AUGUSTUS,
   },
 ];

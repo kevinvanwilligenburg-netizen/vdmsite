@@ -6,16 +6,27 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { MerkLogo } from "@/components/MerkLogo";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductFiltersPanel } from "@/components/plp/ProductFilters";
+import {
+  activeFilterCount,
+  applyFilters,
+  buildFacets,
+  parseFilters,
+  snelfilterAantallen,
+} from "@/lib/facets";
 import { euro } from "@/lib/format";
 import { merkFeiten, merkInleiding, merkVragen, type MerkRubriek } from "@/lib/merkpagina";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { getBrand, getBrands } from "@/lib/tilroy";
 
-export const revalidate = 3600;
+// Filters lezen de URL, dus deze pagina kan niet statisch blijven; en een
+// actieprijs die een uur vastzit is precies wat we vandaag hebben opgeruimd.
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 interface Props {
   params: { slug: string };
+  searchParams: Record<string, string | string[] | undefined>;
 }
 
 /** De grootste merken vooraf; de rest op aanvraag. */
@@ -67,13 +78,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function BrandPage({ params }: Props) {
+export default async function BrandPage({ params, searchParams }: Props) {
   const brand = await getBrand(params.slug);
   if (!brand) notFound();
 
   const feiten = merkFeiten(brand.products);
   const inleiding = merkInleiding(brand.name, feiten);
   const vragen = merkVragen(brand.name, feiten);
+
+  // Filteren binnen het merk, met dezelfde parser als de categoriepagina.
+  const filters = parseFilters(searchParams);
+  const gefilterd = applyFilters(brand.products, filters);
+  const snelfilters = snelfilterAantallen(brand.products, filters);
+  const facets = buildFacets(brand.products, filters);
+  const actief = activeFilterCount(filters);
+  const zichtbaar = gefilterd.slice(0, 48);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -165,13 +184,33 @@ export default async function BrandPage({ params }: Props) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-        {brand.products.slice(0, 48).map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {/*
+        Filters, net als op een categoriepagina.
 
-      {brand.products.length > 48 && (
+        Die stonden hier niet, en dat viel pas op toen Drenth 102 artikelen in
+        de actie kreeg: je kunt dan wel naar het merk, maar niet naar "alleen
+        wat in de actie is". Op een merk met honderden artikelen is dat het
+        verschil tussen bladeren en vinden.
+
+        Dezelfde componenten en dezelfde parser als de categoriepagina — een
+        tweede filterimplementatie is een tweede plek waar "aanbieding" iets
+        anders gaat betekenen.
+      */}
+      <ProductFiltersPanel
+        facets={facets}
+        filters={filters}
+        total={gefilterd.length}
+        activeCount={actief}
+        snelfilters={snelfilters}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+          {zichtbaar.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </ProductFiltersPanel>
+
+      {gefilterd.length > 48 && (
         <p className="text-sm text-ink-soft">
           Dit zijn de eerste 48 van {brand.count} artikelen.{" "}
           <Link

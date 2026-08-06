@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ProductCard } from "@/components/ProductCard";
 import { actieLoopt, actieStand, getActiepagina, vulBlokken } from "@/lib/actiepagina";
+import { campagneStand, getCampagnes, type Campagne } from "@/lib/campagnes";
+import { getProducts } from "@/lib/tilroy";
 
 /**
  * Een actiepagina: teksten en producten door elkaar.
@@ -51,7 +54,99 @@ function alineas(tekst: string) {
     );
 }
 
+/**
+ * De producten van één campagne, over alle merken die eronder vallen.
+ *
+ * Toont wat er écht in de actie zit: producten met `actie`. Staat een merk in
+ * de aankondiging maar heeft Tilroy de prijs (nog) niet, dan blijft die kop
+ * leeg — en dan zeggen we dat, in plaats van de klant naar een lijst met volle
+ * prijzen te sturen.
+ */
+async function CampagnePagina({ campagne }: { campagne: Campagne }) {
+  const alles = await getProducts();
+  const merken = (campagne.merken ?? []).map((m) => m.toLowerCase());
+  const vanCampagne = alles.filter((product) =>
+    merken.includes((product.brand ?? "").trim().toLowerCase()),
+  );
+  const inActie = vanCampagne.filter((product) => product.actie);
+  const rest = vanCampagne.filter((product) => !product.actie);
+  const stand = campagneStand(campagne);
+  const datum = (waarde: string) =>
+    new Date(waarde).toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+
+  return (
+    <div className="space-y-8">
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Acties", href: "/actie" },
+          { name: campagne.waarop },
+        ]}
+      />
+      <header className="rounded-2xl bg-brand-actie p-6 sm:p-8">
+        <p className="text-5xl font-black leading-none text-white sm:text-6xl">{campagne.kop}</p>
+        <h1 className="mt-3 text-2xl font-black text-white sm:text-3xl">{campagne.waarop}</h1>
+        {campagne.klein && <p className="mt-2 font-semibold text-white/80">{campagne.klein}</p>}
+        <p className="mt-4 text-sm font-semibold text-white/70">
+          {stand === "nog-niet"
+            ? `Begint op ${datum(campagne.van)}`
+            : `Nog geldig tot en met ${datum(campagne.tot)}`}
+          {inActie.length > 0 && ` · ${inActie.length} artikelen`}
+        </p>
+      </header>
+
+      {inActie.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+          {inActie.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="card p-6">
+          <p className="text-ink-soft">
+            De actieprijzen staan nog niet in de webshop. Ze komen binnen een uur
+            door; kom straks nog eens kijken, of{" "}
+            <Link href="/actie" className="font-bold text-brand hover:underline">
+              bekijk de andere acties
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
+      {/* Wat er wél van dit merk is maar niet in de actie zit. Weglaten zou de
+          indruk wekken dat het assortiment kleiner is dan het is. */}
+      {rest.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-xl font-black uppercase text-ink">
+            Ook van {(campagne.merken ?? []).join(", ")}
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+            {rest.slice(0, 8).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
 export default async function Actiepagina({ params }: Props) {
+  /*
+   * Twee soorten pagina achter dezelfde URL.
+   *
+   * Eerst kijken of de slug een CAMPAGNE is ("mack-benson-hofftech"). Kevin
+   * merkte dat die kaart naar /merk/mack linkte en dus alleen Mack toonde,
+   * terwijl de actie over drie merken gaat — één kaart kan nu eenmaal maar
+   * naar één merkpagina. Deze pagina toont ze samen.
+   *
+   * Is het geen campagne, dan is het een in het dashboard samengestelde
+   * actiepagina, zoals hiervoor.
+   */
+  const campagne = (await getCampagnes()).find((c) => c.id === params.slug);
+  if (campagne) return <CampagnePagina campagne={campagne} />;
+
   const pagina = await getActiepagina(params.slug);
   if (!pagina) notFound();
 
