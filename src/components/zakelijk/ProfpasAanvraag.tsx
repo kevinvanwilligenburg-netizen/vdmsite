@@ -39,11 +39,13 @@ export function ProfpasAanvraag({ ingelogdAls }: { ingelogdAls?: string }) {
   const [kvk, setKvk] = useState("");
   const [btw, setBtw] = useState("");
   const [besteding, setBesteding] = useState(BESTEDINGEN[1]);
-  const [betaalwijze, setBetaalwijze] = useState("Vooraf");
+  const [betaalwijze, setBetaalwijze] = useState("vooraf");
   const [opmerking, setOpmerking] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [klaar, setKlaar] = useState(false);
+  // Het portaal meldt of dit adres al een pas of een lopende aanvraag heeft.
+  const [alBekend, setAlBekend] = useState(false);
   const [viesStatus, setViesStatus] = useState<"leeg" | "bezig" | "geldig" | "ongeldig" | "onbeslist">(
     "leeg",
   );
@@ -85,8 +87,9 @@ export function ProfpasAanvraag({ ingelogdAls }: { ingelogdAls?: string }) {
           opmerking,
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string; alBekend?: boolean };
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Versturen lukte niet.");
+      setAlBekend(Boolean(data.alBekend));
       setKlaar(true);
     } catch (error) {
       setFout(error instanceof Error ? error.message : "Versturen lukte niet.");
@@ -100,12 +103,16 @@ export function ProfpasAanvraag({ ingelogdAls }: { ingelogdAls?: string }) {
       <div className="card border-2 border-brand/30 p-6">
         <p className="flex items-center gap-2 font-black text-ink">
           <Icon name="check" className="h-5 w-5 shrink-0 text-green-700" strokeWidth={3} />
-          Je aanvraag is verstuurd
+          {alBekend ? "Dit adres kennen we al" : "Je aanvraag is verstuurd"}
         </p>
+        {/* Het portaal meldt of dit e-mailadres al een pas of een lopende
+            aanvraag heeft. Dan een tweede keer "we nemen contact op" tonen is
+            precies waarom iemand gaat bellen om te vragen of het wel gelukt
+            is. */}
         <p className="mt-2 text-sm text-ink-soft">
-          Onze verkoopafdeling kijkt hem na en neemt contact met je op. Zodra je
-          ProfPas actief is, wordt de korting bij het afrekenen vanzelf verrekend —
-          je hoeft dan niets meer aan te vinken.
+          {alBekend
+            ? "Er staat al een ProfPas of een lopende aanvraag op dit e-mailadres. We hoeven dus niets opnieuw te doen — heb je een vraag over de status, bel of mail ons gerust."
+            : "Onze verkoopafdeling kijkt hem na en neemt contact met je op. Je krijgt ook een bevestiging per mail. Zodra je ProfPas actief is, wordt de korting bij het afrekenen vanzelf verrekend — je hoeft dan niets meer aan te vinken."}
         </p>
       </div>
     );
@@ -222,8 +229,8 @@ export function ProfpasAanvraag({ ingelogdAls }: { ingelogdAls?: string }) {
         <div>
           <label className={label} htmlFor="pp-betaal">Betalen</label>
           <select id="pp-betaal" value={betaalwijze} onChange={(e) => setBetaalwijze(e.target.value)} className={veld}>
-            <option value="Vooraf">Vooraf</option>
-            <option value="Op factuur">Op factuur</option>
+            <option value="vooraf">Vooraf</option>
+            <option value="factuur">Op factuur</option>
           </select>
         </div>
       </div>

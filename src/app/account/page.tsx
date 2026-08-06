@@ -121,17 +121,32 @@ export default async function AccountPage() {
             "je korting staat klaar" bij iets wat nog op een bureau ligt.
           */}
           {pasStatus?.pas === "profpas" ? (
+            /*
+              De fasen komen uit het portaal en heten daar "aanvraag",
+              "actief", "bijna" en "verlopen". Ze hier vertalen in plaats van
+              rauw tonen: "bijna" zegt een klant niets, "je pas verloopt
+              binnenkort" wel — en dat is nou juist het moment waarop hij iets
+              moet doen.
+            */
             <div className="card border-2 border-brand/30 p-5">
               <p className="text-xs font-black uppercase tracking-wide text-brand">ProfPas</p>
               <p className="mt-1 font-black text-ink">
-                {pasStatus.fase === "actief" || !pasStatus.fase
-                  ? "Je ProfPas is actief"
-                  : "Je aanvraag is in behandeling"}
+                {pasStatus.fase === "aanvraag"
+                  ? "Je aanvraag is in behandeling"
+                  : pasStatus.fase === "verlopen"
+                    ? "Je ProfPas is verlopen"
+                    : pasStatus.fase === "bijna"
+                      ? "Je ProfPas verloopt binnenkort"
+                      : "Je ProfPas is actief"}
               </p>
               <p className="mt-1 text-sm text-ink-soft">
-                {pasStatus.fase === "actief" || !pasStatus.fase
-                  ? "Bij het afrekenen wordt je korting vanzelf verrekend en bezorgen we gratis, ongeacht het bedrag. Log wel in met dit e-mailadres."
-                  : `Onze verkoopafdeling kijkt ernaar. Status: ${pasStatus.fase}.`}
+                {pasStatus.fase === "aanvraag"
+                  ? "Onze verkoopafdeling kijkt ernaar en neemt contact met je op. Zolang hij niet rond is, reken je af tegen de gewone prijs."
+                  : pasStatus.fase === "verlopen"
+                    ? "Een pas blijft geldig zolang je minstens één keer per maand iets koopt. Doe je weer een bestelling, dan leeft hij vanzelf op — of bel de winkel."
+                    : pasStatus.fase === "bijna"
+                      ? "Een pas blijft geldig zolang je minstens één keer per maand iets koopt. Doe je binnenkort een bestelling, dan blijft hij gewoon staan."
+                      : "Bij het afrekenen wordt je korting vanzelf verrekend en bezorgen we gratis, ongeacht het bedrag. Log wel in met dit e-mailadres."}
               </p>
             </div>
           ) : klant.kluspas ? (

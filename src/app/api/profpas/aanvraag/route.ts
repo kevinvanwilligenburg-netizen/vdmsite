@@ -120,52 +120,80 @@ export async function POST(request: Request) {
     }
   `;
 
-  const gemaild = await verstuurMail({
-    aan: VERKOOP,
-    onderwerp: `ProfPas-aanvraag: ${bedrijf}`,
-    tekst: [
-      "Nieuwe ProfPas-aanvraag via de webshop.",
-      "",
-      ...regels.map(([label, waarde]) => `${label}: ${waarde}`),
-      ...(opmerking ? ["", `Opmerking: ${opmerking}`] : []),
-    ].join("\n"),
-    html,
-  });
-
-  // Ook naar het portaal, zodat de aanvraag tussen de andere leads komt te
-  // staan. Bestaat dat endpoint nog niet, dan is de mail hierboven de
-  // aanvraag — daar wordt hij vandaag ook mee behandeld.
+  /*
+   * Eerst naar het portaal, want daar wordt de aanvraag behandeld.
+   *
+   * Het dashboard zet hem in het /profpas-scherm mét herkomst-badge, en
+   * stuurt de klant zélf de bevestigingsmail met de procedure. Wij sturen er
+   * dus géén tweede achteraan — twee mails over dezelfde aanvraag leest als
+   * een fout in de webshop.
+   *
+   * Let op de veldnamen: dit is hún contract, niet het onze. `contactpersoon`
+   * (niet naam), `btwNummer` (niet btw), `verwachteBestedingPerMaand`, en
+   * `betaalwijze` moet kleine letters zijn en precies "vooraf" of "factuur" —
+   * onze knop zei "Op factuur" en dat had een 400 gegeven.
+   */
   const sleutel = process.env.SITE_API_KEY;
+  let inPortaal = false;
+  let alBekend = false;
   if (sleutel) {
     try {
-      const res = await fetch(`${DASHBOARD_API_URL}/api/profpas/lead`, {
+      const res = await fetch(`${DASHBOARD_API_URL}/api/profpas/aanvraag`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sleutel}` },
         body: JSON.stringify({
           site: "vdm",
           bedrijf,
-          naam,
+          contactpersoon: naam,
           email,
-          telefoon,
-          land,
-          ...(land === "BE" ? { btw } : { kvk }),
-          besteding,
-          betaalwijze,
-          opmerking,
+          ...(telefoon ? { telefoon } : {}),
+          ...(land === "BE" ? { btwNummer: btw } : { kvk }),
+          ...(besteding ? { verwachteBestedingPerMaand: besteding } : {}),
+          betaalwijze: betaalwijze === "factuur" ? "factuur" : "vooraf",
         }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(6000),
       });
-      if (!res.ok && res.status !== 404) {
+      const antwoord = (await res.json().catch(() => null)) as
+        | { ok?: boolean; alBekend?: boolean; fout?: string }
+        | null;
+      if (res.status === 429) {
+        return NextResponse.json(
+          { error: "Het is nu erg druk met aanvragen. Probeer het over een uur nog eens." },
+          { status: 429 },
+        );
+      }
+      if (res.ok && antwoord?.ok) {
+        inPortaal = true;
+        alBekend = Boolean(antwoord.alBekend);
+      } else {
         console.error(
-          `[profpas] portaal weigerde de aanvraag met status ${res.status}: ${(
-            await res.text()
-          ).slice(0, 200)}`,
+          `[profpas] portaal weigerde de aanvraag (${res.status}): ${antwoord?.fout ?? "geen reden"}`,
         );
       }
     } catch (error) {
       console.error("[profpas] portaal onbereikbaar:", error);
     }
   }
+
+  if (inPortaal) return NextResponse.json({ ok: true, alBekend });
+
+  /*
+   * Kwam hij daar niet aan, dan gaat hij per mail naar verkoop — zoals het
+   * vóór dit formulier ook ging. Liever een aanvraag in een mailbox dan een
+   * klant die op "versturen" drukt en niets hoort.
+   */
+  const gemaild = await verstuurMail({
+    aan: VERKOOP,
+    onderwerp: `ProfPas-aanvraag: ${bedrijf}`,
+    tekst: [
+      "Nieuwe ProfPas-aanvraag via de webshop.",
+      "Let op: het portaal nam hem niet aan, dus hij staat niet in /profpas.",
+      "",
+      ...regels.map(([label, waarde]) => `${label}: ${waarde}`),
+      ...(opmerking ? ["", `Opmerking: ${opmerking}`] : []),
+    ].join("\n"),
+    html,
+  });
 
   if (!gemaild.ok) {
     console.error(`[profpas] aanvraag van ${bedrijf} niet gemaild: ${gemaild.reden}`);
