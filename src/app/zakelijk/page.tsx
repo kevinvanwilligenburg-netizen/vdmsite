@@ -19,7 +19,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * De voorwaarden van de Profpas, overgenomen van devoordeelmarkt.nl/nl/profpas.
+ * De voorwaarden van de Profpas: 10% korting en altijd gratis verzending,
+ * rechtstreeks door Kevin opgegeven (6/8/2026); de oude folderpagina
+ * (/nl/profpas) bestaat niet meer.
  *
  * ⚠️ Niets hier verzinnen. Staat er op die pagina iets anders, dan is die
  * pagina leidend — een webshop die andere kortingen belooft dan de folder is
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
 const VOORDELEN = [
   {
     icon: "tag",
-    title: "Altijd 5% korting",
+    title: "Altijd 10% korting",
     text: "Op het hele assortiment, direct verrekend bij het afrekenen. Uitgezonderd Sikkens; vraag daar naar de voorwaarden.",
   },
   {
