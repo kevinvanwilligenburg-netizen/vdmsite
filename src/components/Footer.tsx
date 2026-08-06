@@ -31,6 +31,26 @@ export async function Footer() {
   ]);
   return (
     <footer className="mt-14 bg-ink text-white sm:mt-16">
+      {/*
+        Nieuwsbrief in een eigen strook boven de kolommen.
+
+        Stond eerst als zesde kolom in een raster van vijf; dan valt het rijtje
+        uit elkaar en houd je een gat over. Los daarvan hoort een aanmeldveld
+        niet in een kolom geperst: het is één regel invullen, en dat verdient
+        de breedte in plaats van een smalle strook naast de merkenlijst.
+      */}
+      <div className="border-b border-white/10">
+        <div className="container-page flex flex-wrap items-center justify-between gap-6 py-8">
+          <div className="min-w-0 max-w-md">
+            <Nieuwsbrief donker />
+          </div>
+          <p className="hidden max-w-xs text-sm text-white/60 lg:block">
+            Eens per maand een mail met wat er in de aanbieding is en waar je bij
+            het klussen wat aan hebt. Meer niet.
+          </p>
+        </div>
+      </div>
+
       <div className="container-page grid gap-10 py-10 sm:grid-cols-2 sm:py-12 lg:grid-cols-3 xl:grid-cols-5">
         <div>
           <p className="mb-3 text-lg font-black uppercase">
@@ -159,13 +179,6 @@ export async function Footer() {
             ))}
           </ul>
         </nav>
-
-        {/* Aanmelden voor de nieuwsbrief. In de footer omdat het daar hoort
-            en niet in de weg zit: wie iets wil kopen komt hier niet, wie klaar
-            is met kijken wel. */}
-        <div className="sm:col-span-2 lg:col-span-1">
-          <Nieuwsbrief donker />
-        </div>
 
         <nav aria-label="Klantenservice">
           <p className="mb-3 font-bold uppercase tracking-wide text-brand-bright">
