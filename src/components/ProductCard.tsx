@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 import { Icon } from "@/components/icons";
+import { KortingBadge } from "@/components/KortingBadge";
 import { Price } from "@/components/Price";
 import { ProductArt } from "@/components/ProductArt";
-import { discountPct } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
 /**
@@ -39,10 +39,20 @@ export function ProductCard({ product }: { product: Product }) {
         />
         {/* Rood, niet oranje: in de huisstijlgids is PMS 2347 het actiekleur
             ("GRATIS", "2 halen 1 betalen"). Een kortingsvlag in hetzelfde
-            oranje als de rest van de pagina valt niet op. */}
+            oranje als de rest van de pagina valt niet op.
+
+            Sinds de actieprijzen binnenkomen staat die kleur alléén nog op een
+            échte actie. Een verschil met de adviesprijs krijgt een ingetogen
+            vlag: dat is geen nieuws, het staat er al jaren, en bij sommige
+            artikelen is het 56% — waardoor een echte actie van 20% ernaast
+            als het mindere aanbod las. */}
         {hasDiscount && (
-          <span className="absolute left-3 top-3 rounded-md bg-brand-actie px-2 py-1 text-sm font-black text-white shadow">
-            −{discountPct(product.price, product.compareAtPrice!)}%
+          <span className="absolute left-3 top-3">
+            <KortingBadge
+              prijs={product.price}
+              vanaf={product.compareAtPrice}
+              actie={product.actie}
+            />
           </span>
         )}
         {/* "Elke RAL-kleur" verkocht goed maar sloot te veel uit: klanten die

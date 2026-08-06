@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { ArtikelBekeken } from "@/components/meten/Paginameting";
+import { KortingBadge } from "@/components/KortingBadge";
 import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
 import { Companions } from "@/components/product/Companions";
@@ -305,7 +306,13 @@ export default async function ProductPage({ params }: Props) {
             over levertijd terwijl de koopknop rechts al voorbij was. */}
         <div className="min-w-0">
           <div className="lg:sticky lg:top-40">
-            <div className="card overflow-hidden">
+            {/* Kortingsvlag op de foto, maar alléén bij een échte actie.
+                Kevin vroeg erom ("percentage korting bij producten in de
+                actie"). Het verschil met de adviesprijs zetten we hier
+                bewust NIET neer: dat staat er al jaren, is bij sommige
+                artikelen 56%, en zo'n vlag op de hoofdfoto maakt van een
+                permanente marge een aanbieding. */}
+            <div className="card relative overflow-hidden">
               <ProductArt
                 icon={product.art.icon}
                 hue={product.art.hue}
@@ -314,6 +321,16 @@ export default async function ProductPage({ params }: Props) {
                 label={product.name}
                 priority
               />
+              {product.actie && (
+                <span className="absolute left-4 top-4">
+                  <KortingBadge
+                    prijs={product.price}
+                    vanaf={product.compareAtPrice}
+                    actie
+                    formaat="groot"
+                  />
+                </span>
+              )}
             </div>
             {/*
               Bij een voorgemengd blik toont de foto het blik, niet de kleur —
