@@ -35,6 +35,12 @@ export default async function Afmelden({
     <div className="mx-auto max-w-2xl">
       <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Afmelden" }]} />
       <div className="card mt-6 p-6 sm:p-8">
+        {/*
+          Geen aparte "je stond niet op de lijst"-tak meer. Contacten uit de
+          Mailchimp-import staan wél in Resend maar niet in onze KV, en die
+          kregen dan te horen dat ze nergens op stonden terwijl de nieuwsbrief
+          gewoon bleef komen. `meldAf` handelt nu ook onbekende adressen af.
+        */}
         {gelukt ? (
           <>
             <p className="text-xl font-black text-ink">Je bent afgemeld</p>
@@ -42,14 +48,6 @@ export default async function Afmelden({
               We sturen je geen nieuwsbrief meer. Bestel je iets, dan krijg je nog
               wel gewoon je orderbevestiging en het bericht als je pakket onderweg
               is — dat hoort bij je bestelling en staat hier los van.
-            </p>
-          </>
-        ) : klopt ? (
-          <>
-            <p className="text-xl font-black text-ink">Je stond niet op de lijst</p>
-            <p className="mt-3 text-ink-soft">
-              Dit adres kennen we niet als aanmelding voor de nieuwsbrief. Je hoeft
-              dus niets te doen.
             </p>
           </>
         ) : (

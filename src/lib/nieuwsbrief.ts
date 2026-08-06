@@ -169,15 +169,33 @@ export async function bevestigAanmelding(token: string): Promise<Aanmelding | nu
   return bevestigd;
 }
 
-/** Afmelden. Blijft als record staan, met datum — dat is ook bewijs. */
+/**
+ * Afmelden. Blijft als record staan, met datum — dat is ook bewijs.
+ *
+ * ⚠️ Werkt óók als we het adres niet kennen, en dat is geen nette-jongen-
+ * gedrag maar noodzaak. Contacten die van elders komen (de Mailchimp-import)
+ * staan wél in Resend en niet in onze KV. Zonder deze tak zou hun afmeldlink
+ * "je stond niet op de lijst" tonen terwijl ze de nieuwsbrief gewoon blijven
+ * krijgen — en dan is de volgende klik "dit is spam", wat het hele
+ * verzenddomein raakt.
+ *
+ * Bij een onbekend adres leggen we het afmeldverzoek alsnog vast, zodat er
+ * ook van die weigering een spoor is.
+ */
 export async function meldAf(email: string): Promise<boolean> {
   if (!isKvEnabled()) return false;
+  const nu = new Date().toISOString();
   const bestaand = await aanmeldingVan(email);
-  if (!bestaand) return false;
   await kvSetJSON(sleutel.aanmelding(email), {
-    ...bestaand,
-    afgemeldOp: new Date().toISOString(),
-  });
+    email: normaliseerEmail(email),
+    aangemeldOp: bestaand?.aangemeldOp ?? nu,
+    bron: bestaand?.bron ?? "mailchimp",
+    toestemmingstekst:
+      bestaand?.toestemmingstekst ??
+      "Onbekend bij ons; afgemeld via de link in de nieuwsbrief.",
+    ...(bestaand?.bevestigdOp ? { bevestigdOp: bestaand.bevestigdOp } : {}),
+    afgemeldOp: nu,
+  } satisfies Aanmelding);
   await zetUitResend(email);
   return true;
 }
