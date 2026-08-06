@@ -534,7 +534,7 @@ export async function getUpsellProducts(limit = 6): Promise<Product[]> {
 
 export { isEchtMerk, merknaam };
 
-function brandSlug(name: string): string {
+export function brandSlug(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD")

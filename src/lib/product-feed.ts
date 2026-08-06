@@ -1,6 +1,7 @@
 import { bezorgbaarheid, type TeBezorgenArtikel } from "@/lib/bezorgbaarheid";
 import { toonbareRubriek } from "@/lib/rubrieken";
 import { isKvEnabled, kvGetRaw, kvSetEx } from "@/lib/kv";
+import { campagneKorting } from "@/lib/campagnes";
 import { isGeloofwaardigeKluspasPrijs } from "@/lib/kluspas";
 import { parseBase } from "@/lib/paint-bases";
 import { DASHBOARD_API_URL } from "@/lib/site";
@@ -535,6 +536,30 @@ export function prijzenVan(
     if (tot !== null && nu > tot + 24 * 60 * 60 * 1000 - 1) return false;
     return true;
   })();
+
+  /*
+   * NOODBRUG (6 augustus 2026). Weghalen zodra de feed de acties draagt.
+   *
+   * Tilroy hééft de actieprijzen — gemeten via de Price API: Benson standard
+   * 3.25 → promo 1.63, 152.10 → 76.05. Maar de promosync van het dashboard
+   * weigert een uitkomst waarin meer dan 40% van het assortiment in actie is,
+   * en Kevins augustuscampagne raakt 56% van de catalogus. Gevolg: de kassa
+   * rekende 50% op Benson en de webshop de volle prijs.
+   *
+   * Daarom rekenen we hier de campagnekorting zélf uit — maar ALLEEN als de
+   * feed geen `promo_prijs` draagt. Zodra die er wel is wint de feed en is
+   * deze tak dood. Dat is het verschil tussen een brug en een tweede
+   * prijzenbron.
+   *
+   * De percentages zijn getoetst tegen de Price API: ze leveren exact dezelfde
+   * prijs op als Tilroy zelf rekent, dus het ordertotaal klopt bij het
+   * inboeken en er ontstaan geen drafts.
+   */
+  const viaCampagne =
+    !promo && standaard > 0 ? Math.round(standaard * (1 - campagneKorting(item.brand))) : 0;
+  if (viaCampagne > 0 && viaCampagne < standaard) {
+    return { prijs: viaCampagne, vanaf: standaard, kluspas: 0, actie: true };
+  }
 
   if (binnenVenster && promo < standaard) {
     return {
@@ -1919,7 +1944,8 @@ async function fetchFeed(): Promise<Product[]> {
 // rekende. Zie ook /api/catalogus/ververs, zodat dit niet nog eens een deploy
 // hoeft te kosten.
 // v55: actieVan/actieTot erbij voor sale_price_effective_date in de feed.
-export const KV_KEY = "catalog:products:v55";
+// v56: campagnebrug in prijzenVan (zie lib/campagnes.ts).
+export const KV_KEY = "catalog:products:v56";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
