@@ -48,7 +48,7 @@ interface CodeRecord {
 
 /* ── Inlogcodes ────────────────────────────────────────────────── */
 
-function normaliseerEmail(email: string): string {
+export function normaliseerEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { Aankopen } from "@/components/account/Aankopen";
+import { Adresboek } from "@/components/account/Adresboek";
 import { Inloggen } from "@/components/account/Inloggen";
 import { Kluspas } from "@/components/account/Kluspas";
 import { WinkelKeuze } from "@/components/account/WinkelKeuze";
@@ -313,6 +314,11 @@ export default async function AccountPage() {
           </div>
           <Aankopen webshop={webshopAankopen} />
         </section>
+
+        {/* Adresboek onderaan: je komt hier voor je pas, je punten en je
+            bestellingen. Adressen beheer je zelden, maar áls je het doet wil
+            je het op één plek kunnen. */}
+        <Adresboek />
       </div>
     </div>
   );
