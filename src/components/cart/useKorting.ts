@@ -11,8 +11,17 @@ import type { CartItem } from "@/lib/types";
  * prijsmomentopname per regel, en een mandje van gisteren mist velden die er
  * vandaag wel zijn. Zie /api/korting voor het hele verhaal.
  */
-export function useKorting(items: CartItem[]): number {
-  const [korting, setKorting] = useState(0);
+export type PasSoortKorting = "profpas" | "kluspas" | "geen";
+
+export interface Kortingstand {
+  /** Bedrag in centen. */
+  bedrag: number;
+  /** Van welke pas de korting komt; bepaalt hoe we hem noemen. */
+  pas: PasSoortKorting;
+}
+
+export function useKorting(items: CartItem[]): Kortingstand {
+  const [stand, setStand] = useState<Kortingstand>({ bedrag: 0, pas: "geen" });
 
   // De regels als sleutel, zodat we alleen opnieuw vragen als het mandje
   // verandert — niet bij elke render.
@@ -22,7 +31,7 @@ export function useKorting(items: CartItem[]): number {
 
   useEffect(() => {
     if (items.length === 0) {
-      setKorting(0);
+      setStand({ bedrag: 0, pas: "geen" });
       return;
     }
     let actief = true;
@@ -38,8 +47,11 @@ export function useKorting(items: CartItem[]): number {
       }),
     })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { korting?: number } | null) => {
-        if (actief && typeof data?.korting === "number") setKorting(data.korting);
+      .then((data: { korting?: number; pas?: string } | null) => {
+        if (!actief || typeof data?.korting !== "number") return;
+        const pas: PasSoortKorting =
+          data.pas === "profpas" ? "profpas" : data.pas === "kluspas" ? "kluspas" : "geen";
+        setStand({ bedrag: data.korting, pas });
       })
       .catch(() => undefined);
     return () => {
@@ -48,5 +60,5 @@ export function useKorting(items: CartItem[]): number {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sleutel]);
 
-  return korting;
+  return stand;
 }

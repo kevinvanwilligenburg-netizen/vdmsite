@@ -62,7 +62,10 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
 
   // Wat de korting op dit mandje waard is; de server rekent het uit de
   // catalogus, niet uit de prijzen die in de winkelwagen zijn blijven staan.
-  const kluspasKorting = useKorting(items);
+  const { bedrag: kluspasKorting, pas } = useKorting(items);
+  // De pas bij naam noemen. Er stond hardcoded "Kluspas-korting", ook boven de
+  // korting van iemand met een ProfPas — die heeft helemaal geen Kluspas.
+  const kortingLabel = pas === "profpas" ? "ProfPas-korting" : "Kluspas-korting";
 
   if (!hydrated) {
     return <p className="py-16 text-center text-ink-soft">Winkelwagen laden…</p>;
@@ -216,7 +219,7 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
               laat de klant twijfelen op precies het verkeerde moment. */}
           {ingelogd && kluspasKorting > 0 && (
             <div className="flex justify-between">
-              <dt className="text-ink-soft">Kluspas-korting</dt>
+              <dt className="text-ink-soft">{kortingLabel}</dt>
               <dd className="font-bold text-green-700">− {euro(kluspasKorting)}</dd>
             </div>
           )}

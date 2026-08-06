@@ -369,7 +369,7 @@ export function CheckoutForm({
   // Uit de catalogus, niet uit de winkelwagen: die bewaart een
   // prijsmomentopname die kan verouderen. Zie /api/korting. Vóór het
   // bezorgopties-effect gedeclareerd, want dat rekent ermee.
-  const kluspasKorting = useKorting(items);
+  const { bedrag: kluspasKorting, pas: kortingPas } = useKorting(items);
 
   // Staal-voucher: code invullen, server beoordeelt. Het bedrag hier is de
   // spiegel; bij het afrekenen beoordeelt de checkout-route opnieuw.
@@ -1163,7 +1163,8 @@ export function CheckoutForm({
               <p className="flex items-start gap-2 text-sm font-bold text-ink">
                 <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-green-700" strokeWidth={3} />
                 <span>
-                  Je korting van {euro(kluspasKorting)} is verrekend.
+                  Je {kortingPas === "profpas" ? "ProfPas" : "Kluspas"}-korting van{" "}
+                  {euro(kluspasKorting)} is verrekend.
                   <span className="block font-normal text-ink-soft">
                     Als {ingelogdAls}.
                   </span>

@@ -1,12 +1,14 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { kluspasSaving } from "@/lib/kluspas";
+import { emailVanSessie, haalPas, SESSIE_COOKIE } from "@/lib/account";
+import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
 import { getProductById } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Wat de accountkorting op dit mandje waard is.
+ * Wat de accountkorting op dit mandje waard is, en van welke pas hij komt.
  *
  * ⚠️ Dit hoort niet in de winkelwagen zelf uitgerekend te worden.
  *
@@ -22,14 +24,31 @@ export const dynamic = "force-dynamic";
  * het afrekenen, kost meer vertrouwen dan hij oplevert.
  *
  * Daarom komt het bedrag hier uit de catalogus, net als bij het afrekenen.
+ *
+ * ⚠️ EN MET DE JUISTE PAS. Hier werd altijd de Kluspas-besparing gerekend,
+ * ook voor een ProfPas-houder — terwijl de checkout voor die klant
+ * `profpasUnitPrice` gebruikt: 10% van de normale prijs, of de pasprijs als
+ * die lager uitvalt. Precies het verschil waar de waarschuwing hierboven voor
+ * bedoeld was, maar dan een verdieping dieper. De winkelwagen zette er
+ * bovendien "Kluspas-korting" boven bij iemand die helemaal geen Kluspas
+ * heeft.
+ *
+ * De pas komt uit de sessie, nooit uit het verzoek: anders bepaalt de browser
+ * welke korting hij krijgt.
  */
 export async function POST(request: Request) {
   let body: { items?: { productId?: string; variantId?: string; qty?: number }[] };
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ korting: 0 });
+    return NextResponse.json({ korting: 0, pas: "geen" });
   }
+
+  const sessieEmail = await emailVanSessie(cookies().get(SESSIE_COOKIE)?.value);
+  const pasStatus = sessieEmail ? await haalPas(sessieEmail) : null;
+  // Geen pas uit de portal maar wél ingelogd: dan geldt de Kluspas-prijs, net
+  // als bij het afrekenen — een account ís de pas.
+  const pas = pasStatus?.pas === "profpas" ? "profpas" : sessieEmail ? "kluspas" : "geen";
 
   const regels = (body.items ?? []).slice(0, 50);
   let korting = 0;
@@ -45,8 +64,11 @@ export async function POST(request: Request) {
     // hoort niet bij een blik van 2,5 liter.
     const prijs = variant?.price ?? product.price;
     const pasprijs = variant ? variant.kluspasPrice : product.kluspasPrice;
-    korting += kluspasSaving(prijs, pasprijs) * aantal;
+    if (pas === "geen") continue;
+    const stukprijs =
+      pas === "profpas" ? profpasUnitPrice(prijs, pasprijs) : kluspasUnitPrice(prijs, pasprijs);
+    korting += Math.max(0, prijs - stukprijs) * aantal;
   }
 
-  return NextResponse.json({ korting });
+  return NextResponse.json({ korting, pas });
 }
