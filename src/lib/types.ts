@@ -106,6 +106,15 @@ export interface Product {
   /** Looptijd van die actie ("JJJJ-MM-DD"), voor `sale_price_effective_date`. */
   actieVan?: string;
   actieTot?: string;
+  /**
+   * Bundelprijzen uit Tilroy: "3 voor € 4,95".
+   *
+   * ⚠️ Verwar dit niet met de staffelregels in lib/staffel.ts. Díé verzinnen
+   * wij (2 halen 1 betalen) en hebben daarom een kortingsartikel nodig om het
+   * ordertotaal kloppend te houden. Dit komt uít Tilroy, dus de kassa rekent
+   * hem zelf ook — geen compensatie nodig, geen drafts.
+   */
+  staffelPrijzen?: { aantal: number; prijs: number }[];
   unit?: string;
   colorMixable?: boolean; // verf die in de winkel op kleur wordt gemengd
   /** Waar: de omschrijving is Tilroy's handgeschreven webtekst, geen terugvalzin. */

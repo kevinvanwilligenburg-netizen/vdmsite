@@ -129,6 +129,45 @@ export async function staffelregels(): Promise<Staffelregel[]> {
     .filter((regel) => staffelLoopt(regel));
 }
 
+/**
+ * Bundelprijs uit Tilroy toepassen: "3 voor € 4,95".
+ *
+ * Wat dit kost bij `aantal` stuks, gegeven de gewone stuksprijs. Geeft de
+ * korting in centen (0 = geen bundel van toepassing).
+ *
+ * ⚠️ Anders dan de regels hierboven is hiervoor GEEN kortingsartikel nodig:
+ * deze bundel staat in Tilroy, dus de kassa rekent hem zelf ook en het
+ * ordertotaal klopt vanzelf. Vandaar dat deze functie niet op `staffelSku()`
+ * hangt.
+ *
+ * De klant krijgt altijd het gunstigste. Ligt de stuksprijs door een lopende
+ * actie al lager dan de bundel (drie stuks à € 1,50 tegenover "3 voor
+ * € 4,95"), dan blijft de stuksprijs staan. Dat is ook waarom hier `Math.max`
+ * met nul staat: een "bundel" die duurder uitvalt is geen korting.
+ */
+export function bundelKorting(
+  stuksprijs: number,
+  aantal: number,
+  staffels: { aantal: number; prijs: number }[] | undefined,
+): number {
+  if (!staffels?.length || aantal < 2 || stuksprijs <= 0) return 0;
+
+  // Grootste bundel eerst, dan blijft er zo min mogelijk los over.
+  const oplopend = [...staffels].sort((a, b) => b.aantal - a.aantal);
+  let over = aantal;
+  let kosten = 0;
+  for (const staffel of oplopend) {
+    if (staffel.aantal < 2) continue;
+    const groepen = Math.floor(over / staffel.aantal);
+    if (groepen <= 0) continue;
+    kosten += groepen * staffel.prijs;
+    over -= groepen * staffel.aantal;
+  }
+  kosten += over * stuksprijs;
+
+  return Math.max(0, aantal * stuksprijs - kosten);
+}
+
 /** Waar een regel op slaat. */
 export function regelGeldtVoor(
   regel: Staffelregel,

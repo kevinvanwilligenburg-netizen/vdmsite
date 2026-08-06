@@ -491,6 +491,47 @@ function toCents(value: string | undefined): number {
 }
 
 /**
+ * Bundelprijzen uit Tilroy: "3 voor € 4,95".
+ *
+ * Contract van het dashboard (6 augustus 2026):
+ *   staffel_prijzen: [{ aantal: 3, prijs: "4.95", van: "…"|null, tot: "…"|null }]
+ *
+ * Het venster toetsen we hier zelf, om dezelfde reden als bij `promo_prijs`:
+ * hun feed heeft een eigen cache, dus een net verlopen staffel kan nog even
+ * naijlen. Van/tot leeg = permanent.
+ *
+ * Oplopend op aantal, en per aantal de laagste prijs — bij twee regels voor
+ * hetzelfde aantal krijgt de klant de gunstigste.
+ */
+function staffelsVan(item: FeedItem, nu: number): { aantal: number; prijs: number }[] {
+  const ruw = (item as unknown as Record<string, unknown>).staffel_prijzen;
+  if (!Array.isArray(ruw)) return [];
+  const beste = new Map<number, number>();
+  for (const regel of ruw) {
+    if (!regel || typeof regel !== "object") continue;
+    const r = regel as Record<string, unknown>;
+    const aantal = Math.floor(Number(r.aantal));
+    const prijs = toCents(typeof r.prijs === "string" ? r.prijs : String(r.prijs ?? ""));
+    if (!Number.isFinite(aantal) || aantal < 2 || prijs <= 0) continue;
+
+    const grens = (waarde: unknown) => {
+      const tijd = typeof waarde === "string" ? Date.parse(waarde) : Number.NaN;
+      return Number.isNaN(tijd) ? null : tijd;
+    };
+    const van = grens(r.van);
+    const tot = grens(r.tot);
+    if (van !== null && nu < van) continue;
+    if (tot !== null && nu > tot + 24 * 60 * 60 * 1000 - 1) continue;
+
+    const bestaand = beste.get(aantal);
+    if (bestaand === undefined || prijs < bestaand) beste.set(aantal, prijs);
+  }
+  return [...beste.entries()]
+    .map(([aantal, prijs]) => ({ aantal, prijs }))
+    .sort((a, b) => a.aantal - b.aantal);
+}
+
+/**
  * De prijzen van één feedregel, met een lopende actie erin verwerkt.
  *
  * Regel van Kevin (6 augustus 2026): *"extra kortingen is altijd voor iedereen,
@@ -1656,6 +1697,13 @@ function buildProduct(
     compareAtPrice: compareAtPrice > price ? compareAtPrice : undefined,
     kluspasPrice: kluspasPrice > 0 ? kluspasPrice : undefined,
     actie: inActie || undefined,
+    // Bundelprijs van de goedkoopste maat; die hoort bij dezelfde variant als
+    // de "vanaf"-prijs ernaast.
+    ...(() => {
+      const bron = group.find((item) => item.id === vanafVariant?.sku) ?? leader;
+      const staffels = staffelsVan(bron, Date.now());
+      return staffels.length > 0 ? { staffelPrijzen: staffels } : {};
+    })(),
     ...(actieVenster?.van ? { actieVan: actieVenster.van } : {}),
     ...(actieVenster?.tot ? { actieTot: actieVenster.tot } : {}),
     unit: leader.maat_range || leader.maat || undefined,
@@ -1945,7 +1993,8 @@ async function fetchFeed(): Promise<Product[]> {
 // hoeft te kosten.
 // v55: actieVan/actieTot erbij voor sale_price_effective_date in de feed.
 // v56: campagnebrug in prijzenVan (zie lib/campagnes.ts).
-export const KV_KEY = "catalog:products:v56";
+// v57: staffel_prijzen (bundelprijzen uit Tilroy) erbij.
+export const KV_KEY = "catalog:products:v57";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
