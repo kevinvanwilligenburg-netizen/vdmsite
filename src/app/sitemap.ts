@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { getLopendeActies } from "@/lib/actiepagina";
 import { listPublishedPages } from "@/lib/content";
 import { GIDSEN } from "@/lib/gidsen";
 import { kleurtestersActief } from "@/lib/instellingen";
@@ -9,13 +10,16 @@ import { getBrands, getCategories, getProducts, getStores } from "@/lib/tilroy";
 import { VERGELIJKINGEN } from "@/lib/vergelijk";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, categories, stores, pages, brands, testers] = await Promise.all([
+  const [products, categories, stores, pages, brands, testers, acties] = await Promise.all([
     getProducts(),
     getCategories(),
     getStores(),
     listPublishedPages(),
     getBrands(60),
     kleurtestersActief(),
+    // Alleen de lopende: een afgelopen actie blijft bereikbaar (een link uit
+    // een mailing moet ergens uitkomen) maar hoort niet in de sitemap.
+    getLopendeActies(),
   ]);
   const lastModified = new Date();
 
@@ -100,6 +104,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: page.updatedAt ? new Date(page.updatedAt) : lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.5,
+    })),
+    // Actiepagina's staan hoog: ze lopen kort en moeten snel opgepikt worden.
+    ...(acties.length > 0
+      ? [
+          {
+            url: absoluteUrl("/actie"),
+            lastModified,
+            changeFrequency: "daily" as const,
+            priority: 0.7,
+          },
+        ]
+      : []),
+    ...acties.map((actie) => ({
+      url: absoluteUrl(`/actie/${actie.slug}`),
+      lastModified: actie.updatedAt ? new Date(actie.updatedAt) : lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
     })),
   ];
 }
