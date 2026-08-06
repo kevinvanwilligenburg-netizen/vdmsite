@@ -233,45 +233,84 @@ export function afmeldUrl(email: string): string {
 async function zetInResend(email: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return false;
+  const adres = normaliseerEmail(email);
+  const kop = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
   try {
-    const res = await fetch("https://api.resend.com/contacts", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: normaliseerEmail(email),
-        unsubscribed: false,
-        segment_ids: [SEGMENT_ID],
-      }),
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!res.ok) {
-      // Luid loggen mét de reden: het contract van Resend kan wijzigen, en
-      // dan willen we dat in de logs zien in plaats van een lijst die stil
-      // leeg blijft.
+    /*
+     * Eerst het LABEL proberen, dan pas aanmaken.
+     *
+     * In Resend staan al 75.656 contacten — van beide winkels door elkaar.
+     * Een nieuwe aanmelding is dus meestal geen nieuw contact maar een
+     * bestaand contact dat er een segment bij krijgt. Meteen `POST /contacts`
+     * doen botst dan op het bestaande adres, en de aanmelding zou stil
+     * mislukken terwijl de klant "je staat op de lijst" te zien kreeg.
+     */
+    const label = await fetch(
+      `https://api.resend.com/contacts/${encodeURIComponent(adres)}/segments/${SEGMENT_ID}`,
+      { method: "POST", headers: kop, signal: AbortSignal.timeout(6000) },
+    );
+    if (label.ok) return true;
+
+    // Alleen bij een écht onbekend contact aanmaken — mét segment in dezelfde
+    // aanroep, zodat er nooit een contact zonder label achterblijft.
+    if (label.status === 404) {
+      const nieuw = await fetch("https://api.resend.com/contacts", {
+        method: "POST",
+        headers: kop,
+        body: JSON.stringify({ email: adres, unsubscribed: false, segment_ids: [SEGMENT_ID] }),
+        signal: AbortSignal.timeout(6000),
+      });
+      if (nieuw.ok) return true;
       console.error(
-        `[nieuwsbrief] Resend weigerde ${normaliseerEmail(email)} (${res.status}): ${(
-          await res.text()
-        ).slice(0, 200)}`,
+        `[nieuwsbrief] aanmaken van ${adres} geweigerd (${nieuw.status}): ${(await nieuw.text()).slice(0, 200)}`,
       );
       return false;
     }
-    return true;
+
+    // Luid loggen mét de reden: het contract van Resend kan wijzigen, en dan
+    // willen we dat in de logs zien in plaats van een lijst die stil leeg
+    // blijft.
+    console.error(
+      `[nieuwsbrief] labelen van ${adres} geweigerd (${label.status}): ${(await label.text()).slice(0, 200)}`,
+    );
+    return false;
   } catch (error) {
     console.error("[nieuwsbrief] Resend onbereikbaar:", error);
     return false;
   }
 }
 
+/**
+ * Afmelden = het VDM-label eraf halen, NIET het contact op "unsubscribed".
+ *
+ * ⚠️ Dit is een belangrijk verschil. In Resend staan de contacten van beide
+ * winkels door elkaar (75.656 stuks, met de drie Klus=r-segmenten ernaast).
+ * `unsubscribed: true` op het contact zet iemand uit voor ÁLLE broadcasts —
+ * dus wie zich afmeldt voor de nieuwsbrief van De Voordeelmarkt zou daarmee
+ * ook geen Klus=r-mail meer krijgen. Dat heeft die klant niet gevraagd, en het
+ * is bij de andere winkel niet eens te zien waarom hij verdween.
+ *
+ * Het segment eraf halen doet precies wat er gevraagd is, en niets meer.
+ */
 async function zetUitResend(email: string): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return;
+  const adres = normaliseerEmail(email);
   try {
-    await fetch(`https://api.resend.com/contacts/${encodeURIComponent(normaliseerEmail(email))}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ unsubscribed: true }),
-      signal: AbortSignal.timeout(6000),
-    });
+    const res = await fetch(
+      `https://api.resend.com/contacts/${encodeURIComponent(adres)}/segments/${SEGMENT_ID}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(6000),
+      },
+    );
+    // 404 = stond er al niet in; dat is geen fout maar het gewenste resultaat.
+    if (!res.ok && res.status !== 404) {
+      console.error(
+        `[nieuwsbrief] afmelden van ${adres} geweigerd (${res.status}): ${(await res.text()).slice(0, 200)}`,
+      );
+    }
   } catch (error) {
     // Afmelden moet bij ons altijd lukken; Resend mag daarna nog volgen.
     console.error("[nieuwsbrief] afmelden bij Resend mislukt:", error);
