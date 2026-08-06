@@ -6,7 +6,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
-import { mapsUrl, openingHoursSpecification, STORE_SERVICES } from "@/lib/stores";
+import { mapsUrl, openingHoursSpecification, winkelUsps } from "@/lib/stores";
 import { absoluteUrl, CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { getDeals, getStore, getStores } from "@/lib/tilroy";
 import { getVacaturesVoorWinkel } from "@/lib/vacatures";
@@ -84,7 +84,7 @@ export default async function StorePage({ params }: Props) {
       : {}),
     openingHoursSpecification: openingHoursSpecification(store),
     hasMap: mapsUrl(store),
-    makesOffer: STORE_SERVICES.map((service) => ({
+    makesOffer: winkelUsps(store).map((service) => ({
       "@type": "Offer",
       itemOffered: { "@type": "Service", name: service },
     })),
@@ -219,7 +219,7 @@ export default async function StorePage({ params }: Props) {
               Wat kun je hier terecht voor?
             </h2>
             <ul className="mt-3 space-y-2 text-sm text-ink-soft">
-              {STORE_SERVICES.map((service) => (
+              {winkelUsps(store).map((service) => (
                 <li key={service} className="flex items-start gap-2">
                   <Icon
                     name="check"

@@ -88,13 +88,43 @@ export const demoStores: Store[] = [
 ];
 
 /** Diensten die in elke vestiging beschikbaar zijn (bron: devoordeelmarkt.nl). */
+/**
+ * Wat elke winkel biedt.
+ *
+ * Kevin: "kan je bij de winkels usp zetten zoals gratis parkeren verfmengen
+ * enz". Deze lijst bestond al, maar ging alléén naar Google (`makesOffer` in de
+ * LocalBusiness-markup) en stond nergens op de pagina zelf. We beloofden het
+ * dus wél aan een zoekmachine en niet aan de klant.
+ *
+ * Nu één bron voor allebei, via `winkelUsps()`. Dat is niet alleen netter: een
+ * zichtbare lijst en een verborgen lijst die uit elkaar lopen, is precies waar
+ * Google een site op afrekent.
+ *
+ * De formuleringen zijn overgenomen van waar ze elders op de site al staan,
+ * inclusief de nuances. "Binnen 2 uur klaar" geldt bij ons uitdrukkelijk
+ * alléén voor wat in díé winkel op voorraad ligt; dat weglaten maakt er een
+ * belofte van die we niet altijd waar kunnen maken.
+ */
 export const STORE_SERVICES = [
-  "Verf mengen in elke kleur",
-  "Kleuradvies",
-  "Click & Collect",
+  "Verf gratis aangemengd in elke kleur, uit ruim 140 waaiers",
+  "Gratis kleuradvies van een verfspecialist",
+  "Online besteld en op voorraad? Binnen 2 uur klaar om af te halen",
+  "14 dagen bedenktijd, terugbrengen kan in elke winkel",
   "Gratis parkeren voor de deur",
-  "Zakelijk afhalen",
 ];
+
+/**
+ * De lijst voor één winkel.
+ *
+ * ⚠️ Per vestiging te overschrijven met `services` in de winkelgegevens.
+ * Parkeren is het voorbeeld waarom dat moet bestaan: dat verschilt per pand, en
+ * "gratis parkeren voor de deur" op een pagina zetten waar dat niet zo is,
+ * levert een klant op die tien minuten rondjes rijdt en met dat humeur
+ * binnenkomt.
+ */
+export function winkelUsps(store: Store): string[] {
+  return store.services?.length ? store.services : STORE_SERVICES;
+}
 
 /** Openingstijden in schema.org-notatie, voor LocalBusiness-markup. */
 export function openingHoursSpecification(store: Store) {
