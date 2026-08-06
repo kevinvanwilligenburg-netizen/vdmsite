@@ -205,7 +205,7 @@ export function ProductFiltersPanel({
   // maar niet terugzien.
   const VLAG_LABELS: Record<string, string> = {
     voorraad: "Direct leverbaar",
-    aanbieding: "In de aanbieding",
+    aanbieding: "Nu in de actie",
     mengverf: "Mengbaar in elke kleur",
   };
   const actieveChips = facets
@@ -241,7 +241,7 @@ export function ProductFiltersPanel({
           },
           {
             key: "aanbieding",
-            label: "In de aanbieding",
+            label: "Nu in de actie",
             on: Boolean(filters.aanbieding),
             aantal: snelfilters?.aanbieding,
           },

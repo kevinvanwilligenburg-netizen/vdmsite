@@ -213,9 +213,20 @@ function matches(product: Product, filters: ProductFilters): boolean {
   ) {
     return false;
   }
-  if (filters.aanbieding && !(product.compareAtPrice && product.compareAtPrice > product.price)) {
-    return false;
-  }
+  /*
+   * "In de aanbieding" betekent een échte actie, niet "onder de adviesprijs".
+   *
+   * Dit filter keek op `compareAtPrice > price`. Dat is bij ons vrijwel alles:
+   * 417 van de 500 gemeten feedregels staan onder de adviesprijs, want dat is
+   * ons hele verdienmodel. Een filter dat 83% overhoudt filtert niets, en de
+   * klant die erop klikt denkt dat het stuk is.
+   *
+   * Nu op `actie`: een lopende Tilroy-actie met een echte was-prijs. Zolang er
+   * geen enkele actie loopt levert het filter niets op — dat is eerlijker dan
+   * een lijst die net zo lang is als zonder filter. Het facettenpaneel telt
+   * mee (zie `facetTellingen`) en verbergt de knop dan vanzelf.
+   */
+  if (filters.aanbieding && !product.actie) return false;
   if (filters.mengverf && !product.colorMixable) return false;
   if (filters.opVoorraad && product.inStock === false) return false;
   if (filters.prijsMax && product.price > filters.prijsMax * 100) return false;
@@ -272,9 +283,10 @@ export function snelfilterAantallen(
 
   return {
     voorraad: zonder("opVoorraad").filter((product) => product.inStock !== false).length,
-    aanbieding: zonder("aanbieding").filter(
-      (product) => product.compareAtPrice && product.compareAtPrice > product.price,
-    ).length,
+    // Zelfde maatstaf als het filter zelf: een échte actie, niet "onder de
+    // adviesprijs". Liepen die twee uiteen, dan beloofde de teller 400
+    // artikelen en gaf het filter er drie.
+    aanbieding: zonder("aanbieding").filter((product) => product.actie).length,
     mengverf: zonder("mengverf").filter((product) => product.colorMixable).length,
   };
 }
