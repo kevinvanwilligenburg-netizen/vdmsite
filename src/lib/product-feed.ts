@@ -1898,7 +1898,12 @@ async function fetchFeed(): Promise<Product[]> {
 // Elke wijziging in het parsen hoort een nieuwe sleutel te krijgen, anders
 // blijft de oude vorm een uur lang uit de cache komen en lijkt de wijziging
 // niet te werken.
-const KV_KEY = "catalog:products:v53";
+// v54: enkel om de cache van vóór de eerste promosync weg te gooien. De
+// promovelden landden om 20:20 in de feed, maar onze kopie was daarvóór
+// gebouwd — de winkel toonde toen een uur lang € 17,60 waar de kassa € 14,08
+// rekende. Zie ook /api/catalogus/ververs, zodat dit niet nog eens een deploy
+// hoeft te kosten.
+export const KV_KEY = "catalog:products:v54";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
