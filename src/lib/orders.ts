@@ -11,6 +11,7 @@ import { maakStaalVoucher, verzilverVoucher } from "@/lib/vouchers";
 import { stuurVoucherMail } from "@/lib/vouchermail";
 import {
   isPaidStatus,
+  type Adres,
   type CartItem,
   type Order,
   type OrderCustomer,
@@ -358,6 +359,8 @@ export interface CreateOrderInput {
   kluspasNumber?: string;
   kluspasSavings?: number;
   /** Afgerekend met ProfPas: 10% korting, gratis bezorgd, geen kluspunten. */
+  /** Factuuradres, als dat afwijkt van het bezorgadres. */
+  billing?: Adres;
   profpas?: boolean;
   /** Verzilverde staal-voucher; de korting zit al in `total`. */
   voucherCode?: string;
@@ -372,6 +375,10 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     createdAt: new Date().toISOString(),
     paymentStatus: "open",
     customer: input.customer,
+    // Factuuradres alleen als het echt afwijkt; anders is het bezorgadres het
+    // factuuradres en levert een kopie alleen maar twee plekken op die uit
+    // elkaar kunnen lopen.
+    ...(input.billing ? { billing: input.billing } : {}),
     items: input.items,
     subtotal: input.subtotal,
     shipping: input.shipping,

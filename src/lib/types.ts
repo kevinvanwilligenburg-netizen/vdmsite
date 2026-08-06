@@ -308,6 +308,14 @@ export interface Order {
   paymentStatus: OrderPaymentStatus;
   paymentMethod?: string;
   customer: OrderCustomer;
+  /**
+   * Factuuradres, als dat afwijkt van het bezorgadres.
+   *
+   * Ontbreekt het, dan is het bezorgadres ook het factuuradres. Bij een
+   * AFHAALbestelling is dit het enige adres op de order — daar hebben we
+   * verder geen adres, terwijl een zakelijke klant er wel een factuur op wil.
+   */
+  billing?: Adres;
   items: OrderItem[];
   subtotal: number; // euro's
   shipping: number; // euro's (afhalen = 0)
@@ -434,6 +442,8 @@ export interface CheckoutInput {
    * adres om op te zetten.
    */
   billing?: Adres;
+  /** Heeft de klant "factuuradres is anders" aangevinkt? */
+  factuurAnders?: boolean;
   fulfilment: "pickup" | "delivery";
   storeId?: string;
   /** Mollie-id van de gekozen betaalmethode ("ideal", "klarna", …). */

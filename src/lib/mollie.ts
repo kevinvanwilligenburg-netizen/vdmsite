@@ -196,23 +196,51 @@ export async function createMolliePayment(
     metadata: { orderId: order.id },
     ...(gekozenMethod ? { method: gekozenMethod } : {}),
     ...(regels ? { lines: regels } : {}),
-    ...(heeftAdres
+    /*
+     * Het factuuradres wint als de klant er een apart heeft ingevuld.
+     *
+     * Dit is voor Mollie geen bijzaak: Klarna en Billie doen op dit adres hun
+     * kredietbeoordeling. Sturen we het bezorgadres terwijl de factuur ergens
+     * anders heen gaat, dan valt achteraf betalen weg voor precies de klanten
+     * die ervoor kiezen.
+     *
+     * En bij AFHALEN is dit het enige adres dat we hebben — daar was het
+     * `billingAddress`-blok tot nu toe helemaal leeg.
+     */
+    ...(order.billing
       ? {
           billingAddress: {
-            ...(order.customer.company
-              ? { organizationName: order.customer.company }
+            ...(order.billing.bedrijf || order.customer.company
+              ? { organizationName: order.billing.bedrijf ?? order.customer.company }
               : {}),
-            givenName: order.customer.firstName,
-            familyName: order.customer.lastName,
+            givenName: order.billing.voornaam ?? order.customer.firstName,
+            familyName: order.billing.achternaam ?? order.customer.lastName,
             email: order.customer.email,
-            streetAndNumber:
-              `${order.customer.street} ${order.customer.houseNumber ?? ""}${order.customer.houseNumberSuffix ?? ""}`.trim(),
-            postalCode: order.customer.postalCode,
-            city: order.customer.city,
-            country: order.customer.country ?? "NL",
+            streetAndNumber: `${order.billing.straat} ${order.billing.huisnummer}${
+              order.billing.toevoeging ? `-${order.billing.toevoeging}` : ""
+            }`.trim(),
+            postalCode: order.billing.postcode,
+            city: order.billing.plaats,
+            country: order.billing.land,
           },
         }
-      : {}),
+      : heeftAdres
+        ? {
+            billingAddress: {
+              ...(order.customer.company
+                ? { organizationName: order.customer.company }
+                : {}),
+              givenName: order.customer.firstName,
+              familyName: order.customer.lastName,
+              email: order.customer.email,
+              streetAndNumber:
+                `${order.customer.street} ${order.customer.houseNumber ?? ""}${order.customer.houseNumberSuffix ?? ""}`.trim(),
+              postalCode: order.customer.postalCode,
+              city: order.customer.city,
+              country: order.customer.country ?? "NL",
+            },
+          }
+        : {}),
   };
   // Mollie weigert webhooks naar localhost; lokaal synct de orderpagina
   // de betaalstatus zelf bij (zie getOrderSynced in lib/orders.ts).

@@ -16,6 +16,7 @@ import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
+import { leesAdres, onthoudAdres } from "@/lib/adressen";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import {
   isStaalOrderItem,
@@ -96,6 +97,22 @@ export async function POST(request: Request) {
         city: string;
       }
     | undefined;
+
+  /*
+   * Factuuradres. Los van de bezorg-/afhaalkeuze, want juist bij afhalen kan
+   * een zakelijke klant een factuur op een ander adres willen — en dan is dit
+   * het énige adres op de order.
+   *
+   * Hier opnieuw controleren en niet vertrouwen op het formulier: de browser
+   * is de spiegel, dit is het slot. `leesAdres` geeft null bij een half adres,
+   * en dan schrijven we er liever geen dan een halve op de factuur.
+   */
+  const factuuradres = input.factuurAnders ? leesAdres(input.billing) : null;
+  if (input.factuurAnders && !factuuradres) {
+    return badRequest(
+      "Het factuuradres is niet compleet. Vul straat, huisnummer, postcode en plaats in, of vink het vakje uit.",
+    );
+  }
 
   if (fulfilment === "pickup") {
     store = await getStore(String(input.storeId ?? ""));
@@ -553,6 +570,18 @@ export async function POST(request: Request) {
       ...(address ?? {}),
       country: land,
     },
+    /*
+     * Factuuradres, alleen als de klant er echt een apart heeft ingevuld.
+     *
+     * Bij een bouwbedrijf staat de factuur zelden op het adres waar de doos
+     * heen gaat. En bij AFHALEN was er tot nu toe helemaal geen adres op de
+     * order — terwijl een zakelijke klant juist dán een factuur nodig heeft.
+     *
+     * Onvolledig ingevuld = geen factuuradres. `leesAdres` geeft dan null en
+     * we vallen terug op het bezorgadres; half opnemen levert een factuur op
+     * met een straat zonder huisnummer.
+     */
+    ...(factuuradres ? { billing: factuuradres } : {}),
     items,
     subtotal,
     shipping: verzendkostenCents / 100,
@@ -714,6 +743,28 @@ export async function POST(request: Request) {
 
   meet("artikelen-en-voorraad");
   const order = await createOrder(orderInput);
+
+  /*
+   * Adres onthouden voor de volgende keer (keuze van Kevin).
+   *
+   * Alleen voor wie is ingelogd — anders is er geen account om het aan te
+   * hangen — en bewust NIET afgewacht: dit draait ná een aangemaakte order en
+   * mag die nooit vertragen of laten klappen. `onthoudAdres` slikt zijn eigen
+   * fouten (zie lib/adressen.ts).
+   */
+  if (sessieEmail && address) {
+    void onthoudAdres(sessieEmail, {
+      ...(company ? { bedrijf: company } : {}),
+      voornaam: firstName,
+      achternaam: lastName,
+      straat: address.street,
+      huisnummer: address.houseNumber,
+      ...(address.houseNumberSuffix ? { toevoeging: address.houseNumberSuffix } : {}),
+      postcode: address.postalCode,
+      plaats: address.city,
+      land,
+    });
+  }
   meet("order-opslaan");
   const baseUrl = baseUrlFromRequest(request);
 

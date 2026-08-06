@@ -17,6 +17,7 @@ import { BTW_TARIEF } from "@/lib/factuur";
 import { CONTACT_PHONE, WHATSAPP_NUMMER, WHATSAPP_TIJDEN } from "@/lib/site";
 import { BEDRIJFSTYPEN } from "@/lib/zakelijk";
 import { euro } from "@/lib/format";
+import type { Adres } from "@/lib/types";
 
 interface StoreOption {
   id: string;
@@ -100,6 +101,45 @@ export function CheckoutForm({
   const [postalCode, setPostalCode] = useState(bekend?.postcode ?? "");
   const [city, setCity] = useState(bekend?.plaats ?? "");
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
+
+  /*
+   * Bewaarde adressen en het factuuradres.
+   *
+   * Kevin: "graag meerdere adressen kunnen invoeren en ook een factuuradres."
+   * Een schilder bestelt de ene week naar zijn loods en de andere naar het
+   * werkadres van een klant; en bij een bouwbedrijf staat de factuur zelden op
+   * het adres waar de doos heen gaat.
+   */
+  const [bewaardeAdressen, setBewaardeAdressen] = useState<Adres[]>([]);
+  const [factuurAnders, setFactuurAnders] = useState(false);
+  const [billing, setBilling] = useState<Adres>({
+    bedrijf: "",
+    straat: "",
+    huisnummer: "",
+    toevoeging: "",
+    postcode: "",
+    plaats: "",
+    land: "NL",
+  });
+
+  useEffect(() => {
+    if (!ingelogdAls) return;
+    fetch("/api/account/adressen")
+      .then((res) => (res.ok ? res.json() : { adressen: [] }))
+      .then((data) => setBewaardeAdressen(Array.isArray(data.adressen) ? data.adressen : []))
+      .catch(() => undefined);
+  }, [ingelogdAls]);
+
+  /** Een bewaard adres in de velden zetten. */
+  const kiesAdres = (adres: Adres) => {
+    setStreet(adres.straat);
+    setHouseNumber(adres.huisnummer);
+    setHouseNumberSuffix(adres.toevoeging ?? "");
+    setPostalCode(adres.postcode);
+    setCity(adres.plaats);
+    setCountry(adres.land === "BE" ? "BE" : "NL");
+    if (adres.bedrijf) setCompany(adres.bedrijf);
+  };
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availability, setAvailability] = useState<StoreAvailability[] | null>(null);
@@ -519,6 +559,9 @@ export function CheckoutForm({
               ? { street, houseNumber, houseNumberSuffix, postalCode, city, country }
               : {}),
           },
+          // Het factuuradres gaat mee ongeacht bezorgen of afhalen; de server
+          // controleert het opnieuw en weigert een half adres.
+          ...(factuurAnders ? { factuurAnders: true, billing } : {}),
           ...(fulfilment === "pickup" ? { storeId } : {}),
           ...(fulfilment === "delivery" && sameDay ? { sameDay: true } : {}),
           ...(voucher ? { voucherCode: voucher.code } : {}),
@@ -921,6 +964,49 @@ export function CheckoutForm({
             </div>
             {fulfilment === "delivery" && (
               <>
+                {/* Bewaarde adressen als knoppen boven de velden. Wie er een
+                    kiest hoeft niets te typen; wie niets kiest merkt er niets
+                    van. Alleen zichtbaar voor wie is ingelogd en er echt een
+                    heeft staan — anders is het een lege kop. */}
+                {bewaardeAdressen.length > 0 && (
+                  <div className="sm:col-span-2">
+                    <p className="mb-2 text-sm font-bold text-ink">Kies een bewaard adres</p>
+                    <div className="flex flex-wrap gap-2">
+                      {bewaardeAdressen.map((adres, index) => {
+                        const gekozen =
+                          adres.straat === street &&
+                          adres.huisnummer === houseNumber &&
+                          adres.postcode === postalCode;
+                        return (
+                          <button
+                            key={`${adres.postcode}-${adres.huisnummer}-${index}`}
+                            type="button"
+                            onClick={() => kiesAdres(adres)}
+                            aria-pressed={gekozen}
+                            className={`rounded-lg border-2 px-3 py-2 text-left text-sm transition ${
+                              gekozen
+                                ? "border-brand bg-brand-light"
+                                : "border-ink/10 hover:border-brand"
+                            }`}
+                          >
+                            {(adres.label || adres.bedrijf) && (
+                              <span className="block font-black text-ink">
+                                {adres.label || adres.bedrijf}
+                              </span>
+                            )}
+                            <span className="block text-ink-soft">
+                              {adres.straat} {adres.huisnummer}
+                              {adres.toevoeging ? `-${adres.toevoeging}` : ""}, {adres.plaats}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-xs text-ink-soft">
+                      Of vul hieronder een ander adres in; we bewaren het daarna voor je.
+                    </p>
+                  </div>
+                )}
                 <div className="sm:col-span-2">
                   <label htmlFor="straat" className="mb-1 block text-sm font-bold text-ink">
                     Straatnaam
@@ -1015,6 +1101,131 @@ export function CheckoutForm({
               </>
             )}
           </div>
+          {/*
+            Factuuradres, ook bij afhalen.
+
+            Bij een bouwbedrijf staat de factuur zelden op het adres waar de
+            doos heen gaat. En een afhaalbestelling had tot nu toe helemáál
+            geen adres op de order — terwijl juist een zakelijke klant daar een
+            factuur op wil.
+
+            Dichtgeklapt tot iemand het vinkje zet: negen van de tien klanten
+            hebben dit niet nodig en een extra adresblok op een afrekenpagina
+            kost bestellingen.
+          */}
+          <div className="mt-4 border-t-2 border-ink/10 pt-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={factuurAnders}
+                onChange={(event) => setFactuurAnders(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+              />
+              <span className="text-sm font-bold text-ink">
+                Mijn factuuradres is anders
+                <span className="ml-2 font-semibold text-ink-soft">
+                  {fulfilment === "pickup"
+                    ? "(handig als de factuur op de zaak moet staan)"
+                    : "(bijvoorbeeld het kantooradres)"}
+                </span>
+              </span>
+            </label>
+
+            {factuurAnders && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label htmlFor="fa-bedrijf" className="mb-1 block text-sm font-bold text-ink">
+                    Bedrijfsnaam op de factuur
+                  </label>
+                  <input
+                    id="fa-bedrijf"
+                    value={billing.bedrijf ?? ""}
+                    onChange={(e) => setBilling({ ...billing, bedrijf: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="fa-straat" className="mb-1 block text-sm font-bold text-ink">
+                    Straatnaam
+                  </label>
+                  <input
+                    id="fa-straat"
+                    required
+                    value={billing.straat}
+                    onChange={(e) => setBilling({ ...billing, straat: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="fa-nr" className="mb-1 block text-sm font-bold text-ink">
+                      Huisnummer
+                    </label>
+                    <input
+                      id="fa-nr"
+                      required
+                      value={billing.huisnummer}
+                      onChange={(e) => setBilling({ ...billing, huisnummer: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="fa-toev" className="mb-1 block text-sm font-bold text-ink">
+                      Toevoeging
+                    </label>
+                    <input
+                      id="fa-toev"
+                      value={billing.toevoeging ?? ""}
+                      onChange={(e) => setBilling({ ...billing, toevoeging: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="fa-pc" className="mb-1 block text-sm font-bold text-ink">
+                      Postcode
+                    </label>
+                    <input
+                      id="fa-pc"
+                      required
+                      value={billing.postcode}
+                      onChange={(e) => setBilling({ ...billing, postcode: e.target.value })}
+                      className="input"
+                      placeholder={billing.land === "BE" ? "1000" : "1234 AB"}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="fa-land" className="mb-1 block text-sm font-bold text-ink">
+                      Land
+                    </label>
+                    <select
+                      id="fa-land"
+                      value={billing.land}
+                      onChange={(e) => setBilling({ ...billing, land: e.target.value })}
+                      className="input"
+                    >
+                      <option value="NL">Nederland</option>
+                      <option value="BE">België</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="fa-plaats" className="mb-1 block text-sm font-bold text-ink">
+                    Plaats
+                  </label>
+                  <input
+                    id="fa-plaats"
+                    required
+                    value={billing.plaats}
+                    onChange={(e) => setBilling({ ...billing, plaats: e.target.value })}
+                    className="input"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <p className="mt-3 text-xs text-ink-soft">
             We gebruiken je gegevens alleen voor deze bestelling.
           </p>

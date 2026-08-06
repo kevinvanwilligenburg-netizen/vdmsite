@@ -49,14 +49,35 @@ export default async function FactuurPage({ params }: { params: { id: string } }
   }
 
   const factuur = maakFactuur(order);
-  const klantregels = [
-    [order.customer.firstName, order.customer.lastName].filter(Boolean).join(" "),
-    [order.customer.street, order.customer.houseNumber, order.customer.houseNumberSuffix]
-      .filter(Boolean)
-      .join(" "),
-    [order.customer.postalCode, order.customer.city].filter(Boolean).join(" "),
-    order.customer.country === "BE" ? "België" : undefined,
-  ].filter(Boolean);
+  /*
+   * Boven de factuur hoort het FACTUURadres, niet het bezorgadres.
+   *
+   * Heeft de klant er een apart ingevuld, dan wint die. Anders het
+   * bezorgadres, zoals altijd. Bij een afhaalbestelling was er tot nu toe
+   * helemaal geen adres — dan stond hier alleen een naam, en dat is geen
+   * factuur waar een boekhouder iets mee kan.
+   */
+  const klantregels = order.billing
+    ? [
+        order.billing.bedrijf,
+        [order.billing.voornaam ?? order.customer.firstName, order.billing.achternaam ?? order.customer.lastName]
+          .filter(Boolean)
+          .join(" "),
+        [order.billing.straat, order.billing.huisnummer, order.billing.toevoeging]
+          .filter(Boolean)
+          .join(" "),
+        [order.billing.postcode, order.billing.plaats].filter(Boolean).join(" "),
+        order.billing.land === "BE" ? "België" : undefined,
+      ].filter(Boolean)
+    : [
+        order.customer.company,
+        [order.customer.firstName, order.customer.lastName].filter(Boolean).join(" "),
+        [order.customer.street, order.customer.houseNumber, order.customer.houseNumberSuffix]
+          .filter(Boolean)
+          .join(" "),
+        [order.customer.postalCode, order.customer.city].filter(Boolean).join(" "),
+        order.customer.country === "BE" ? "België" : undefined,
+      ].filter(Boolean);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 print:max-w-none">
