@@ -79,16 +79,23 @@ function tekst(waarde: unknown, max = 200): string {
  * actie nog" is hoe je een pagina krijgt die reclame maakt voor een prijs die
  * de kassa niet meer rekent.
  */
-export function actieLoopt(pagina: Actiepagina, nu: number = Date.now()): boolean {
+export function actieStand(
+  pagina: Actiepagina,
+  nu: number = Date.now(),
+): "nog-niet" | "loopt" | "afgelopen" {
   const grens = (waarde?: string) => {
     const tijd = waarde ? Date.parse(waarde) : Number.NaN;
     return Number.isNaN(tijd) ? null : tijd;
   };
   const van = grens(pagina.van);
   const tot = grens(pagina.tot);
-  if (van !== null && nu < van) return false;
-  if (tot !== null && nu > tot + 24 * 60 * 60 * 1000 - 1) return false;
-  return true;
+  if (van !== null && nu < van) return "nog-niet";
+  if (tot !== null && nu > tot + 24 * 60 * 60 * 1000 - 1) return "afgelopen";
+  return "loopt";
+}
+
+export function actieLoopt(pagina: Actiepagina, nu: number = Date.now()): boolean {
+  return actieStand(pagina, nu) === "loopt";
 }
 
 /** Leest en controleert wat het dashboard heeft weggeschreven. */

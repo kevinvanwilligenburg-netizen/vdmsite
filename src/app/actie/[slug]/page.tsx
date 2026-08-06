@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ProductCard } from "@/components/ProductCard";
-import { actieLoopt, getActiepagina, vulBlokken } from "@/lib/actiepagina";
+import { actieLoopt, actieStand, getActiepagina, vulBlokken } from "@/lib/actiepagina";
 
 /**
  * Een actiepagina: teksten en producten door elkaar.
@@ -55,8 +55,13 @@ export default async function Actiepagina({ params }: Props) {
   const pagina = await getActiepagina(params.slug);
   if (!pagina) notFound();
 
-  const loopt = actieLoopt(pagina);
+  const stand = actieStand(pagina);
+  const loopt = stand === "loopt";
   const blokken = await vulBlokken(pagina.blokken);
+  const datum = (waarde?: string) =>
+    waarde
+      ? new Date(waarde).toLocaleDateString("nl-NL", { day: "numeric", month: "long" })
+      : "";
 
   return (
     <div className="space-y-10">
@@ -90,20 +95,24 @@ export default async function Actiepagina({ params }: Props) {
           prijzen op de kaarten komen uit de catalogus, dus die zijn dan al
           terug naar normaal terwijl de pagina nog "actie" roept.
         */}
-        {!loopt && (
+        {stand === "afgelopen" && (
           <p className="mt-4 rounded-lg border-2 border-ink/10 bg-ink/5 px-4 py-3 text-sm font-bold text-ink">
             Deze actie is afgelopen. De artikelen hieronder staan er nog, tegen de
             prijs van nu.
           </p>
         )}
+        {/* Een actie die nog moet beginnen is iets heel anders dan een die
+            voorbij is. Allebei "afgelopen" noemen — wat hier eerst gebeurde,
+            omdat er maar één vlag was — jaagt iemand weg die net op tijd is. */}
+        {stand === "nog-niet" && (
+          <p className="mt-4 rounded-lg border-2 border-brand/30 bg-brand-light px-4 py-3 text-sm font-bold text-ink">
+            Deze actie begint op {datum(pagina.van)}. De prijzen hieronder zijn de
+            prijzen van nu.
+          </p>
+        )}
         {loopt && pagina.tot && (
           <p className="mt-4 text-sm font-bold text-brand-dark">
-            Nog geldig tot en met{" "}
-            {new Date(pagina.tot).toLocaleDateString("nl-NL", {
-              day: "numeric",
-              month: "long",
-            })}
-            .
+            Nog geldig tot en met {datum(pagina.tot)}.
           </p>
         )}
       </header>
