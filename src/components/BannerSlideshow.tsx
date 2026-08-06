@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Banner } from "@/lib/banners";
+import { bannerRatio, type Banner } from "@/lib/banners";
 
 /**
  * De actiebanners bovenaan de homepage.
@@ -28,6 +28,25 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
   // "subtiel" vinden.
   const [rustig, setRustig] = useState(false);
   const raakStart = useRef<number | null>(null);
+
+  /*
+   * Eén verhouding voor de hele slideshow, van de eerste banner.
+   *
+   * Per banner zijn eigen vorm geven zou netter lijken, maar er staat er
+   * telkens maar één in beeld (de rest is `hidden`): dan verspringt de halve
+   * homepage bij elke wissel. Kevins banners komen uit hetzelfde sjabloon, dus
+   * de eerste is maatgevend voor de rest.
+   */
+  const eerste = banners[0];
+  const ratios = {
+    "--banner-mobiel": bannerRatio(
+      eerste?.mobielBreedte ?? eerste?.breedte,
+      eerste?.mobielHoogte ?? eerste?.hoogte,
+      "groot",
+      "mobiel",
+    ),
+    "--banner-desktop": bannerRatio(eerste?.breedte, eerste?.hoogte, "groot", "desktop"),
+  } as React.CSSProperties;
 
   useEffect(() => {
     const vraag = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -57,6 +76,7 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
       aria-roledescription="carousel"
       aria-label="Acties"
       className="relative overflow-hidden rounded-2xl shadow-card"
+      style={ratios}
       onMouseEnter={() => setPauze(true)}
       onMouseLeave={() => setPauze(false)}
       // Doorschuiven terwijl iemand met het toetsenbord in de banner staat is
@@ -82,20 +102,21 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
         const plaatje = (
           <>
             {/*
-              Vaste verhouding met een uitsnede, geen meeschalend plaatje.
+              Het kader krijgt de ware verhouding van het bestand (gemeten in
+              lib/banners.ts), begrensd tegen uitschieters.
 
-              Hier stond `h-auto w-full`: de banner nam dan zijn eigen
-              verhouding aan. Dat gaat goed zolang iemand netjes 1920×640
-              aanlevert, maar de bannergenerator levert 1536×1024 — en dat zou
-              als een bijna vierkant blok bovenaan de homepage komen, met de
-              tekstlaag over de volle hoogte.
+              Hier stond een vaste 3:1, op een telefoon zelfs vierkant. Dat was
+              ooit een verdediging tegen de bannergenerator, die 1536×1024
+              levert — bijna vierkant boven de homepage. Maar Kevins eigen
+              banners zijn 930×450, en die werden er dus voor een derde
+              afgesneden: precies de rand waar "20% KORTING" stond. Bij een
+              banner met de tekst in het plaatje is bijsnijden geen
+              schoonheidsfoutje maar weggelakte informatie.
 
-              Nu ligt de vorm vast (breed 3:1, op een telefoon vierkant, want
-              daar is het vierkante bestand voor) en snijdt de afbeelding zich
-              daarin. Aanleveren in een andere maat kan dus geen scheve pagina
-              meer opleveren.
+              De grens uit `bannerRatio` houdt de oude bescherming overeind:
+              een gek aangeleverde maat wordt nog steeds bijgesneden.
             */}
-            <div className="relative aspect-square overflow-hidden md:aspect-[3/1]">
+            <div className="relative aspect-[var(--banner-mobiel)] overflow-hidden md:aspect-[var(--banner-desktop)]">
               {/* Twee bronnen in één <picture>: de browser kiest, dus er wordt
                   er maar één gedownload. */}
               <picture>
@@ -105,12 +126,16 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
                 <Image
                   src={banner.desktopUrl}
                   alt={banner.alt}
-                  width={1920}
-                  height={640}
+                  width={banner.breedte ?? 1920}
+                  height={banner.hoogte ?? 640}
                   // De eerste banner staat bovenaan de pagina en is dus het
                   // grootste ding dat de bezoeker als eerste ziet.
                   priority={index === 0}
-                  sizes="(max-width: 767px) 100vw, 1200px"
+                  sizes="(max-width: 767px) 100vw, (max-width: 1279px) 100vw, 1280px"
+                  // Deze banners zijn tekst op een vlakke oranje achtergrond.
+                  // Daar is de standaard 75 te weinig voor: letterranden gaan
+                  // rafelen en vlakken krijgen banding.
+                  quality={90}
                   className="h-full w-full object-cover"
                 />
               </picture>

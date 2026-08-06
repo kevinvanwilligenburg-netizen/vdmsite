@@ -460,12 +460,13 @@ export function PurchasePanel({
                       gewoon wit". */}
                   {wit ? "100% Wit" : "Wit"}
                 </span>
+                {/* Geen prijs in dit blok. De prijs bovenaan volgt de keuze al
+                    (zie `unitPrice`), en die staat er mét Kluspas. Zetten we
+                    hier de brutoprijs van het witte artikel bij, dan las de
+                    klant "€ 20,85" met daaronder "€ 21,95" — alsof wit duurder
+                    was dan wat er net boven stond. */}
                 <span className="mt-0.5 block text-xs text-ink-soft">
-                  {wit
-                    ? `direct uit voorraad${
-                        wit.price !== activeVariant?.price ? ` · ${euro(wit.price)}` : ""
-                      }`
-                    : "gratis gemengd"}
+                  {wit ? "direct uit voorraad" : "gratis gemengd"}
                 </span>
               </button>
               <button

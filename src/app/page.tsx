@@ -91,8 +91,15 @@ export default async function HomePage() {
         pas als de posities al weg zijn. Daarom hieronder een smalle regel in
         plaats van het hele oranje blok.
       */}
-      <BannerSlideshow banners={groteBanners} />
-      <KleineBanners banners={kleineBanners} />
+      {/* De grote en de kleine banners horen bij elkaar: samen zijn ze de
+          etalage. Stonden ze los in het `space-y-14`-ritme van de pagina, dan
+          zat er 56 px lucht tussen — dat leest als twee losse blokken met een
+          gat, niet als één etalage. Naar buiten toe houdt het blok wél die
+          ruimte, want daaronder begint iets anders. */}
+      <div className="space-y-3">
+        <BannerSlideshow banners={groteBanners} />
+        <KleineBanners banners={kleineBanners} />
+      </div>
       {/* Smalle titelregel in plaats van het oranje heroblok: de homepage
           houdt zo een h1 en een zin die zegt wat we verkopen, zonder een
           tweede actiebanner naast die van Kevin. */}
