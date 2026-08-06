@@ -10,6 +10,7 @@ import { KleurVenster } from "@/components/kleur/KleurVenster";
 import { kleurLabel } from "@/components/kleur/waaier";
 import { Price } from "@/components/Price";
 import { PaintCalculator } from "@/components/product/PaintCalculator";
+import { Voorraadmelding } from "@/components/product/Voorraadmelding";
 import {
   coveragePerLiter,
   hasBases,
@@ -157,6 +158,24 @@ export function PurchasePanel({
   // alleen de 250 ml ergens lag.
   const { zet: zetGekozenSku } = useGekozenVariant();
   const gekozenSku = wit100 && wit ? wit.sku : activeVariant?.sku ?? product.sku;
+
+  /*
+   * Is er nog iets anders te koop op deze pagina?
+   *
+   * Zo ja, dan is "uitverkocht" een eigenschap van de gekozen maat en niet van
+   * het product — en dan hoort het seintje-formulier hier, want StockList
+   * toont het alleen bij een product dat overal op is.
+   *
+   * `wit` is bij een uitverkocht wit-artikel undefined (zie boven), dus de sku
+   * komt uit `witVariant`: zonder dat zouden we een melding aanmaken voor het
+   * basisartikel dat gewoon op voorraad ligt.
+   */
+  const andereMaatWelLeverbaar = wit100
+    ? activeVariant?.inStock !== false
+    : variants.some((variant) => variant !== activeVariant && variant.inStock !== false);
+  const uitverkochteSku = wit100
+    ? (witVariant?.wit?.sku ?? gekozenSku)
+    : (activeVariant?.sku ?? product.sku);
 
   /*
    * Hoeveel er van dít artikel te koop zijn.
@@ -389,24 +408,41 @@ export function PurchasePanel({
               <fieldset>
                 <legend className="mb-2 text-sm font-bold text-ink">Aantal per verpakking</legend>
                 <div className="flex flex-wrap gap-2">
-                  {verpakkingenVanMaat.map((variant) => (
-                    <button
-                      key={variant.id}
-                      type="button"
-                      onClick={() => setVariantId(variant.id)}
-                      aria-pressed={variant.id === variantId}
-                      className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
-                        variant.id === variantId
-                          ? "border-brand bg-brand-light text-brand"
-                          : "border-ink/10 text-ink hover:border-ink/30"
-                      }`}
-                    >
-                      {variant.packaging ?? variant.name}
-                      <span className="ml-2 font-normal text-ink-soft">
-                        {euro(variant.price)}
-                      </span>
-                    </button>
-                  ))}
+                  {/* Net als bij de maten: uitverkocht blijft staan en blijft
+                      aanklikbaar (dan krijg je het seintje-formulier), maar het
+                      moet er wél op staan. Bij HG Strijkspray staan hier twee
+                      keer "500 ml" — twee Tilroy-artikelen met dezelfde naam,
+                      waarvan er één op is. Zonder dit woordje klikt de klant op
+                      de duurdere en ontdekt hij pas bij de knop dat die niet
+                      te koop is. */}
+                  {verpakkingenVanMaat.map((variant) => {
+                    const op = variant.inStock === false;
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        onClick={() => setVariantId(variant.id)}
+                        aria-pressed={variant.id === variantId}
+                        className={`rounded-lg border-2 px-4 py-2 text-sm font-bold transition ${
+                          variant.id === variantId
+                            ? "border-brand bg-brand-light text-brand"
+                            : op
+                              ? "border-ink/10 text-ink-soft hover:border-ink/30"
+                              : "border-ink/10 text-ink hover:border-ink/30"
+                        }`}
+                      >
+                        {variant.packaging ?? variant.name}
+                        <span className="ml-2 font-normal text-ink-soft">
+                          {euro(variant.price)}
+                        </span>
+                        {op && (
+                          <span className="ml-1.5 text-xs font-semibold text-ink-soft">
+                            uitverkocht
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </fieldset>
             )}
@@ -640,6 +676,28 @@ export function PurchasePanel({
           {maatUitverkocht ? "Tijdelijk uitverkocht" : "In winkelwagen"}
         </button>
       </div>
+
+      {/*
+        Uitverkochte maat: bied hier het seintje aan.
+
+        Kevin: "geen out of stock notificatie". Het aanmeldformulier bestond al,
+        maar hing onder het voorraadblok en verscheen alleen als het HÉLE
+        product overal op was. Koos je een verpakking die op is terwijl een
+        andere er nog ligt, dan stond er een uitgeschakelde knop en verder
+        niets — de klant heeft dan geen enkele volgende stap.
+
+        Alleen bij dit maat-geval, want bij een volledig uitverkocht product
+        toont StockList hem al; twee formulieren op één pagina is erger dan
+        geen.
+      */}
+      {maatUitverkocht && andereMaatWelLeverbaar && (
+        <Voorraadmelding
+          sku={uitverkochteSku}
+          slug={product.slug}
+          naam={product.name}
+          maat={actieveMaat}
+        />
+      )}
 
       {error && (
         <p role="alert" className="rounded-lg bg-brand-light px-4 py-3 text-sm font-semibold text-brand-dark">
