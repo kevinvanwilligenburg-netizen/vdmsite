@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ProfpasAanvraag } from "@/components/zakelijk/ProfpasAanvraag";
 import { Icon } from "@/components/icons";
 import { JsonLd } from "@/components/JsonLd";
 import { PrijsSchakelaar } from "@/components/prijs/PrijsWeergave";
@@ -111,6 +112,13 @@ export default async function BusinessPage() {
           </div>
         ))}
       </section>
+
+      {/* De aanvraag zelf. Hier stond alleen "stuur een verzoek naar
+          verkoop@" -- een doodlopende straat voor iemand die 's avonds op
+          zijn telefoon zit. Aanvragen worden met de hand beoordeeld, dus dit
+          formulier belooft geen korting; het zorgt dat de aanvraag compleet
+          bij verkoop aankomt. */}
+      <ProfpasAanvraag />
 
       {/* Twee dingen die vaak gevraagd worden en op de oude site apart
           stonden: de omzetting vanaf een Kluspas, en de btw-weergave. */}

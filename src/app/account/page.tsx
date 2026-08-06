@@ -13,6 +13,7 @@ import {
   emailVanSessie,
   haalFavorieten,
   haalKlant,
+  haalPas,
   haalKluspunten,
   type Aankoop,
   voorkeurWinkel,
@@ -54,13 +55,14 @@ export default async function AccountPage() {
   // Alleen wat snel is doen we hier: de klantgegevens en onze eigen orders.
   // De winkelhistorie haalt de pagina er zelf bij — daarvoor doorloopt het
   // dashboard een jaar verkopen, en daar wachten we de klant niet op.
-  const [klant, webshoporders, winkelKeuze, winkels, favorieten, kluspunten] = await Promise.all([
+  const [klant, webshoporders, winkelKeuze, winkels, favorieten, kluspunten, pasStatus] = await Promise.all([
     haalKlant(email),
     getOrdersByEmail(email),
     voorkeurWinkel(email),
     getStores(),
     haalFavorieten(email),
     haalKluspunten(email),
+    haalPas(email),
   ]);
 
   const webshopAankopen: Aankoop[] = webshoporders.map((order) => ({
@@ -109,7 +111,30 @@ export default async function AccountPage() {
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         <div className="space-y-4">
-          {klant.kluspas ? (
+          {/*
+            ProfPas heeft voorrang op de Kluspas-kaart: wie een ProfPas heeft,
+            rekent daarmee af (10%, altijd gratis bezorgd) en wil niet naar een
+            Kluspas kijken die minder oplevert.
+
+            De fase komt uit het portaal. Aanvragen worden met de hand
+            beoordeeld, dus zolang hij niet actief is zeggen we dat ook — geen
+            "je korting staat klaar" bij iets wat nog op een bureau ligt.
+          */}
+          {pasStatus?.pas === "profpas" ? (
+            <div className="card border-2 border-brand/30 p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-brand">ProfPas</p>
+              <p className="mt-1 font-black text-ink">
+                {pasStatus.fase === "actief" || !pasStatus.fase
+                  ? "Je ProfPas is actief"
+                  : "Je aanvraag is in behandeling"}
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                {pasStatus.fase === "actief" || !pasStatus.fase
+                  ? "Bij het afrekenen wordt je korting vanzelf verrekend en bezorgen we gratis, ongeacht het bedrag. Log wel in met dit e-mailadres."
+                  : `Onze verkoopafdeling kijkt ernaar. Status: ${pasStatus.fase}.`}
+              </p>
+            </div>
+          ) : klant.kluspas ? (
             <Kluspas nummer={klant.kluspas} naam={naam || undefined} />
           ) : (
             <div className="card p-5">
