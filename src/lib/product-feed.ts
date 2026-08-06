@@ -490,6 +490,64 @@ function toCents(value: string | undefined): number {
 }
 
 /**
+ * De prijzen van één feedregel, met een lopende actie erin verwerkt.
+ *
+ * Regel van Kevin (6 augustus 2026): *"extra kortingen is altijd voor iedereen,
+ * dat betekent dat soms de reguliere prijs goedkoper is dan de kluspasprijs,
+ * laat dan alleen de normale prijs zien en de sale price, je krijgt daar dan
+ * ook geen extra kluspaskorting op."*
+ *
+ * Een Tilroy-actie is dus géén ledenkorting: iedereen betaalt hem. Daarom
+ * wordt de actieprijs gewoon de prijs, komt de normale prijs doorgestreept
+ * ernaast, en verdwijnt de Kluspas-prijs — die zou anders een voordeel
+ * voorspiegelen dat er niet is, of erger, hoger uitvallen dan wat iedereen
+ * betaalt.
+ *
+ * ⚠️ De velden `promo_prijs`/`promo_van`/`promo_tot` levert het dashboard nog
+ * NIET. Zolang ze ontbreken doet deze functie precies wat de site hiervóór
+ * deed. Ze staan er al wel in omdat de actie die er nu loopt anders in het
+ * Kluspas-veld belandt: het dashboard schrijft de Tilroy-promoprijs daar in
+ * (`lib/tilroyProductCatalogus.ts:574`), waardoor een korting voor iedereen
+ * eruitziet als pashouderkorting. Dat is bij hen gemeld.
+ *
+ * Het datumvenster toetsen we zelf. Een actie die is afgelopen maar nog in de
+ * feed staat, is precies het soort prijs waar je een klacht over krijgt.
+ */
+export function prijzenVan(
+  item: FeedItem,
+  nu: number = Date.now(),
+): { prijs: number; vanaf: number; kluspas: number; actie: boolean } {
+  const standaard = toCents(item.sale_price ?? item.price);
+  const advies = toCents(item.price);
+  const kluspas = toCents(item.kluspas_prijs);
+  const promo = toCents(item.promo_prijs);
+
+  const binnenVenster = (() => {
+    if (!promo) return false;
+    const grens = (waarde: string | undefined) => {
+      const tijd = waarde ? Date.parse(waarde) : Number.NaN;
+      return Number.isNaN(tijd) ? null : tijd;
+    };
+    const van = grens(item.promo_van);
+    const tot = grens(item.promo_tot);
+    if (van !== null && nu < van) return false;
+    // Einddatum zonder tijd betekent "tot en met die dag".
+    if (tot !== null && nu > tot + 24 * 60 * 60 * 1000 - 1) return false;
+    return true;
+  })();
+
+  if (binnenVenster && promo < standaard) {
+    return { prijs: promo, vanaf: standaard, kluspas: 0, actie: true };
+  }
+  return {
+    prijs: standaard,
+    vanaf: advies,
+    kluspas: isGeloofwaardigeKluspasPrijs(standaard, kluspas) ? kluspas : 0,
+    actie: false,
+  };
+}
+
+/**
  * Productfoto via de beeldproxy, in de vorm die het ook echt doet.
  *
  * Ongeveer één op de acht artikelen kreeg een URL van de vorm
@@ -1403,25 +1461,22 @@ function buildProduct(
         group.filter((ander) => ander.maat === item.maat).length > 1;
       const verpakking = meerdereVerpakkingen ? verpakkingUit(item.title) : undefined;
       const afhalen = bezorgbaarheid(teBezorgen(item));
-      const eigenPrijs = toCents(item.sale_price ?? item.price);
-      const eigenAdvies = toCents(item.price);
-      const eigenKluspas = toCents(item.kluspas_prijs);
+      const eigen = prijzenVan(item);
+      const eigenPrijs = eigen.prijs;
       // Fabriekswit bij deze maat, als dat er is (alleen Sikkens-mengverf).
       const witItem =
         (item.mengverf ?? "").trim() === "Ja"
           ? witIndex.get(witSleutel(item.title ?? "", item.maat))
           : undefined;
-      const witPrijs = witItem ? toCents(witItem.sale_price ?? witItem.price) : 0;
-      const witAdvies = witItem ? toCents(witItem.price) : 0;
-      const witKluspas = witItem ? toCents(witItem.kluspas_prijs) : 0;
+      const wit_ = witItem ? prijzenVan(witItem) : null;
+      const witPrijs = wit_ ? wit_.prijs : 0;
       return {
         id: item.id,
         name: verpakking ? `${item.maat}, ${verpakking}` : item.maat,
         price: eigenPrijs,
-        ...(eigenAdvies > eigenPrijs ? { compareAtPrice: eigenAdvies } : {}),
-        ...(isGeloofwaardigeKluspasPrijs(eigenPrijs, eigenKluspas)
-          ? { kluspasPrice: eigenKluspas }
-          : {}),
+        ...(eigen.vanaf > eigenPrijs ? { compareAtPrice: eigen.vanaf } : {}),
+        ...(eigen.kluspas ? { kluspasPrice: eigen.kluspas } : {}),
+        ...(eigen.actie ? { actie: true } : {}),
         sku: item.id,
         size: item.maat,
         // Voorraad per maat: 250 ml kan uitverkocht zijn terwijl 2,5 L er
@@ -1438,10 +1493,8 @@ function buildProduct(
               wit: {
                 sku: witItem.id!,
                 price: witPrijs,
-                ...(witAdvies > witPrijs ? { compareAtPrice: witAdvies } : {}),
-                ...(isGeloofwaardigeKluspasPrijs(witPrijs, witKluspas)
-                  ? { kluspasPrice: witKluspas }
-                  : {}),
+                ...(wit_ && wit_.vanaf > witPrijs ? { compareAtPrice: wit_.vanaf } : {}),
+                ...(wit_?.kluspas ? { kluspasPrice: wit_.kluspas } : {}),
                 inStock:
                   Number(witItem.voorraad ?? 0) > 0 ||
                   (witItem.availability ?? "").trim() === "in stock",
@@ -1456,7 +1509,10 @@ function buildProduct(
   const afhaalRedenen = group.map((item) => bezorgbaarheid(teBezorgen(item)).reden);
   const pickupOnly = afhaalRedenen.every(Boolean) ? afhaalRedenen[0] : undefined;
 
-  const prices = (variants.length > 0 ? variants.map((v) => v.price) : [toCents(leader.sale_price)])
+  // Zonder maatvarianten telt de groepsleider zelf; ook daar moet een lopende
+  // actie de prijs zijn en niet een voetnoot.
+  const leiderPrijzen = prijzenVan(leader);
+  const prices = (variants.length > 0 ? variants.map((v) => v.price) : [leiderPrijzen.prijs])
     .filter((price) => price > 0);
   if (prices.length === 0) return null;
   const price = Math.min(...prices);
@@ -1468,14 +1524,17 @@ function buildProduct(
   // erachter, en verdween de Kluspas-prijs helemaal omdat € 170,42 niet
   // lager is dan € 44,84.
   const vanafVariant = variants.find((variant) => variant.price === price);
-  const compareAtPrice = vanafVariant?.compareAtPrice ?? toCents(leader.price);
-  // Kluspas-prijs uit de feed (komma-notatie, bv. "4,13").
-  const eigenKluspas = vanafVariant
-    ? (vanafVariant.kluspasPrice ?? 0)
-    : toCents(leader.kluspas_prijs);
+  const compareAtPrice = vanafVariant?.compareAtPrice ?? leiderPrijzen.vanaf;
+  // Kluspas-prijs zoals `prijzenVan` hem heeft vastgesteld: 0 zodra er een
+  // actie loopt, want die geldt voor iedereen en is dus geen pasvoordeel.
+  const eigenKluspas = vanafVariant ? (vanafVariant.kluspasPrice ?? 0) : leiderPrijzen.kluspas;
   // Onwaarschijnlijke kortingen (zie lib/kluspas.ts) laten we hier al vallen,
   // zodat ze nergens in de site meer opduiken.
   const kluspasPrice = isGeloofwaardigeKluspasPrijs(price, eigenKluspas) ? eigenKluspas : 0;
+  // Loopt er op de goedkoopste maat een actie? Dan mag er nergens nog een
+  // korting bovenop — ook de Profpas-10% niet, want die rekenen wij zélf uit
+  // en zou dus stapelen op een korting die de kassa al gegeven heeft.
+  const inActie = vanafVariant ? Boolean(vanafVariant.actie) : leiderPrijzen.actie;
 
   const groupId = (leader.group_id ?? leader.id).replace(/^g:/, "");
   const inStock = group.some((item) => Number(item.voorraad ?? 0) > 0);
@@ -1558,6 +1617,7 @@ function buildProduct(
     price,
     compareAtPrice: compareAtPrice > price ? compareAtPrice : undefined,
     kluspasPrice: kluspasPrice > 0 ? kluspasPrice : undefined,
+    actie: inActie || undefined,
     unit: leader.maat_range || leader.maat || undefined,
     colorMixable: leader.mengverf === "Ja",
     variants: variants.length > 1 ? variants : undefined,
@@ -1834,7 +1894,11 @@ async function fetchFeed(): Promise<Product[]> {
  * veld, andere groepering). De opgeslagen catalogus blijft anders 24 uur
  * staan en mist dan het nieuwe veld — dat kostte de Kluspas-prijs een deploy.
  */
-const KV_KEY = "catalog:products:v52";
+// v53: `prijzenVan` erbij (promo_prijs/promo_van/promo_tot + veld `actie`).
+// Elke wijziging in het parsen hoort een nieuwe sleutel te krijgen, anders
+// blijft de oude vorm een uur lang uit de cache komen en lijkt de wijziging
+// niet te werken.
+const KV_KEY = "catalog:products:v53";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

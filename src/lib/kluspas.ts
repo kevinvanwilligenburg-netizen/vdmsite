@@ -92,7 +92,24 @@ export function kluspasSaving(price: number, kluspasPrice?: number): number {
  */
 export const PROFPAS_KORTING = 0.1;
 
-export function profpasUnitPrice(price: number, kluspasPrice?: number): number {
+/**
+ * @param inActie Loopt er een Tilroy-actie op dit artikel? Dan is `price` de
+ *   actieprijs en gaat er niets meer af.
+ *
+ *   Dit is de enige plek waar stapelen écht kan gebeuren. De Kluspas-prijs
+ *   komt uit de bron en is dus per definitie wat de kassa rekent; deze 10%
+ *   rekenen wíj uit. Zonder deze rem zou een artikel met 20% actie online voor
+ *   28% weggaan — en dat verschil merkt niemand tot de dagafsluiting.
+ *
+ *   Regel van Kevin (6 augustus 2026): *"extra kortingen is altijd voor
+ *   iedereen … je krijgt daar dan ook geen extra kluspaskorting op."*
+ */
+export function profpasUnitPrice(
+  price: number,
+  kluspasPrice?: number,
+  inActie = false,
+): number {
+  if (inActie) return price;
   const viaProfpas = Math.round(price * (1 - PROFPAS_KORTING));
   const viaKluspas = kluspasUnitPrice(price, kluspasPrice);
   return Math.min(viaProfpas, viaKluspas);

@@ -65,8 +65,12 @@ export async function POST(request: Request) {
     const prijs = variant?.price ?? product.price;
     const pasprijs = variant ? variant.kluspasPrice : product.kluspasPrice;
     if (pas === "geen") continue;
+    // Op een lopende actie komt geen tweede korting; zie profpasUnitPrice.
+    const inActie = Boolean(variant?.actie ?? product.actie);
     const stukprijs =
-      pas === "profpas" ? profpasUnitPrice(prijs, pasprijs) : kluspasUnitPrice(prijs, pasprijs);
+      pas === "profpas"
+        ? profpasUnitPrice(prijs, pasprijs, inActie)
+        : kluspasUnitPrice(prijs, pasprijs);
     korting += Math.max(0, prijs - stukprijs) * aantal;
   }
 

@@ -389,8 +389,13 @@ export async function POST(request: Request) {
     // Profpas rekent 10% van de gewone prijs, maar nooit duurder dan de
     // Kluspas-prijs — bij de actieartikelen van 30% en 50% zou die 10% een
     // verhoging zijn. Zie profpasUnitPrice.
+    //
+    // Loopt er een Tilroy-actie, dan gaat er niets meer af: die korting geldt
+    // al voor iedereen en `listCents` ís de actieprijs. Anders zou de webshop
+    // 28% weggeven waar de kassa 20% rekent.
+    const inActie = Boolean(variant?.actie ?? product.actie);
     const unitCents = profpasActief
-      ? profpasUnitPrice(listCents, listKluspas)
+      ? profpasUnitPrice(listCents, listKluspas, inActie)
       : kluspas
         ? kluspasUnitPrice(listCents, listKluspas)
         : listCents;

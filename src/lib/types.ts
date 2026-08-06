@@ -15,6 +15,8 @@ export interface ProductVariant {
    */
   compareAtPrice?: number;
   kluspasPrice?: number;
+  /** Loopt er op deze maat een Tilroy-actie? Zie `actie` op Product. */
+  actie?: boolean;
   sku: string;
   /** Inhoud of maat (bv. "2,5 L", "70 MM"); bij mengverf los van de basis. */
   size?: string;
@@ -68,6 +70,16 @@ export interface Product {
   compareAtPrice?: number; // adviesprijs in centen, voor voordeel-badge
   /** Prijs met Kluspas (in centen); komt uit de feed. */
   kluspasPrice?: number;
+  /**
+   * Er loopt een Tilroy-actie op dit product; `price` ís al de actieprijs en
+   * `compareAtPrice` de normale prijs.
+   *
+   * Zo'n actie geldt voor iedereen, dus er hoort géén tweede korting
+   * overheen — niet de Kluspas (die staat hier al op 0) en niet de Profpas,
+   * die wij zélf uitrekenen en anders zou stapelen op korting die de kassa al
+   * gegeven heeft. Regel van Kevin, 6 augustus 2026.
+   */
+  actie?: boolean;
   unit?: string;
   colorMixable?: boolean; // verf die in de winkel op kleur wordt gemengd
   /** Waar: de omschrijving is Tilroy's handgeschreven webtekst, geen terugvalzin. */
