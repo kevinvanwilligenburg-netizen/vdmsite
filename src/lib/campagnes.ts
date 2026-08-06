@@ -162,7 +162,11 @@ const STANDAARD: Campagne[] = [
   {
     id: "ledlights",
     kop: "5 halen, 3 betalen",
-    waarop: "Led lights",
+    waarop: "Led's light",
+    // In de feed heet het merk "Led's light" (70 artikelen), niet "Led lights"
+    // zoals in de aankondiging. Met de juiste spelling krijgt de kaart een
+    // knop en klopt de telling.
+    merken: ["Led's light"],
     van: "2026-08-10",
     tot: TOT_AUGUSTUS,
     staffel: true,
