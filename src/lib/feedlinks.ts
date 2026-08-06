@@ -37,6 +37,17 @@ export async function bouwLinkmap(): Promise<Record<string, string>> {
     if (product.sku) sleutels.add(product.sku);
     for (const variant of product.variants ?? []) {
       if (variant.sku) sleutels.add(variant.sku);
+      /*
+       * Ook het fabriekswit-artikel, dat bij ons geen eigen pagina heeft maar
+       * een kleurkeuze op déze pagina is.
+       *
+       * Zonder dit viel het uit de linkmap en hield het in de Google-feed zijn
+       * oude /nl/-adres — en dat platform bestaat sinds de domeinomzetting niet
+       * meer. Gemeten in één feedpagina van 500: precies vier ontbrekende
+       * sku's, alle vier Sikkens-wit, alle vier mét voorraad en foto. Dus wél
+       * geadverteerd, niet te bereiken.
+       */
+      if (variant.wit?.sku) sleutels.add(variant.wit.sku);
     }
     for (const sleutel of sleutels) links[sleutel] = adres;
   }
