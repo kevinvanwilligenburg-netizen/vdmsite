@@ -1,3 +1,26 @@
+/**
+ * Een post-adres: bezorgadres, factuuradres of een regel uit het adresboek.
+ *
+ * Staat hier en niet in lib/adressen.ts omdat `Order` hem nodig heeft en dat
+ * anders een kringverwijzing geeft. De logica (lezen, controleren, opslaan)
+ * zit wél in lib/adressen.ts.
+ */
+export interface Adres {
+  /** Vrije naam in het adresboek ("Loods", "Thuis"); alleen voor de klant. */
+  label?: string;
+  /** Op de factuur en op het pakket; bij zakelijk vrijwel altijd gevuld. */
+  bedrijf?: string;
+  voornaam?: string;
+  achternaam?: string;
+  straat: string;
+  huisnummer: string;
+  toevoeging?: string;
+  postcode: string;
+  plaats: string;
+  /** "NL" of "BE". */
+  land: string;
+}
+
 /* ── Catalogus (prijzen in centen, alleen site-intern) ─────────── */
 
 /** Mengbasis waarin een kleur wordt aangemaakt. */
@@ -80,6 +103,9 @@ export interface Product {
    * gegeven heeft. Regel van Kevin, 6 augustus 2026.
    */
   actie?: boolean;
+  /** Looptijd van die actie ("JJJJ-MM-DD"), voor `sale_price_effective_date`. */
+  actieVan?: string;
+  actieTot?: string;
   unit?: string;
   colorMixable?: boolean; // verf die in de winkel op kleur wordt gemengd
   /** Waar: de omschrijving is Tilroy's handgeschreven webtekst, geen terugvalzin. */
@@ -396,6 +422,18 @@ export interface CheckoutInput {
     /** "NL" of "BE"; bepaalt de verzendkosten. */
     country?: string;
   };
+  /**
+   * Factuuradres, als dat afwijkt van het bezorgadres.
+   *
+   * Bepaalt niet waar de doos heen gaat maar op wiens naam de factuur staat —
+   * bij een bouwbedrijf zelden hetzelfde adres. Ontbreekt het, dan is het
+   * bezorgadres ook het factuuradres.
+   *
+   * Staat er los van `customer` omdat een AFHAALbestelling geen bezorgadres
+   * heeft maar wel een factuur kan vragen; die had voorheen helemaal geen
+   * adres om op te zetten.
+   */
+  billing?: Adres;
   fulfilment: "pickup" | "delivery";
   storeId?: string;
   /** Mollie-id van de gekozen betaalmethode ("ideal", "klarna", …). */

@@ -169,13 +169,39 @@ function regelVoor(product: Product, kleur: PaintColor): string | null {
         ]
       : []),
     `<g:availability>${voorradig ? "in stock" : "out of stock"}</g:availability>`,
-    `<g:price>${(prijs / 100).toFixed(2)} EUR</g:price>`,
-    // Kevin: Google krijgt altijd de Kluspas-prijs te zien. Als sale_price,
-    // zodat Google 'm als dé prijs toont terwijl de gewone prijs ernaast
-    // blijft bestaan — allebei staan ook zo op de landingspagina.
-    ...(variant?.kluspasPrice && variant.kluspasPrice < prijs
-      ? [`<g:sale_price>${(variant.kluspasPrice / 100).toFixed(2)} EUR</g:sale_price>`]
-      : []),
+    /*
+     * Prijzen, en dit luistert nauw.
+     *
+     * Loopt er een échte Tilroy-actie, dan is dát de sale price: `g:price`
+     * wordt de normale prijs en `g:sale_price` de actieprijs, met het venster
+     * erbij. Zonder `sale_price_effective_date` toont Google geen actielabel,
+     * en dat label is het halve punt van een actie.
+     *
+     * Dit moest, want anders ging er bij een actieproduct HELEMAAL geen
+     * sale_price mee: de Kluspas-prijs is bij een actie onderdrukt (de korting
+     * geldt voor iedereen), en dat was tot nu toe de enige bron voor dit veld.
+     *
+     * Zonder actie blijft Kevins keuze staan: de Kluspas-prijs als sale_price.
+     * ⚠️ Dat is wel een prijs die je alleen mét pas krijgt, terwijl Google
+     * verwacht dat de feedprijs is wat iedereen betaalt. Bij een controle op
+     * prijsverschil is dat de eerste regel waar Merchant Center over valt.
+     */
+    ...(product.actie && product.compareAtPrice && product.compareAtPrice > prijs
+      ? [
+          `<g:price>${(product.compareAtPrice / 100).toFixed(2)} EUR</g:price>`,
+          `<g:sale_price>${(prijs / 100).toFixed(2)} EUR</g:sale_price>`,
+          ...(product.actieVan && product.actieTot
+            ? [
+                `<g:sale_price_effective_date>${product.actieVan}T00:00:00+02:00/${product.actieTot}T23:59:59+02:00</g:sale_price_effective_date>`,
+              ]
+            : []),
+        ]
+      : [
+          `<g:price>${(prijs / 100).toFixed(2)} EUR</g:price>`,
+          ...(variant?.kluspasPrice && variant.kluspasPrice < prijs
+            ? [`<g:sale_price>${(variant.kluspasPrice / 100).toFixed(2)} EUR</g:sale_price>`]
+            : []),
+        ]),
     `<g:brand>${xml(product.brand)}</g:brand>`,
     `<g:mpn>${xml(variant?.sku ?? product.sku)}</g:mpn>`,
     `<g:condition>new</g:condition>`,

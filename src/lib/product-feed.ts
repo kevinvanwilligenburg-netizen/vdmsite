@@ -516,7 +516,7 @@ function toCents(value: string | undefined): number {
 export function prijzenVan(
   item: FeedItem,
   nu: number = Date.now(),
-): { prijs: number; vanaf: number; kluspas: number; actie: boolean } {
+): { prijs: number; vanaf: number; kluspas: number; actie: boolean; van?: string; tot?: string } {
   const standaard = toCents(item.sale_price ?? item.price);
   const advies = toCents(item.price);
   const kluspas = toCents(item.kluspas_prijs);
@@ -537,7 +537,16 @@ export function prijzenVan(
   })();
 
   if (binnenVenster && promo < standaard) {
-    return { prijs: promo, vanaf: standaard, kluspas: 0, actie: true };
+    return {
+      prijs: promo,
+      vanaf: standaard,
+      kluspas: 0,
+      actie: true,
+      // Meegeven zodat de Shopping-feed er een echte `sale_price_effective_date`
+      // van kan maken; zonder venster toont Google geen actielabel.
+      ...(item.promo_van ? { van: item.promo_van } : {}),
+      ...(item.promo_tot ? { tot: item.promo_tot } : {}),
+    };
   }
   return {
     prijs: standaard,
@@ -1535,6 +1544,10 @@ function buildProduct(
   // korting bovenop — ook de Profpas-10% niet, want die rekenen wij zélf uit
   // en zou dus stapelen op een korting die de kassa al gegeven heeft.
   const inActie = vanafVariant ? Boolean(vanafVariant.actie) : leiderPrijzen.actie;
+  // Het venster hangt aan de goedkoopste maat, net als de prijs ernaast.
+  const actieVenster = inActie
+    ? prijzenVan(group.find((item) => item.id === vanafVariant?.sku) ?? leader)
+    : null;
 
   const groupId = (leader.group_id ?? leader.id).replace(/^g:/, "");
   const inStock = group.some((item) => Number(item.voorraad ?? 0) > 0);
@@ -1618,6 +1631,8 @@ function buildProduct(
     compareAtPrice: compareAtPrice > price ? compareAtPrice : undefined,
     kluspasPrice: kluspasPrice > 0 ? kluspasPrice : undefined,
     actie: inActie || undefined,
+    ...(actieVenster?.van ? { actieVan: actieVenster.van } : {}),
+    ...(actieVenster?.tot ? { actieTot: actieVenster.tot } : {}),
     unit: leader.maat_range || leader.maat || undefined,
     colorMixable: leader.mengverf === "Ja",
     variants: variants.length > 1 ? variants : undefined,
@@ -1903,7 +1918,8 @@ async function fetchFeed(): Promise<Product[]> {
 // gebouwd — de winkel toonde toen een uur lang € 17,60 waar de kassa € 14,08
 // rekende. Zie ook /api/catalogus/ververs, zodat dit niet nog eens een deploy
 // hoeft te kosten.
-export const KV_KEY = "catalog:products:v54";
+// v55: actieVan/actieTot erbij voor sale_price_effective_date in de feed.
+export const KV_KEY = "catalog:products:v55";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,
