@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { isKvEnabled, kvGetJSON, kvSetJSON } from "@/lib/kv";
 import { normaliseerEmail } from "@/lib/account";
-import { TOESTEMMINGSTEKST, type Aanmelding } from "@/lib/nieuwsbrief";
+import { type Aanmelding } from "@/lib/nieuwsbrief";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Geen opslag beschikbaar." }, { status: 503 });
   }
 
-  let body: { leden?: { email?: string; timestampOpt?: string; status?: string }[] };
+  let body: {
+    leden?: { email?: string; timestampOpt?: string; status?: string }[];
+    overschrijf?: boolean;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -62,8 +65,29 @@ export async function POST(request: Request) {
   }
 
   let nieuw = 0;
+  let bijgewerkt = 0;
   let bestond = 0;
   let overgeslagen = 0;
+
+  /*
+   * Met `overschrijf: true` worden bestaande records bijgewerkt in plaats van
+   * overgeslagen. Nodig omdat de eerste import 43.950 records wegschreef met
+   * een toestemmingstekst die een aanmelddatum suggereerde die we niet kunnen
+   * hardmaken; zonder deze vlag was die tekst niet meer te corrigeren.
+   */
+  const overschrijf = body.overschrijf === true;
+
+  /**
+   * De twee dagen waarop een hele lijst in Mailchimp is geladen.
+   *
+   * Gemeten over het dossier van 6 augustus 2026: 60.664 van de 68.323
+   * stempels vallen op 30-12-2025 en 6.871 op 19-03-2026 — samen 98,9%.
+   * Zestigduizend mensen melden zich niet op één dag aan, dus die datums zijn
+   * importmomenten. Alleen bij deze twee zetten we erbij dat het echte
+   * toestemmingsmoment onbekend is; de 788 verspreide adressen zijn wél
+   * gewone aanmeldingen en verdienen die kanttekening niet.
+   */
+  const BULKDAGEN = new Set(["2025-12-30", "2026-03-19"]);
 
   /*
    * In groepjes tegelijk, niet één voor één.
@@ -97,31 +121,61 @@ export async function POST(request: Request) {
 
     const sleutel = `nieuwsbrief:${normaliseerEmail(email)}`;
     const bestaand = await kvGetJSON<Aanmelding>(sleutel);
-    if (bestaand) {
+    if (bestaand && !overschrijf) {
       bestond++;
       return;
     }
+    /*
+     * Iemand die zich intussen heeft AFGEMELD blijft afgemeld, ook bij
+     * overschrijven. Een correctieronde over de toestemmingsteksten mag nooit
+     * iemand terugzetten op de lijst — dat is precies de fout waar deze route
+     * verder zo hard tegen beveiligt.
+     */
+    if (bestaand?.afgemeldOp) {
+      overgeslagen++;
+      return;
+    }
 
-    const opgegeven = lid.timestampOpt ? Date.parse(lid.timestampOpt) : Number.NaN;
+    // Mailchimp levert "JJJJ-MM-DD UU:MM:SS"; Date.parse wil een T.
+    const opgegeven = lid.timestampOpt
+      ? Date.parse(String(lid.timestampOpt).replace(" ", "T"))
+      : Number.NaN;
     const aangemeldOp = Number.isNaN(opgegeven)
       ? new Date().toISOString()
       : new Date(opgegeven).toISOString();
+    const bulkdag = BULKDAGEN.has(aangemeldOp.slice(0, 10));
 
     await kvSetJSON(sleutel, {
       email: normaliseerEmail(email),
       aangemeldOp,
       bevestigdOp: aangemeldOp,
       bron: "mailchimp",
-      // Bewust niet onze eigen tekst: die stond er bij hen niet. Wat er wél
-      // vaststaat is waar en wanneer, en dat zeggen we dan ook precies zo.
+      /*
+       * Opschrijven wat we ECHT weten, niet wat het handigst leest.
+       *
+       * Gemeten over het dossier van 6 augustus 2026: 60.664 van de 68.323
+       * "toestemmingsmomenten" vallen op 30 december 2025 en 6.871 op 19 maart
+       * 2026. Zestigduizend mensen melden zich niet op één dag aan — dat zijn
+       * twee bulk-imports in Mailchimp, waarbij OPTIN_TIME op de importdatum
+       * werd gezet. Slechts 788 adressen zijn over losse dagen verspreid en
+       * zien eruit als echte aanmeldingen.
+       *
+       * "Aangemeld op 30-12-2025" zou dus een onwaarheid zijn, en juist deze
+       * tekst is wat je bij een klacht laat zien. Dan is een eerlijke regel
+       * ("herkomst bekend, moment niet") meer waard dan een datum die niet
+       * standhoudt zodra iemand doorvraagt.
+       */
       toestemmingstekst:
-        "Aangemeld via de Mailchimp-nieuwsbrieflijst van De Voordeelmarkt; " +
-        "overgezet naar Resend op " +
-        new Date().toISOString().slice(0, 10) +
-        ".",
+        `Overgezet uit de Mailchimp-lijst van De Voordeelmarkt op ${new Date()
+          .toISOString()
+          .slice(0, 10)}. Stempel uit Mailchimp: ${aangemeldOp.slice(0, 10)}` +
+        (bulkdag
+          ? " — dat is een importdatum, niet het moment van aanmelden; het oorspronkelijke toestemmingsmoment is onbekend."
+          : "."),
       inResend: true,
     } satisfies Aanmelding);
-    nieuw++;
+    if (bestaand) bijgewerkt++;
+    else nieuw++;
   };
 
   for (let i = 0; i < leden.length; i += GROEP) {
@@ -129,7 +183,7 @@ export async function POST(request: Request) {
   }
 
   console.warn(
-    `[nieuwsbrief] import: ${nieuw} nieuw, ${bestond} bestonden al, ${overgeslagen} overgeslagen`,
+    `[nieuwsbrief] import: ${nieuw} nieuw, ${bijgewerkt} bijgewerkt, ${bestond} bestonden al, ${overgeslagen} overgeslagen`,
   );
-  return NextResponse.json({ ok: true, nieuw, bestond, overgeslagen });
+  return NextResponse.json({ ok: true, nieuw, bijgewerkt, bestond, overgeslagen });
 }
