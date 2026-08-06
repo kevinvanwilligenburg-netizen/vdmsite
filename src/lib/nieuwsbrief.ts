@@ -31,7 +31,7 @@ import { absoluteUrl } from "@/lib/site";
  */
 
 /** Waar aanmeldingen vandaan komen; staat in het bewijs en in Resend. */
-export type Aanmeldbron = "footer" | "checkout" | "account";
+export type Aanmeldbron = "footer" | "checkout" | "account" | "mailchimp";
 
 export interface Aanmelding {
   email: string;
