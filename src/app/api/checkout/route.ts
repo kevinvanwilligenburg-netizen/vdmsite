@@ -17,6 +17,7 @@ import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { leesAdres, onthoudAdres } from "@/lib/adressen";
+import { meldDirectAan } from "@/lib/nieuwsbrief";
 import { createOrder, setMolliePaymentId, type CreateOrderInput } from "@/lib/orders";
 import {
   isStaalOrderItem,
@@ -752,6 +753,16 @@ export async function POST(request: Request) {
    * mag die nooit vertragen of laten klappen. `onthoudAdres` slikt zijn eigen
    * fouten (zie lib/adressen.ts).
    */
+  /*
+   * Nieuwsbriefvinkje. Ook niet afgewacht: de toestemming is vastgelegd zodra
+   * dit draait, en een hapering bij Resend mag een betaalde bestelling niet
+   * ophouden.
+   *
+   * Geen tweede bevestigingsmail hier — zie meldDirectAan voor waarom dat bij
+   * het afrekenen anders ligt dan bij het formulier in de footer.
+   */
+  if (input.nieuwsbrief) void meldDirectAan(email, "checkout");
+
   if (sessieEmail && address) {
     void onthoudAdres(sessieEmail, {
       ...(company ? { bedrijf: company } : {}),

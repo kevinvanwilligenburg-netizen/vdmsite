@@ -442,6 +442,8 @@ export interface CheckoutInput {
    * adres om op te zetten.
    */
   billing?: Adres;
+  /** Heeft de klant zich bij het afrekenen voor de nieuwsbrief aangemeld? */
+  nieuwsbrief?: boolean;
   /** Heeft de klant "factuuradres is anders" aangevinkt? */
   factuurAnders?: boolean;
   fulfilment: "pickup" | "delivery";

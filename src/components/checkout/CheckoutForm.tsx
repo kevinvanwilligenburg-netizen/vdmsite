@@ -112,6 +112,9 @@ export function CheckoutForm({
    */
   const [bewaardeAdressen, setBewaardeAdressen] = useState<Adres[]>([]);
   const [factuurAnders, setFactuurAnders] = useState(false);
+  /* Leeg beginnen is geen vormkwestie: een vooraf aangevinkt hokje is geen
+     toestemming, en dan is de hele lijst waardeloos zodra iemand klaagt. */
+  const [nieuwsbrief, setNieuwsbrief] = useState(false);
   const [billing, setBilling] = useState<Adres>({
     bedrijf: "",
     straat: "",
@@ -562,6 +565,7 @@ export function CheckoutForm({
           // Het factuuradres gaat mee ongeacht bezorgen of afhalen; de server
           // controleert het opnieuw en weigert een half adres.
           ...(factuurAnders ? { factuurAnders: true, billing } : {}),
+          ...(nieuwsbrief ? { nieuwsbrief: true } : {}),
           ...(fulfilment === "pickup" ? { storeId } : {}),
           ...(fulfilment === "delivery" && sameDay ? { sameDay: true } : {}),
           ...(voucher ? { voucherCode: voucher.code } : {}),
@@ -1225,6 +1229,24 @@ export function CheckoutForm({
               </div>
             )}
           </div>
+
+          {/* Nieuwsbrief. Leeg vinkje, tekst ernaast, geen tweede
+              bevestigingsmail: het adres is al bewezen bereikbaar doordat de
+              orderbevestiging er heen gaat, en een losse "bevestig je
+              nieuwsbrief"-mail direct na een bestelling is ruis. */}
+          <label className="mt-4 flex cursor-pointer items-start gap-3 border-t-2 border-ink/10 pt-4">
+            <input
+              type="checkbox"
+              checked={nieuwsbrief}
+              onChange={(event) => setNieuwsbrief(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+            />
+            <span className="text-sm text-ink">
+              <span className="font-bold">Houd me op de hoogte</span> — acties,
+              klustips en nieuwe producten. Eens per maand, niet vaker, en
+              afmelden kan met één klik in elke mail.
+            </span>
+          </label>
 
           <p className="mt-3 text-xs text-ink-soft">
             We gebruiken je gegevens alleen voor deze bestelling.

@@ -112,6 +112,37 @@ export async function startAanmelding(
   return { token };
 }
 
+/**
+ * Aanmelden zónder bevestigingsmail, voor het vinkje bij het afrekenen.
+ *
+ * Daar is een tweede mail overbodig en zelfs storend: het vinkje staat leeg,
+ * de tekst staat ernaast, en het adres is al bewezen bereikbaar doordat de
+ * orderbevestiging er heen gaat. Een losse "bevestig je nieuwsbrief"-mail
+ * direct na een bestelling leest als ruis en verlaagt juist het vertrouwen.
+ *
+ * Bij het footerformulier ligt dat anders — daar is niets bewezen en kan
+ * iemand het adres van een ander invullen. Vandaar dáár wél de dubbele stap.
+ *
+ * Faalt stil: dit hangt aan een geslaagde bestelling en mag die nooit raken.
+ */
+export async function meldDirectAan(email: string, bron: Aanmeldbron): Promise<void> {
+  if (!isKvEnabled() || !email) return;
+  try {
+    const bestaand = await aanmeldingVan(email);
+    if (bestaand?.bevestigdOp && !bestaand.afgemeldOp) return;
+    await kvSetJSON(sleutel.aanmelding(email), {
+      email: normaliseerEmail(email),
+      aangemeldOp: bestaand?.aangemeldOp ?? new Date().toISOString(),
+      bevestigdOp: new Date().toISOString(),
+      bron,
+      toestemmingstekst: TOESTEMMINGSTEKST,
+      inResend: await zetInResend(email),
+    } satisfies Aanmelding);
+  } catch (error) {
+    console.error("[nieuwsbrief] directe aanmelding mislukt:", error);
+  }
+}
+
 /** Stap 2: de klik uit de mail. Zet hem op de lijst en in Resend. */
 export async function bevestigAanmelding(token: string): Promise<Aanmelding | null> {
   if (!isKvEnabled() || !token) return null;
