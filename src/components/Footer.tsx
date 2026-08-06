@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Icon } from "@/components/icons";
+import { Nieuwsbrief } from "@/components/Nieuwsbrief";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
 import { getWhatsappNummer } from "@/lib/contact";
 import { kleurtestersActief } from "@/lib/instellingen";
@@ -158,6 +159,13 @@ export async function Footer() {
             ))}
           </ul>
         </nav>
+
+        {/* Aanmelden voor de nieuwsbrief. In de footer omdat het daar hoort
+            en niet in de weg zit: wie iets wil kopen komt hier niet, wie klaar
+            is met kijken wel. */}
+        <div className="sm:col-span-2 lg:col-span-1">
+          <Nieuwsbrief donker />
+        </div>
 
         <nav aria-label="Klantenservice">
           <p className="mb-3 font-bold uppercase tracking-wide text-brand-bright">
