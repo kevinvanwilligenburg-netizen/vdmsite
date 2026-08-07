@@ -39,11 +39,30 @@ export function bouwProductFaqs(
     }`,
   });
 
+  /*
+   * De levertijdvraag, maar niet als het artikel nergens ligt.
+   *
+   * Kevin: "Post nl blijft er ook bij staan als er iets niet op voorraad is."
+   * Deze tekst stond er altijd, ongeacht de voorraad — dus op een uitverkocht
+   * artikel beloofde de FAQ DHL de volgende dag en PostNL binnen één werkdag,
+   * pal onder het blok dat "Tijdelijk niet leverbaar" zei. Twee beweringen op
+   * één scherm die elkaar tegenspreken, en de klant gelooft de gunstigste.
+   *
+   * Erger nog: deze vragen gaan als FAQPage-structured data mee, dus Google
+   * kon de levertijdbelofte los van de pagina tonen bij een artikel dat we
+   * niet konden leveren.
+   */
+  const uitverkocht =
+    product.inStock === false &&
+    !(product.variants ?? []).some((variant) => variant.inStock !== false);
+
   faqs.push({
     q: "Hoe snel heb ik dit in huis?",
-    a: product.pickupOnly
-      ? "Dit artikel halen we niet door de brievenbus: je haalt het af in een van onze winkels. Reken online af en het ligt vandaag nog voor je klaar zodra de winkel open is. Op deze pagina zie je in welke winkels het op voorraad ligt."
-      : "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het de volgende dag. Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor bezorging vandaag nog, tegen een toeslag van € 1,25. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
+    a: uitverkocht
+      ? "Dit artikel is nu nergens op voorraad, dus we kunnen er geen levertijd op geven. Laat op deze pagina je e-mailadres achter, dan krijg je een bericht zodra het er weer is — meestal binnen een week. Onze klantenservice kan ook kijken of er een alternatief is dat wel op voorraad ligt."
+      : product.pickupOnly
+        ? "Dit artikel halen we niet door de brievenbus: je haalt het af in een van onze winkels. Reken online af en het ligt vandaag nog voor je klaar zodra de winkel open is. Op deze pagina zie je in welke winkels het op voorraad ligt."
+        : "Ligt dit artikel in onze webshopvoorraad in Nijverdal, dan bezorgt DHL het de volgende dag. Bestel je vóór 09:00, dan kun je bij het afrekenen kiezen voor bezorging vandaag nog, tegen een toeslag van € 1,25. Ligt het in een van onze andere winkels, dan verstuurt die winkel het met PostNL en heb je het binnen één werkdag. Op deze pagina zie je de actuele voorraad per winkel.",
   });
 
   if (product.colorMixable) {
