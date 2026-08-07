@@ -223,6 +223,15 @@ function totalen(order: Order): string {
       ? totaalregel("Artikelen (adviesprijs)", euros(order.subtotal + kluspas))
       : totaalregel("Artikelen", euros(order.subtotal)),
     kluspas > 0 ? totaalregel("Kluspas-korting", `− ${euros(kluspas)}`, { groen: true }) : "",
+    // Aantal-acties gaan over de groep en zitten dus niet in de regelprijzen;
+    // zonder deze regel telt de mail niet op tot het betaalde bedrag.
+    order.staffelKorting
+      ? totaalregel(
+          esc(order.staffelNamen?.join(" · ") || "Actiekorting"),
+          `− ${euros(order.staffelKorting)}`,
+          { groen: true },
+        )
+      : "",
     order.voucherKorting
       ? totaalregel(
           `Staal-voucher${order.voucherCode ? ` (${esc(order.voucherCode)})` : ""}`,
@@ -625,6 +634,11 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     "",
     ...(order.kluspasSavings
       ? [`Kluspas-korting: − ${euros(order.kluspasSavings)}`]
+      : []),
+    ...(order.staffelKorting
+      ? [
+          `${order.staffelNamen?.join(" · ") || "Actiekorting"}: − ${euros(order.staffelKorting)}`,
+        ]
       : []),
     `${order.fulfilment === "delivery" ? "Bezorging" : "Afhalen"}: ${
       order.shipping > 0 ? euros(order.shipping) : "gratis"

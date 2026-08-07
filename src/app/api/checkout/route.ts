@@ -15,6 +15,7 @@ import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
+import { kiesVoordeligste, staffelregels } from "@/lib/staffel";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { leesAdres, onthoudAdres } from "@/lib/adressen";
 import { meldDirectAan } from "@/lib/nieuwsbrief";
@@ -287,6 +288,16 @@ export async function POST(request: Request) {
   // Prijzen en productgegevens altijd server-side bepalen; de client levert
   // alleen id's en aantallen aan. Bedragen in de order zijn EURO'S (contract).
   const items: OrderItem[] = [];
+  /*
+   * Per orderregel de kale prijs náást de prijs met pasvoordeel.
+   *
+   * Nodig voor de aantal-acties: die rekenen over de gewone stuksprijs, en als
+   * er één afgaat vervalt het pasvoordeel op diezelfde artikelen — dubbele
+   * korting maakt de webshop goedkoper dan de kassa. Zonder deze lijst is die
+   * stap niet meer te zetten, want `items[].price` bevat het pasvoordeel al.
+   * Loopt één op één mee met `items`.
+   */
+  const prijsregels: { list: number; unit: number; categorie?: string }[] = [];
   // Artikelen die niet met de pakketdienst mee kunnen (kruiwagen, 25 kg zout).
   const nietVerzendbaar: string[] = [];
   let subtotalCents = 0;
@@ -333,6 +344,11 @@ export async function POST(request: Request) {
           qty,
         ),
       );
+      // Ook de kleurtester krijgt een prijsregel, anders schuift `prijsregels`
+      // op ten opzichte van `items` en landt een aantal-actie op het verkeerde
+      // artikel. Een tester heeft geen pasvoordeel en geen merk, dus hij valt
+      // vanzelf buiten elke staffel.
+      prijsregels.push({ list: STAAL_PRIJS, unit: STAAL_PRIJS });
       subtotalCents += STAAL_PRIJS * qty;
       continue;
     }
@@ -427,6 +443,7 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join(" · ");
 
+    prijsregels.push({ list: listCents, unit: unitCents, categorie: product.category });
     items.push({
       key: `${product.id}:${variant?.id ?? ""}:${color?.code ?? ""}`,
       productId: product.id,
@@ -512,6 +529,51 @@ export async function POST(request: Request) {
     }
   }
 
+  /*
+   * Aantal-acties ("5 halen, 3 betalen", "2 + 1 gratis").
+   *
+   * Deze staan niet in de stuksprijs uit de feed — een aantal-actie pást niet
+   * in een stuksprijs — dus ze worden hier berekend en gaan als eigen regel de
+   * order in. Zonder dit stuk beloofde de merkpagina twee gratis lampen en
+   * rekende de kassa er vijf af.
+   *
+   * Wint de staffel, dan vervalt het pasvoordeel op diezelfde artikelen: die
+   * korting geldt al voor iedereen. Zie kiesVoordeligste.
+   */
+  /*
+   * Eerst controleren dat de prijsregels nog één op één met de orderregels
+   * lopen. Schuift die lijst één op — een nieuwe `items.push` zonder bijhorende
+   * `prijsregels.push` — dan landt de korting op het verkeerde artikel en
+   * betaalt de klant een bedrag dat niemand kan navertellen. Liever de actie
+   * overslaan en het luid in de log zetten dan stilletjes fout rekenen.
+   */
+  const uitgelijnd = prijsregels.length === items.length;
+  if (!uitgelijnd) {
+    console.error(
+      `[checkout] prijsregels (${prijsregels.length}) lopen niet gelijk met orderregels (${items.length}); aantal-acties overgeslagen`,
+    );
+  }
+  const { toepassingen: staffelToepassingen, staffelKorting: staffelKortingCents } =
+    kiesVoordeligste(
+      uitgelijnd ? await staffelregels() : [],
+      items.map((item, index) => ({
+        sku: item.sku,
+        merk: item.brand,
+        categorie: prijsregels[index]?.categorie,
+        prijs: prijsregels[index]?.list ?? Math.round(item.price * 100),
+        pasPrijs: prijsregels[index]?.unit ?? Math.round(item.price * 100),
+        aantal: item.quantity,
+      })),
+    );
+  for (const index of new Set(staffelToepassingen.flatMap((t) => t.indices))) {
+    const regel = prijsregels[index];
+    if (!regel || regel.unit === regel.list) continue;
+    subtotalCents += (regel.list - regel.unit) * items[index].quantity;
+    kluspasSavingCents -= (regel.list - regel.unit) * items[index].quantity;
+    items[index].price = regel.list / 100;
+    regel.unit = regel.list;
+  }
+
   const subtotal = subtotalCents / 100;
 
   /*
@@ -550,7 +612,11 @@ export async function POST(request: Request) {
   const verzendkostenCents =
     fulfilment === "pickup"
       ? 0
-      : shippingCost(subtotalCents - voucherKortingCents, land, gratisOngeachtBedrag);
+      : shippingCost(
+          subtotalCents - voucherKortingCents - staffelKortingCents,
+          land,
+          gratisOngeachtBedrag,
+        );
 
   const orderInput: CreateOrderInput = {
     customer: {
@@ -586,7 +652,22 @@ export async function POST(request: Request) {
     items,
     subtotal,
     shipping: verzendkostenCents / 100,
-    total: (subtotalCents - voucherKortingCents + verzendkostenCents) / 100,
+    total:
+      (subtotalCents - voucherKortingCents - staffelKortingCents + verzendkostenCents) / 100,
+    /*
+     * De aantal-actie als eigen bedrag op de order.
+     *
+     * ⚠️ Het dashboard moet dit als negatieve regel op KORTINGWEBSHOP naar
+     * Tilroy boeken. De kassa kent deze actie niet — de promotie-export staat
+     * voor deze tenant uit — dus zonder die regel is het ordertotaal in Tilroy
+     * hoger dan wat de klant bij Mollie heeft betaald.
+     */
+    ...(staffelKortingCents > 0
+      ? {
+          staffelKorting: staffelKortingCents / 100,
+          staffelNamen: staffelToepassingen.map((t) => t.regel.naam),
+        }
+      : {}),
     fulfilment,
     ...(kluspas
       ? {

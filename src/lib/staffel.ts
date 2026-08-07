@@ -1,3 +1,4 @@
+import { campagneStand, getCampagnes } from "@/lib/campagnes";
 import { isKvEnabled, kvGetJSON } from "@/lib/kv";
 
 /**
@@ -96,6 +97,14 @@ export interface Staffelregel_Toepassing {
   gratis: number;
   /** Kortingsbedrag in centen. */
   korting: number;
+  /**
+   * Welke mandjeregels hieronder vielen.
+   *
+   * Nodig om te voorkomen dat er twee kortingen op hetzelfde artikel komen:
+   * een aantal-actie geldt voor iedereen, en daar hoort net als bij een
+   * Tilroy-actie geen pasvoordeel bovenop. Zie `kluspas.ts`.
+   */
+  indices: number[];
 }
 
 /** Regel geldig op deze dag? `tot` telt inclusief. */
@@ -150,14 +159,74 @@ export function leesRegel(ruw: unknown): Staffelregel | null {
   };
 }
 
-export async function staffelregels(): Promise<Staffelregel[]> {
-  if (!isKvEnabled() || !staffelSku()) return [];
-  const ruw = await kvGetJSON<unknown[]>("staffel:regels");
-  if (!Array.isArray(ruw)) return [];
-  return ruw
-    .map(leesRegel)
-    .filter((regel): regel is Staffelregel => regel !== null)
-    .filter((regel) => staffelLoopt(regel));
+/**
+ * De aantal-acties uit de campagnelijst, als staffelregels.
+ *
+ * ⚠️ Dit is de reparatie van een gat waar de klant doorheen viel. De
+ * augustuscampagne kondigt "5 halen, 3 betalen" aan op Led's light, en die
+ * aankondiging stond netjes op de actiepagina — maar de motor las uitsluitend
+ * `staffel:regels` uit KV, een sleutel die niemand vulde. Vijf lampen in het
+ * mandje kostten vijf keer € 3,05. De belofte stond op de site, de korting
+ * nergens.
+ *
+ * Door de campagne zélf de bron te maken staat de regel op één plek: wat de
+ * klant leest en wat hij betaalt komen uit hetzelfde bestand. Kevin kan de
+ * lijst via KV `campagnes` overschrijven, en dan verhuizen de aantallen
+ * vanzelf mee.
+ *
+ * `staffel:regels` blijft bestaan voor acties die géén publieke aankondiging
+ * hebben; bij dezelfde id wint die sleutel, zodat je vanuit het dashboard kunt
+ * bijsturen zonder deploy.
+ */
+export async function staffelUitCampagnes(nu: number = Date.now()): Promise<Staffelregel[]> {
+  const campagnes = await getCampagnes();
+  const regels: Staffelregel[] = [];
+  for (const campagne of campagnes) {
+    if (!campagne.koop || !campagne.betaal) continue;
+    if (campagneStand(campagne, nu) !== "loopt") continue;
+    const regel = leesRegel({
+      id: `campagne:${campagne.id}`,
+      naam: campagne.kop,
+      koop: campagne.koop,
+      betaal: campagne.betaal,
+      skus: campagne.skus,
+      // Eén merk per staffelregel; `regelGeldtVoor` vergelijkt op één naam.
+      // Alle huidige aantal-acties slaan op één merk of op een sku-lijst.
+      merk: campagne.skus?.length ? undefined : campagne.merken?.[0],
+      van: campagne.van,
+      tot: campagne.tot,
+    });
+    if (regel) regels.push(regel);
+  }
+  return regels;
+}
+
+export async function staffelregels(nu: number = Date.now()): Promise<Staffelregel[]> {
+  // Zonder kortingsartikel geen staffel — zie de kop van dit bestand.
+  if (!staffelSku()) return [];
+
+  const uitKv: Staffelregel[] = [];
+  if (isKvEnabled()) {
+    try {
+      const ruw = await kvGetJSON<unknown[]>("staffel:regels");
+      if (Array.isArray(ruw)) {
+        for (const item of ruw) {
+          const regel = leesRegel(item);
+          if (regel && staffelLoopt(regel, nu)) uitKv.push(regel);
+        }
+      }
+    } catch (error) {
+      // Een storing in KV mag geen prijzen veranderen, maar hem stil laten
+      // vallen zou de campagneregels ook meenemen. Alleen deze bron overslaan.
+      console.error("[staffel] regels uit KV lezen mislukt:", error);
+    }
+  }
+
+  const bekend = new Set(uitKv.map((regel) => regel.id));
+  const uitCampagnes = (await staffelUitCampagnes(nu)).filter(
+    (regel) => !bekend.has(regel.id),
+  );
+  return [...uitKv, ...uitCampagnes];
 }
 
 /**
@@ -248,11 +317,12 @@ export function pasStaffelToe(
   for (const regel of gesorteerd) {
     // Elk stuk als losse prijs, zodat we de goedkoopste gratis kunnen geven.
     const stuks: number[] = [];
+    const raakt: number[] = [];
     regelsInMandje.forEach((mandje, index) => {
       if (alGebruikt.has(index)) return;
       if (!regelGeldtVoor(regel, mandje)) return;
       for (let n = 0; n < mandje.aantal; n++) stuks.push(mandje.prijs);
-      alGebruikt.add(index);
+      raakt.push(index);
     });
     if (stuks.length < regel.koop) continue;
 
@@ -260,13 +330,83 @@ export function pasStaffelToe(
     const gratis = groepen * (regel.koop - regel.betaal);
     if (gratis <= 0) continue;
 
+    // Pas hier vastleggen dat deze artikelen vergeven zijn, en niet al bij het
+    // verzamelen. Anders houdt een regel die níét afgaat — twee Sanicur in het
+    // mandje bij "2 + 1 gratis" — de artikelen bezet, en kan een volgende
+    // regel er niets meer mee. Dan verdwijnt er korting door een actie die
+    // helemaal niet van toepassing was.
+    for (const index of raakt) alGebruikt.add(index);
+
     stuks.sort((a, b) => a - b);
     const korting = stuks.slice(0, gratis).reduce((som, prijs) => som + prijs, 0);
-    toepassingen.push({ regel, gratis, korting });
+    toepassingen.push({ regel, gratis, korting, indices: raakt });
   }
 
   return {
     toepassingen,
     totaleKorting: toepassingen.reduce((som, t) => som + t.korting, 0),
+  };
+}
+
+export interface MandjeRegel {
+  sku?: string;
+  merk?: string;
+  categorie?: string;
+  /** Normale stuksprijs in centen, inclusief een lopende Tilroy-actie. */
+  prijs: number;
+  /** Stuksprijs mét pasvoordeel. Zonder pas gewoon gelijk aan `prijs`. */
+  pasPrijs: number;
+  aantal: number;
+}
+
+/**
+ * Wat er van dit mandje af gaat: de staffel óf het pasvoordeel, niet allebei.
+ *
+ * Kevin over de actieprijzen: "extra kortingen is altijd voor iedereen … je
+ * krijgt daar dan ook geen extra kluspaskorting op." Een aantal-actie is
+ * precies zo'n korting voor iedereen, dus geldt dezelfde regel — anders is de
+ * webshop goedkoper dan de kassa en klopt de bon niet.
+ *
+ * Maar niet ten koste van de klant. Ligt er één Sanicur in het mandje bij
+ * "2 + 1 gratis", dan gaat die actie niet af en moet het pasvoordeel gewoon
+ * blijven staan. En valt het pasvoordeel op de betrokken artikelen hóger uit
+ * dan de staffel, dan wint het pasvoordeel. Per artikelgroep het gunstigste,
+ * nooit gestapeld.
+ *
+ * Rekent uitsluitend met wat er in dit mandje ligt; de aanroeper haalt de
+ * prijzen uit de catalogus en niet uit het verzoek.
+ */
+export function kiesVoordeligste(
+  regels: Staffelregel[],
+  mandje: MandjeRegel[],
+): {
+  toepassingen: Staffelregel_Toepassing[];
+  staffelKorting: number;
+  paskorting: number;
+} {
+  const pasOp = (index: number) => {
+    const regel = mandje[index];
+    return Math.max(0, regel.prijs - regel.pasPrijs) * regel.aantal;
+  };
+
+  const { toepassingen } = pasStaffelToe(regels, mandje);
+
+  // Per toepassing kiezen, niet over het hele mandje: twee acties in één
+  // mandje hoeven niet dezelfde kant op te vallen.
+  const gehouden = toepassingen.filter((toepassing) => {
+    const pas = toepassing.indices.reduce((som, index) => som + pasOp(index), 0);
+    return toepassing.korting >= pas;
+  });
+
+  const gedekt = new Set(gehouden.flatMap((toepassing) => toepassing.indices));
+  let paskorting = 0;
+  mandje.forEach((_, index) => {
+    if (!gedekt.has(index)) paskorting += pasOp(index);
+  });
+
+  return {
+    toepassingen: gehouden,
+    staffelKorting: gehouden.reduce((som, toepassing) => som + toepassing.korting, 0),
+    paskorting,
   };
 }

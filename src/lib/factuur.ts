@@ -100,6 +100,21 @@ export function maakFactuur(order: Order): Factuur {
     });
   }
 
+  // Een aantal-actie ("5 halen, 3 betalen") gaat er niet per stuk af maar over
+  // de groep, dus hij past niet in de artikelregels en hoort hier als eigen
+  // minregel. Zonder deze regel is de factuur hoger dan wat er is afgeschreven.
+  if (order.staffelKorting) {
+    const korting = splitsBtw(-order.staffelKorting);
+    regels.push({
+      omschrijving: order.staffelNamen?.length
+        ? order.staffelNamen.join(" · ")
+        : "Actiekorting",
+      aantal: 1,
+      stukprijsExcl: korting.exclusief,
+      totaalExcl: korting.exclusief,
+    });
+  }
+
   // Een verzilverde staal-voucher staat als minregel op de factuur; zonder die
   // regel telt de kolom niet op tot het afgeschreven bedrag.
   if (order.voucherKorting) {

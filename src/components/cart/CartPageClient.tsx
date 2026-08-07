@@ -62,7 +62,8 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
 
   // Wat de korting op dit mandje waard is; de server rekent het uit de
   // catalogus, niet uit de prijzen die in de winkelwagen zijn blijven staan.
-  const { bedrag: kluspasKorting, pas } = useKorting(items);
+  const { bedrag: kluspasKorting, mogelijkeKorting, pas, staffels, staffelKorting } =
+    useKorting(items);
   // De pas bij naam noemen. Er stond hardcoded "Kluspas-korting", ook boven de
   // korting van iemand met een ProfPas — die heeft helemaal geen Kluspas.
   const kortingLabel = pas === "profpas" ? "ProfPas-korting" : "Kluspas-korting";
@@ -212,6 +213,16 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
               </dd>
             </div>
           )}
+          {/* Aantal-acties staan bóven het pasvoordeel: die gelden voor
+              iedereen, ook zonder account, en zijn meestal het grootste bedrag.
+              Ze stapelen niet met de pas — de server kiest per actie het
+              gunstigste van de twee. */}
+          {staffels.map((staffel) => (
+            <div key={staffel.naam} className="flex justify-between">
+              <dt className="text-ink-soft">{staffel.naam}</dt>
+              <dd className="font-bold text-green-700">− {euro(staffel.korting)}</dd>
+            </div>
+          ))}
           {/* Ingelogd? Dan is de korting geen belofte meer maar een regel, en
               hoort hij in het totaal te zitten. Kevin: "dan moet je
               kluspaskorting zien als regel en dan totaal het bedrag met
@@ -230,22 +241,28 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
           <div className="flex justify-between border-t border-ink/10 pt-3 text-base">
             <dt className="font-black text-ink">Totaal (incl. btw)</dt>
             <dd className="font-black text-brand">
-              {euro(ingelogd ? subtotal - kluspasKorting : subtotal)}
+              {euro(subtotal - staffelKorting - (ingelogd ? kluspasKorting : 0))}
             </dd>
           </div>
         </dl>
 
         {/* Alleen voor wie nog géén account heeft. Een ingelogde klant kreeg
             hier de uitnodiging om een account te maken voor korting die hij al
-            krijgt, en dat leest als een fout in de webshop. */}
-        {kluspasKorting > 0 && !ingelogd && (
+            krijgt, en dat leest als een fout in de webshop.
+
+            ⚠️ Op `mogelijkeKorting`, niet op `kluspasKorting`. Dat laatste is
+            nul zonder sessie — de server rekent het pasvoordeel alleen voor wie
+            is ingelogd — dus deze voorwaarde sprak zichzelf tegen en het blok
+            heeft nooit één bezoeker gezien. `mogelijkeKorting` is wat een
+            Kluspas op dít mandje zou schelen, aantal-acties er al af. */}
+        {mogelijkeKorting > 0 && !ingelogd && (
           <div className="mt-4 rounded-xl bg-brand-light p-4">
             <p className="flex items-center gap-2 font-black text-ink">
               <Icon name="tag" className="h-5 w-5 shrink-0 text-brand" />
-              Met een account betaal je {euro(subtotal - kluspasKorting)}
+              Met een account betaal je {euro(subtotal - staffelKorting - mogelijkeKorting)}
             </p>
             <p className="mt-1 text-sm text-ink-soft">
-              Dat scheelt <strong className="text-ink">{euro(kluspasKorting)}</strong> op
+              Dat scheelt <strong className="text-ink">{euro(mogelijkeKorting)}</strong> op
               dit mandje. Een account maken kost niets en gaat met je e-mailadres,
               geen wachtwoord.
             </p>
@@ -311,7 +328,12 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
           <div>
             <p className="text-xs text-ink-soft">Totaal (incl. btw)</p>
-            <p className="text-lg font-black text-ink">{euro(subtotal)}</p>
+            {/* Hetzelfde bedrag als in het Overzicht-blok hierboven. Deze balk
+                toonde altijd het kale subtotaal, dus op een telefoon zag je
+                een hoger bedrag dan waar je op afrekent. */}
+            <p className="text-lg font-black text-ink">
+              {euro(subtotal - staffelKorting - (ingelogd ? kluspasKorting : 0))}
+            </p>
           </div>
           <Link href="/afrekenen" className="btn btn-primary flex-1 max-w-56">
             Afrekenen →

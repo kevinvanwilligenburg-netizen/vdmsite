@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { emailVanSessie, haalPas, SESSIE_COOKIE } from "@/lib/account";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
+import { kiesVoordeligste, staffelregels, type MandjeRegel } from "@/lib/staffel";
 import { getProductById } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +52,9 @@ export async function POST(request: Request) {
   const pas = pasStatus?.pas === "profpas" ? "profpas" : sessieEmail ? "kluspas" : "geen";
 
   const regels = (body.items ?? []).slice(0, 50);
-  let korting = 0;
+  // De Kluspas-prijs houden we per regel apart bij, ook voor wie niet is
+  // ingelogd: daar komt `mogelijkeKorting` verderop uit.
+  const mandje: (MandjeRegel & { kluspasPrijs: number })[] = [];
 
   for (const regel of regels) {
     const product = await getProductById(String(regel.productId ?? ""));
@@ -64,15 +67,80 @@ export async function POST(request: Request) {
     // hoort niet bij een blik van 2,5 liter.
     const prijs = variant?.price ?? product.price;
     const pasprijs = variant ? variant.kluspasPrice : product.kluspasPrice;
-    if (pas === "geen") continue;
     // Op een lopende actie komt geen tweede korting; zie profpasUnitPrice.
     const inActie = Boolean(variant?.actie ?? product.actie);
+    const kluspasPrijs = kluspasUnitPrice(prijs, pasprijs);
     const stukprijs =
       pas === "profpas"
         ? profpasUnitPrice(prijs, pasprijs, inActie)
-        : kluspasUnitPrice(prijs, pasprijs);
-    korting += Math.max(0, prijs - stukprijs) * aantal;
+        : pas === "kluspas"
+          ? kluspasPrijs
+          : prijs;
+    mandje.push({
+      sku: variant?.sku ?? product.sku,
+      merk: product.brand,
+      categorie: product.category,
+      prijs,
+      pasPrijs: stukprijs,
+      kluspasPrijs,
+      aantal,
+    });
   }
 
-  return NextResponse.json({ korting, pas });
+  const lopende = await staffelregels();
+
+  /*
+   * Aantal-acties tellen ook mee, en ze gelden voor iedereen — ook zonder pas.
+   *
+   * Dit was de bug: de winkelwagen vroeg hier alleen naar het pasvoordeel, dus
+   * vijf Led's light lampen bij "5 halen, 3 betalen" gaven € 0,75 kluspas en
+   * verder niets, terwijl de merkpagina twee gratis lampen belooft.
+   */
+  const { toepassingen, staffelKorting, paskorting } = kiesVoordeligste(lopende, mandje);
+
+  /*
+   * Wat een Kluspas op dít mandje extra zou opleveren — ook zonder sessie.
+   *
+   * `korting` hierboven is nul zolang er geen account is, en dat hoort zo: dat
+   * bedrag gaat van het totaal af en moet dus overeenkomen met wat de checkout
+   * rekent. Maar daardoor kón de winkelwagen nooit tonen wat een account waard
+   * is. Het wervende blok stond achter `korting > 0 && niet ingelogd`, en die
+   * twee kunnen niet tegelijk waar zijn — de klant zag nooit een reden om er
+   * een te maken.
+   *
+   * ⚠️ Het verschil van twee doorrekeningen, niet de kale pasbesparing. Wat er
+   * van een aantal-actie af gaat, krijgt iedereen ook zónder account, en op die
+   * artikelen komt het pasvoordeel er niet bovenop (zie kiesVoordeligste).
+   * Vijf lampen bij "5 halen, 3 betalen" leveren dus geen belofte op. Zou je
+   * hier gewoon prijs − kluspasprijs optellen, dan beloofde het blokje korting
+   * die de klant er bij het afrekenen niet bij krijgt — precies de fout die de
+   * waarschuwing bovenaan dit bestand wil voorkomen, maar dan andersom.
+   *
+   * Altijd de Kluspas-prijs, nooit profpasUnitPrice: wie hier zonder account
+   * zit en er een maakt, krijgt de Kluspas. De ProfPas is een aanvraag bij de
+   * winkel en geen knop in de webshop.
+   */
+  const teHalen = (uitkomst: { staffelKorting: number; paskorting: number }) =>
+    uitkomst.staffelKorting + uitkomst.paskorting;
+  const zonderPas = kiesVoordeligste(
+    lopende,
+    mandje.map((regel) => ({ ...regel, pasPrijs: regel.prijs })),
+  );
+  const metKluspas = kiesVoordeligste(
+    lopende,
+    mandje.map((regel) => ({ ...regel, pasPrijs: regel.kluspasPrijs })),
+  );
+  const mogelijkeKorting = Math.max(0, teHalen(metKluspas) - teHalen(zonderPas));
+
+  return NextResponse.json({
+    korting: paskorting,
+    mogelijkeKorting,
+    pas,
+    staffelKorting,
+    staffels: toepassingen.map((toepassing) => ({
+      naam: toepassing.regel.naam,
+      gratis: toepassing.gratis,
+      korting: toepassing.korting,
+    })),
+  });
 }

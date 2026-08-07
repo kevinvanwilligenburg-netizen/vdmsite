@@ -7,6 +7,7 @@ import { ArtikelBekeken } from "@/components/meten/Paginameting";
 import { KortingBadge } from "@/components/KortingBadge";
 import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
+import { CampagneBalk } from "@/components/campagne/CampagneBalk";
 import { Companions } from "@/components/product/Companions";
 import { Mark } from "@/components/Mark";
 import { VloerRekenhulp } from "@/components/product/VloerRekenhulp";
@@ -298,6 +299,12 @@ export default async function ProductPage({ params }: Props) {
       />
       <JsonLd data={productJsonLd} />
       <JsonLd data={productFaqJsonLd} />
+
+      {/* Loopt er een actie op dit artikel, dan hoort dat hier te staan en
+          niet alleen op /actie. Kevin: "laat je bij de producten zelf ook de
+          actie zien?" Bij een aantal-actie is dat het verschil tussen één lamp
+          in de wagen en vijf. */}
+      <CampagneBalk producten={[product]} />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
         {/* Links alleen het beeld; alles waarop de klant een besluit neemt —

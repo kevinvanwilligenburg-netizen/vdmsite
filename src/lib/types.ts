@@ -343,6 +343,15 @@ export interface Order {
   voucherCode?: string;
   voucherKorting?: number;
   /**
+   * Aantal-acties op deze bestelling ("5 halen, 3 betalen"), in euro's.
+   *
+   * De korting zit al in `total`. ⚠️ Het dashboard boekt dit bedrag als
+   * negatieve regel op KORTINGWEBSHOP naar Tilroy — de kassa kent deze acties
+   * niet, want de promotie-export staat voor deze tenant uit.
+   */
+  staffelKorting?: number;
+  staffelNamen?: string[];
+  /**
    * Voucher die deze bestelling heeft opgeleverd (kleurtesters): code en
    * waarde in euro's. Gezet zodra de betaling binnen is; de mail met de code
    * gaat in dezelfde stap de deur uit.

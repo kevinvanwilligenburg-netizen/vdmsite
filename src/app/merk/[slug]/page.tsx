@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { MerkLogo } from "@/components/MerkLogo";
 import { ProductCard } from "@/components/ProductCard";
+import { CampagneBalk } from "@/components/campagne/CampagneBalk";
 import { ProductFiltersPanel } from "@/components/plp/ProductFilters";
 import {
   activeFilterCount,
@@ -144,6 +145,10 @@ export default async function BrandPage({ params, searchParams }: Props) {
           <p className="mt-2 text-ink-soft">{inleiding}</p>
         </div>
       </header>
+
+      {/* Wat er op dit merk loopt, vóór de artikelen. De aankondiging stond
+          alleen op /actie, dus wie hier via Google binnenkwam zag hem nooit. */}
+      <CampagneBalk producten={brand.products} merk={brand.name} />
 
       {/*
         Doorklikken naar de rubrieken waarin dit merk zit. Dit is het deel dat

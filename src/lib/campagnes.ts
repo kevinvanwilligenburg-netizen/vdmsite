@@ -78,6 +78,25 @@ export interface Campagne {
    * pas écht actief als het Tilroy-kortingsartikel bestaat.
    */
   staffel?: boolean;
+  /**
+   * De aantallen achter `staffel`, zodat de motor er ook echt mee kan rekenen.
+   *
+   * ⚠️ Dit veld is er omdat `staffel: true` alléén niets deed. De kop is
+   * mensentaal — "2 + 1 gratis", "5 halen, 3 betalen" — en daar kun je geen
+   * korting op baseren; de staffelmotor las een KV-lijst die niemand vulde.
+   * Gevolg: de winkel beloofde op de merkpagina 5 halen 3 betalen, en de
+   * winkelwagen rekende vijf keer de volle prijs. Gemeten op Led's light,
+   * 7 augustus 2026: 5 × € 3,05 = € 15,25, korting € 0,00.
+   *
+   * Bij "2 + 1 gratis" is dit koop 3, betaal 2 — je neemt er drie mee en
+   * rekent er twee af.
+   *
+   * Alleen invullen als de actie op dezelfde artikelen slaat. "Gratis
+   * metaalspons bij een spuitbus" is een ánder artikel gratis en past hier
+   * niet in; die moet als cadeauregel, niet als staffel.
+   */
+  koop?: number;
+  betaal?: number;
 }
 
 const TOT_AUGUSTUS = "2026-08-31";
@@ -151,6 +170,8 @@ const STANDAARD: Campagne[] = [
     van: "2026-08-06",
     tot: TOT_DECEMBER,
     staffel: true,
+    koop: 3,
+    betaal: 2,
   },
   {
     id: "sam-tape",
@@ -161,6 +182,8 @@ const STANDAARD: Campagne[] = [
     van: "2026-08-06",
     tot: TOT_AUGUSTUS,
     staffel: true,
+    koop: 2,
+    betaal: 1,
   },
   {
     id: "fitex-schilderstape",
@@ -181,6 +204,8 @@ const STANDAARD: Campagne[] = [
     van: "2026-08-06",
     tot: TOT_AUGUSTUS,
     staffel: true,
+    koop: 5,
+    betaal: 3,
   },
   {
     id: "metaalspons",
@@ -190,6 +215,10 @@ const STANDAARD: Campagne[] = [
     waarop: "Bij spuitlakken van BTC, Levis hittebestendig en Fitex metaallak",
     van: "2026-08-06",
     tot: TOT_AUGUSTUS,
+    // Bewust zonder koop/betaal: hier is een ánder artikel gratis dan wat je
+    // koopt. De staffelmotor rekent binnen dezelfde artikelen en zou hier een
+    // spuitbus weggeven in plaats van een spons. Dit blijft een aankondiging
+    // tot er een cadeauregel is; de winkel legt de spons erbij.
     staffel: true,
   },
   {
@@ -228,7 +257,20 @@ function leesCampagne(ruw: unknown): Campagne | null {
     van,
     tot,
     ...(bron.staffel === true ? { staffel: true } : {}),
+    // Aantallen alleen overnemen als het paar klopt. Een halve staffel (koop
+    // zonder betaal) uit een dashboardformulier mag geen korting worden die
+    // niemand heeft bedoeld; `staffelUitCampagnes` weigert hem dan alsnog,
+    // maar hier al stoppen scheelt een rare campagne in de lijst.
+    ...(getal(bron.koop) && getal(bron.betaal)
+      ? { koop: getal(bron.koop), betaal: getal(bron.betaal) }
+      : {}),
   };
+}
+
+/** Een positief geheel getal, of 0 als het dat niet is. */
+function getal(waarde: unknown): number {
+  const n = Math.floor(Number(waarde));
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 /**

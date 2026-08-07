@@ -365,6 +365,16 @@ export interface CreateOrderInput {
   /** Verzilverde staal-voucher; de korting zit al in `total`. */
   voucherCode?: string;
   voucherKorting?: number;
+  /**
+   * Aantal-actie ("5 halen, 3 betalen"); de korting zit al in `total`.
+   *
+   * ⚠️ Boekt het dashboard door als negatieve regel op KORTINGWEBSHOP. Tilroy
+   * kent deze actie zelf niet, dus zonder die regel loopt het ordertotaal in
+   * de kassa uit de pas met de betaling.
+   */
+  staffelKorting?: number;
+  /** Welke acties dat waren, voor de bon en de bevestigingsmail. */
+  staffelNamen?: string[];
   isTest?: boolean;
 }
 
@@ -389,6 +399,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     ...(input.profpas ? { profpas: true as const } : {}),
     ...(input.voucherCode ? { voucherCode: input.voucherCode } : {}),
     ...(input.voucherKorting ? { voucherKorting: input.voucherKorting } : {}),
+    ...(input.staffelKorting ? { staffelKorting: input.staffelKorting } : {}),
+    ...(input.staffelNamen?.length ? { staffelNamen: input.staffelNamen } : {}),
     channel: "web",
     // Welke webshop dit is. Vast op "vdm": deze code draait maar op één shop.
     // Het dashboard rapporteert per shop en hoeft het nu niet meer uit de
