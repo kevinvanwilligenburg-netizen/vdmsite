@@ -92,6 +92,24 @@ export function PurchasePanel({
     ? pickVariant(product, size, color)
     : variants.find((variant) => variant.id === variantId);
 
+  /*
+   * Kleur gekozen, maar geen basis die hem aankan.
+   *
+   * `pickVariant` geeft dan `undefined` terug: het weigert een diepe tint in
+   * een te lichte basis te stoppen. Dat mag niet stilletjes eindigen in een
+   * koopknop die het toch doet.
+   */
+  const kleurTeDonker = basesInPlay && Boolean(color) && !activeVariant;
+  // De donkerste basis die dit artikel wél heeft, om te kunnen zeggen waaróm.
+  const zwaarsteBasis = kleurTeDonker
+    ? (["donker", "midden", "licht"] as const).find((basis) =>
+        variants.some(
+          (variant) =>
+            variant.base === basis && (!size || (variant.size ?? variant.name) === size),
+        ),
+      )
+    : undefined;
+
   // Het fabriekswit-artikel bij de gekozen inhoud, als dat bestaat en op
   // voorraad is. Zit aan de maat, niet aan de basis.
   const witVariant = basesInPlay
@@ -271,6 +289,18 @@ export function PurchasePanel({
   function handleAdd() {
     if (product.colorMixable && !wit100 && !color) {
       setError("Kies eerst een kleur voor deze mengverf.");
+      setVensterOpen(true);
+      return;
+    }
+    /*
+     * Kleur te donker voor de bases van dit artikel: niet in de wagen.
+     *
+     * Zonder deze rem belandt er een blik in het mandje met een sku die de
+     * winkel niet in die kleur kán mengen — en dat merkt de klant pas als hij
+     * belt waar zijn verf blijft.
+     */
+    if (kleurTeDonker) {
+      setError("Deze kleur past niet in de mengbasis van dit artikel. Kies een lichtere kleur.");
       setVensterOpen(true);
       return;
     }
@@ -564,7 +594,29 @@ export function PurchasePanel({
             </button>
             ))}
 
-          {color && activeBase && (
+          {/*
+            Kleur te donker voor de bases die dit product heeft.
+
+            Melissa: "Deze gaat niet goed bij de betonverf van Histor,
+            misschien omdat we alleen lichte basis hebben daarvan." Precies dat:
+            de site bood Gitzwart aan en zette eronder "wordt gemengd in de
+            lichte basis". Dat kan de machine niet — daar komt grijs uit.
+
+            Het zwaarste dat er wél in past noemen we erbij, anders is dit een
+            afwijzing zonder uitweg.
+          */}
+          {color && kleurTeDonker && (
+            <p className="mt-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+              <strong className="font-bold">
+                {[color.code, color.name].filter(Boolean).join(" ")} kunnen we in deze verf
+                niet mengen.
+              </strong>{" "}
+              {zwaarsteBasis
+                ? `Dit artikel bestaat alleen in de ${PAINT_BASES[zwaarsteBasis].label.toLowerCase()}, en daar is deze kleur te donker voor. Kies een lichtere kleur, of vraag in de winkel naar een verf die wel in een donkere basis komt.`
+                : "Kies een lichtere kleur, of vraag in de winkel wat hiervoor de juiste verf is."}
+            </p>
+          )}
+          {color && !kleurTeDonker && activeBase && (
             <p className="mt-2 text-xs text-ink-soft">
               Wordt gemengd in de{" "}
               <strong className="font-semibold text-ink">
@@ -670,10 +722,14 @@ export function PurchasePanel({
           type="button"
           id="koop-knop"
           onClick={handleAdd}
-          disabled={maatUitverkocht}
+          disabled={maatUitverkocht || kleurTeDonker}
           className="btn btn-primary flex-1 scroll-mt-32 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
         >
-          {maatUitverkocht ? "Tijdelijk uitverkocht" : "In winkelwagen"}
+          {maatUitverkocht
+            ? "Tijdelijk uitverkocht"
+            : kleurTeDonker
+              ? "Kleur kan niet in deze verf"
+              : "In winkelwagen"}
         </button>
       </div>
 

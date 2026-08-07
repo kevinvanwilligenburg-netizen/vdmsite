@@ -15,6 +15,7 @@ import { resolvePaintColor } from "@/lib/colors";
 import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
+import { kleurKanInProduct } from "@/lib/paint-bases";
 import { kiesVoordeligste, staffelregels } from "@/lib/staffel";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { leesAdres, onthoudAdres } from "@/lib/adressen";
@@ -396,6 +397,20 @@ export async function POST(request: Request) {
       }
       const paint = await resolvePaintColor(String(entry.colorKey));
       if (!paint) return badRequest(`Onbekende kleur voor ${product.name}.`);
+      /*
+       * Past deze kleur in een basis die dit artikel heeft?
+       *
+       * De productpagina blokkeert dit al, maar een winkelwagen van gisteren
+       * of een aangepast verzoek komt daar niet langs. En dit is geen
+       * schoonheidsfoutje: bij de Histor betonverf, die alleen in een lichte
+       * basis bestaat, leverde een gitzwarte bestelling een blik op dat de
+       * winkel niet kan mengen. Liever hier weigeren dan aan de mengmachine.
+       */
+      if (!kleurKanInProduct(product, variant?.size ?? variant?.name, paint)) {
+        return badRequest(
+          `${[paint.code, paint.name].filter(Boolean).join(" ")} kunnen we niet mengen in ${product.name}: die verf bestaat alleen in een lichtere mengbasis. Kies een lichtere kleur of een andere verf.`,
+        );
+      }
       color = {
         key: paint.key,
         code: paint.code,

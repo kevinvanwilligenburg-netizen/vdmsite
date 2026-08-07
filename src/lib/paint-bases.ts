@@ -56,10 +56,22 @@ export function baseForColor(hex: string): PaintBaseId {
 }
 
 /**
- * Kies de variant die past bij de gewenste inhoud en kleur. Bestaat de
- * ideale basis niet in die maat, dan pakken we de dichtstbijzijnde die er wel
- * is (een donkere kleur kan altijd in een donkerdere basis, nooit in een te
- * lichte).
+ * Kies de variant die past bij de gewenste inhoud en kleur.
+ *
+ * Bestaat de ideale basis niet in die maat, dan pakken we een DONKERDERE die
+ * er wel is. Nooit een lichtere: in een lichte basis zit te veel wit pigment
+ * om er een diepe tint van te maken, en dan komt er grijs uit de machine in
+ * plaats van zwart.
+ *
+ * ⚠️ Die regel stond hier al in het commentaar maar niet in de code. De
+ * volgorde eindigde voor elke kleur op "licht", dus viel hij daar altijd op
+ * terug. Melissa liep er tegenaan bij de Histor betonverf, die alleen in een
+ * lichte basis bestaat: de site bood Gitzwart RAL 9005 gewoon aan en zette
+ * eronder "wordt gemengd in de lichte basis". Dat kan de winkel niet maken.
+ *
+ * Kan het niet, dan geven we `undefined` terug. Dat is het eerlijke antwoord;
+ * de koopknop hoort daarop te reageren en niet op een blik dat toevallig
+ * bestaat.
  */
 export function pickVariant(
   product: Product,
@@ -74,19 +86,42 @@ export function pickVariant(
 
   if (!color) return candidates[0];
 
+  // Alleen deze basis of donkerder. Een lichte kleur mág in een donkere basis
+  // (zonde van het pigment, maar het klopt); andersom nooit.
   const wanted = baseForColor(color.hex);
   const order: PaintBaseId[] =
     wanted === "licht"
       ? ["licht", "midden", "donker"]
       : wanted === "midden"
-        ? ["midden", "donker", "licht"]
-        : ["donker", "midden", "licht"];
+        ? ["midden", "donker"]
+        : ["donker"];
 
   for (const base of order) {
     const match = candidates.find((variant) => variant.base === base);
     if (match) return match;
   }
-  return candidates[0];
+
+  /*
+   * Geen enkele bruikbare basis. Heeft dit product helemaal geen basis-
+   * varianten, dan is het geen mengverf en slaat de hele vraag niet op — dan
+   * gewoon het blik teruggeven, zoals hiervoor.
+   */
+  return candidates.some((variant) => variant.base) ? undefined : candidates[0];
+}
+
+/**
+ * Kan deze kleur in dit product gemengd worden?
+ *
+ * Zo niet, dan hoort de klant dat te lezen vóórdat hij bestelt — en hoort de
+ * bestelling geweigerd te worden als hij het toch probeert.
+ */
+export function kleurKanInProduct(
+  product: Product,
+  size: string | undefined,
+  color: PaintColor | null,
+): boolean {
+  if (!color) return true;
+  return pickVariant(product, size, color) !== undefined;
 }
 
 /** De beschikbare inhoudsmaten van een product, in de volgorde van de feed. */
