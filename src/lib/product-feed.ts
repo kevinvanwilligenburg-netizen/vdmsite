@@ -1995,6 +1995,8 @@ interface CachedCatalog {
   at: number;
   /** Welke feed deze catalogus opleverde; nodig voor de diagnose. */
   bron?: "json" | "xml";
+  /** Hoeveel producten er in actie stonden; zie waarschuwBijActieval. */
+  acties?: number;
   products: Product[];
 }
 
@@ -2011,12 +2013,46 @@ async function readFromKv(): Promise<CachedCatalog | null> {
   }
 }
 
-async function writeToKv(products: Product[]): Promise<void> {
+/**
+ * Slaat alarm als een verse catalogus ineens bijna geen acties meer heeft.
+ *
+ * ⚠️ Dit is het net onder de trapeze, en het is er niet voor niets.
+ *
+ * Op 7 augustus 2026 stond op Vercel een Instant Rollback van het dashboard
+ * waardoor beide feeds urenlang een build van 4 augustus serveerden — van vóór
+ * de hele actieprijzen-keten. Tilroy klopte, de cron draaide, de feed gaf
+ * netjes 200. Alleen: nul promoprijzen. Onze uurlijkse herbouw pakte die lege
+ * feed op en de winkel verkocht 921 actieartikelen tegen de volle prijs,
+ * terwijl de kassa 50% gaf. Niemand kreeg een foutmelding, want er wás geen
+ * fout — alleen oude data.
+ *
+ * Een wegvallende bron kun je niet altijd zien. Een catalogus die van 921 naar
+ * 0 acties gaat wél. Daarom vergelijken we met de vorige bouw: verdampt meer
+ * dan negentig procent, dan is dat vrijwel nooit een echt afgelopen campagne
+ * maar een bron die iets anders zegt dan gisteren.
+ *
+ * Bewust alleen loggen en niet weigeren: een catalogus zonder acties is nog
+ * altijd een werkende winkel, en helemaal geen catalogus is dat niet.
+ */
+function waarschuwBijActieval(nieuw: Product[], vorige: CachedCatalog | null): void {
+  const nu = nieuw.filter((product) => product.actie).length;
+  const toen = vorige?.acties ?? 0;
+  if (toen < 20 || nu >= toen * 0.1) return;
+  console.error(
+    `[catalogus] ACTIES WEGGEVALLEN: ${toen} → ${nu}. ` +
+      `Bron ${laatsteBron}. De winkel verkoopt nu mogelijk tegen de volle prijs ` +
+      `terwijl de kassa korting geeft — controleer of de feed een oude build serveert.`,
+  );
+}
+
+async function writeToKv(products: Product[], vorige: CachedCatalog | null = null): Promise<void> {
   if (!isKvEnabled() || products.length === 0) return;
   try {
+    waarschuwBijActieval(products, vorige);
     const payload: CachedCatalog = {
       at: Date.now(),
       bron: laatsteBron === "onbekend" ? undefined : laatsteBron,
+      acties: products.filter((product) => product.actie).length,
       products,
     };
     await kvSetEx(KV_KEY, JSON.stringify(payload), KV_TTL_SECONDS);
@@ -2051,7 +2087,9 @@ export async function loadFeedProducts(): Promise<Product[]> {
     try {
       const products = await fetchFeed();
       cache = { at: Date.now(), products };
-      await writeToKv(products);
+      // `stored` is de vorige bouw: die telling gebruiken we om te zien of de
+      // acties ineens verdampt zijn. Zie waarschuwBijActieval.
+      await writeToKv(products, stored);
       return products;
     } catch (error) {
       console.error("[catalogus] productfeed niet beschikbaar:", error);
