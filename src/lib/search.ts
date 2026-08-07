@@ -114,12 +114,28 @@ function indexProduct(product: Product): Indexed {
   return { product, name, haystack, words: haystack.split(" ") };
 }
 
-/** Score voor één term; 0 betekent: dit product past niet. */
+/**
+ * Score voor één term; 0 betekent: dit product past niet.
+ *
+ * Een SYNONIEM weegt minder dan het woord zelf. Zonder dat verschil scoorde
+ * "Latex Werkhandschoenen" op de zoekterm "muurverf" net zo hoog als
+ * "Muurverf roller": `muurverf → latex` staat in de synoniemenlijst, de
+ * handschoen begint met "latex", en dat gaf tien punten. Zoeken op muurverf
+ * en een werkhandschoen bovenaan krijgen is precies waarom mensen denken dat
+ * een zoekfunctie niet werkt.
+ *
+ * De term zelf houdt zijn volle gewicht; alles daarna telt voor iets meer dan
+ * de helft. Genoeg om gevonden te worden, te weinig om te winnen van een
+ * echte treffer.
+ */
+const SYNONIEM_GEWICHT = 0.55;
+
 function scoreTerm(entry: Indexed, term: Term): number {
-  for (const variant of term.variants) {
-    if (entry.name.startsWith(variant)) return 10;
-    if (entry.name.includes(variant)) return 7;
-    if (entry.haystack.includes(variant)) return 3;
+  for (const [index, variant] of term.variants.entries()) {
+    const gewicht = index === 0 ? 1 : SYNONIEM_GEWICHT;
+    if (entry.name.startsWith(variant)) return 10 * gewicht;
+    if (entry.name.includes(variant)) return 7 * gewicht;
+    if (entry.haystack.includes(variant)) return 3 * gewicht;
   }
   // Tikfout-tolerantie: alleen als niets exact matcht.
   if (term.tolerance > 0) {
@@ -154,6 +170,27 @@ export function scoreProducts(products: Product[], query: string): SearchHit[] {
       total += score;
     }
     if (!alle) continue;
+    /*
+     * Zit het product in de rubriek waar je op zoekt? Dan telt dat zwaar.
+     *
+     * Zonder dit won "Muurverf roller" van elke echte muurverf: die roller
+     * begínt met het woord en scoort dus tien, terwijl "Alabastine 2 in 1
+     * Muurverf Vlekken Mat" het woord middenin heeft en op zeven blijft
+     * steken. Wie "muurverf" typt wil verf, geen roller — en dat verschil
+     * staat in de rubriek, niet in de titel.
+     */
+    if (
+      terms.some((term) =>
+        term.variants.some(
+          (variant) =>
+            variant.length > 2 &&
+            normalize(product.attributes?.subcategorie ?? "").includes(variant),
+        ),
+      )
+    ) {
+      total += 6;
+    }
+
     // Kleine voorkeur voor wat de klant direct kan kopen en zien.
     if (product.image) total += 1;
     if (product.inStock !== false) total += 1;
