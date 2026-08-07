@@ -62,11 +62,16 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
 
   // Wat de korting op dit mandje waard is; de server rekent het uit de
   // catalogus, niet uit de prijzen die in de winkelwagen zijn blijven staan.
-  const { bedrag: kluspasKorting, mogelijkeKorting, pas, staffels, staffelKorting } =
+  const { bedrag: kluspasKorting, mogelijkeKorting, regels, pas, staffels, staffelKorting } =
     useKorting(items);
   // De pas bij naam noemen. Er stond hardcoded "Kluspas-korting", ook boven de
   // korting van iemand met een ProfPas — die heeft helemaal geen Kluspas.
   const kortingLabel = pas === "profpas" ? "ProfPas-korting" : "Kluspas-korting";
+  // Wat de server over déze regel weet: van/voor en de actienaam. De sleutel
+  // is dezelfde als daar, en de kleur telt niet mee — twee kleuren van
+  // hetzelfde blik hebben dezelfde prijs en dezelfde actie.
+  const regelStand = (item: { productId: string; variantId?: string }) =>
+    regels[`${item.productId}:${item.variantId ?? ""}`];
 
   if (!hydrated) {
     return <p className="py-16 text-center text-ink-soft">Winkelwagen laden…</p>;
@@ -142,11 +147,33 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
               )}
               {/* Bewust geen pasprijs per regel: die zou uit de opgeslagen
                   winkelwagen komen en dus kunnen verouderen. Het bedrag dat
-                  telt staat onderaan, en dat komt van de server. */}
+                  telt staat onderaan, en dat komt van de server.
+
+                  De van/voor-prijs komt om diezelfde reden óók van de server
+                  (zie /api/korting). Kevin miste hem hier: bij een artikel in
+                  de HG-actie stond alleen "€ 7,00 per stuk", zonder dat je zag
+                  dat dat een actieprijs was. */}
               <p className="mt-1 text-sm text-ink-soft">
                 {toon(item.unitPrice)} per stuk
                 {modus === "excl" && " excl. btw"}
+                {regelStand(item)?.vanaf && (
+                  <>
+                    {" "}
+                    <span className="line-through">{toon(regelStand(item)!.vanaf!)}</span>
+                  </>
+                )}
               </p>
+              {/* Waaróm het een actieprijs is. Een prijskorting zit al in de
+                  stuksprijs en kan dus geen regel in het overzicht krijgen —
+                  dat zou dubbel tellen — maar hier hoort hij wel te staan.
+                  Een aantal-actie noemt zichzelf bij naam. */}
+              {(regelStand(item)?.staffel || regelStand(item)?.actie) && (
+                <p className="mt-1">
+                  <span className="inline-flex items-center rounded-md bg-brand-actie px-1.5 py-0.5 text-xs font-black uppercase text-white">
+                    {regelStand(item)?.staffel ?? "Actieprijs"}
+                  </span>
+                </p>
+              )}
               {/* Zeggen waarom de plusknop niet meer werkt. Zonder die regel
                   lijkt het een storing, en dan belt iemand de winkel. */}
               {item.sku && voorraad[item.sku] !== undefined && item.qty >= maxVoor(item.sku) && (

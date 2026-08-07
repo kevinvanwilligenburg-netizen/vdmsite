@@ -21,9 +21,28 @@ export interface Staffelstand {
   korting: number;
 }
 
+export interface Regelstand {
+  /** `productId:variantId`, zoals de server hem teruggeeft. */
+  sleutel: string;
+  /** Stuksprijs uit de catalogus, in centen. */
+  prijs: number;
+  /** Wat hij kostte vóór de actie; alleen gevuld als er echt een actie loopt. */
+  vanaf?: number;
+  actie: boolean;
+  /** Naam van de aantal-actie die op deze regel afgaat. */
+  staffel?: string;
+}
+
 export interface Kortingstand {
   /** Bedrag in centen. */
   bedrag: number;
+  /**
+   * Wat er per artikel bij hoort te staan: van/voor en de actienaam.
+   *
+   * Gesleuteld op `productId:variantId`. Uit de catalogus, want de winkelwagen
+   * bewaart een prijsmomentopname die kan verouderen.
+   */
+  regels: Record<string, Regelstand>;
   /**
    * Wat een Kluspas op dit mandje extra zou opleveren, in centen.
    *
@@ -52,6 +71,7 @@ export interface Kortingstand {
 const LEEG: Kortingstand = {
   bedrag: 0,
   mogelijkeKorting: 0,
+  regels: {},
   pas: "geen",
   staffels: [],
   staffelKorting: 0,
@@ -89,6 +109,7 @@ export function useKorting(items: CartItem[]): Kortingstand {
           data: {
             korting?: number;
             mogelijkeKorting?: number;
+            regels?: Regelstand[];
             pas?: string;
             staffelKorting?: number;
             staffels?: Staffelstand[];
@@ -101,6 +122,12 @@ export function useKorting(items: CartItem[]): Kortingstand {
             bedrag: data.korting,
             mogelijkeKorting:
               typeof data.mogelijkeKorting === "number" ? data.mogelijkeKorting : 0,
+            regels: Object.fromEntries(
+              (Array.isArray(data.regels) ? data.regels : []).map((regel) => [
+                regel.sleutel,
+                regel,
+              ]),
+            ),
             pas,
             staffels: Array.isArray(data.staffels) ? data.staffels : [],
             staffelKorting:

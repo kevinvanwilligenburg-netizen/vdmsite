@@ -55,6 +55,27 @@ export async function POST(request: Request) {
   // De Kluspas-prijs houden we per regel apart bij, ook voor wie niet is
   // ingelogd: daar komt `mogelijkeKorting` verderop uit.
   const mandje: (MandjeRegel & { kluspasPrijs: number })[] = [];
+  /*
+   * Per regel wat er op het schermpje bij het artikel hoort te staan.
+   *
+   * Kevin: "ik zie nu niet de andere actie en ook niet de van en voor prijs in
+   * de winkelwagen bij t product zelf." De HG-actie van 20% zit al ín de
+   * stuksprijs — die kan er dus geen kortingsregel in het overzicht bij
+   * krijgen, dat zou dubbel tellen — maar bij het artikel zelf hoort wél te
+   * staan dát het een actieprijs is en wat hij eerst was.
+   *
+   * Uit de catalogus en niet uit de opgeslagen winkelwagen: die bewaart een
+   * momentopname die kan verouderen. Zelfde reden als voor het kortingsbedrag,
+   * zie de kop van dit bestand.
+   */
+  const perRegel: {
+    sleutel: string;
+    prijs: number;
+    vanaf?: number;
+    actie: boolean;
+    /** Naam van de aantal-actie die op deze regel afgaat, als die er is. */
+    staffel?: string;
+  }[] = [];
 
   for (const regel of regels) {
     const product = await getProductById(String(regel.productId ?? ""));
@@ -85,6 +106,18 @@ export async function POST(request: Request) {
       kluspasPrijs,
       aantal,
     });
+
+    // Alleen een "van"-prijs als hij écht hoger is. De adviesprijs staat bij
+    // veel artikelen permanent boven onze prijs; daar een doorgestreepte
+    // "van" van maken zou van elke marge een aanbieding maken. Bij een lopende
+    // actie is `compareAtPrice` de gewone prijs en is doorstrepen wél terecht.
+    const vanaf = variant?.compareAtPrice ?? product.compareAtPrice;
+    perRegel.push({
+      sleutel: `${product.id}:${regel.variantId ?? ""}`,
+      prijs,
+      ...(inActie && vanaf && vanaf > prijs ? { vanaf } : {}),
+      actie: inActie,
+    });
   }
 
   const lopende = await staffelregels();
@@ -97,6 +130,15 @@ export async function POST(request: Request) {
    * verder niets, terwijl de merkpagina twee gratis lampen belooft.
    */
   const { toepassingen, staffelKorting, paskorting } = kiesVoordeligste(lopende, mandje);
+
+  // De actienaam bij het artikel zelf. `perRegel` wordt in dezelfde lus
+  // opgebouwd als `mandje`, dus de index van een toepassing wijst hier de
+  // goede regel aan.
+  for (const toepassing of toepassingen) {
+    for (const index of toepassing.indices) {
+      if (perRegel[index]) perRegel[index].staffel = toepassing.regel.naam;
+    }
+  }
 
   /*
    * Wat een Kluspas op dít mandje extra zou opleveren — ook zonder sessie.
@@ -135,6 +177,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     korting: paskorting,
     mogelijkeKorting,
+    regels: perRegel,
     pas,
     staffelKorting,
     staffels: toepassingen.map((toepassing) => ({
