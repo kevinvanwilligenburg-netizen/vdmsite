@@ -4,6 +4,7 @@ import { isEchtMerk, merknaam } from "@/lib/merken";
 import { categorieenUit, loadFeedProducts } from "@/lib/product-feed";
 import { toonbareRubriek } from "@/lib/rubrieken";
 import { scoreProducts, suggestTerms } from "@/lib/search";
+import { noteerMagereHit, zoekregels } from "@/lib/zoekregels";
 import { DASHBOARD_API_URL } from "@/lib/site";
 import { demoStores } from "@/lib/stores";
 import type { Category, Product, Store } from "@/lib/types";
@@ -632,7 +633,21 @@ export async function searchProducts(
   options: { categorySlug?: string; limit?: number } = {},
 ): Promise<SearchResult> {
   const products = await getProducts();
-  const hits = scoreProducts(products, query);
+  /*
+   * Curatie ophalen voor déze zoekterm. De regels staan op de hele zoekzin
+   * (kleine letters), niet per woord: Kevin cureert "witte muurverf" als
+   * geheel, of "muurverf" — niet "witte".
+   */
+  const regels = await zoekregels();
+  const regel = regels.get(query.trim().toLowerCase());
+  const hits = scoreProducts(products, query, regel);
+
+  /*
+   * Zoekopdrachten met weinig of geen resultaten onthouden. Niet afgewacht:
+   * de klant hoort niet te wachten op onze administratie. Zie
+   * lib/zoekregels.ts voor waarom dit de enige plek is waar dit kan.
+   */
+  void noteerMagereHit(query, hits.length);
 
   if (hits.length === 0) {
     return {

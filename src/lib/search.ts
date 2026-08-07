@@ -1,4 +1,5 @@
 import type { Category, Product } from "@/lib/types";
+import type { Zoekregel } from "@/lib/zoekregels";
 
 /**
  * Zoeken over de catalogus.
@@ -151,10 +152,36 @@ export interface SearchHit {
   score: number;
 }
 
-/** Zoek en scoor; producten die niet op álle termen matchen vallen af. */
-export function scoreProducts(products: Product[], query: string): SearchHit[] {
-  const terms = buildTerms(query);
+/**
+ * Zoek en scoor; producten die niet op álle termen matchen vallen af.
+ *
+ * `regel` is de curatie die Kevin in het dashboard instelt voor deze zoekterm
+ * (zie lib/zoekregels.ts). Ontbreekt hij, dan gedraagt het zoeken zich
+ * precies zoals daarvoor — curatie is een correctie, geen voorwaarde.
+ */
+export function scoreProducts(
+  products: Product[],
+  query: string,
+  regel?: Zoekregel,
+): SearchHit[] {
+  let terms = buildTerms(query);
   if (terms.length === 0) return [];
+
+  if (regel) {
+    const uit = new Set(regel.nietSynoniemen ?? []);
+    terms = terms.map((term) => ({
+      ...term,
+      variants: [
+        // De term zelf blijft altijd staan, ook als iemand hem per ongeluk
+        // uitsluit — anders zoek je op een woord dat nergens meer op matcht.
+        term.value,
+        ...[...term.variants.slice(1), ...(regel.synoniemen ?? [])]
+          .filter((variant) => variant !== term.value && !uit.has(variant))
+          // Ontdubbelen: de vaste lijst en Kevins lijst overlappen soms.
+          .filter((variant, index, alle) => alle.indexOf(variant) === index),
+      ],
+    }));
+  }
 
   const hits: SearchHit[] = [];
   for (const product of products) {
@@ -195,10 +222,44 @@ export function scoreProducts(products: Product[], query: string): SearchHit[] {
     if (product.image) total += 1;
     if (product.inStock !== false) total += 1;
     if (product.compareAtPrice && product.compareAtPrice > product.price) total += 0.5;
+
+    if (regel) {
+      const merk = (product.brand ?? "").trim().toLowerCase();
+      if ((regel.merkVoorkeur ?? []).some((m) => m.trim().toLowerCase() === merk)) total += 8;
+      if (
+        regel.rubriek &&
+        normalize(product.attributes?.subcategorie ?? "").includes(normalize(regel.rubriek))
+      ) {
+        total += 8;
+      }
+    }
+
     hits.push({ product, score: total });
   }
 
-  return hits.sort((a, b) => b.score - a.score);
+  hits.sort((a, b) => b.score - a.score);
+
+  /*
+   * Vastgepinde artikelen bovenaan, in de volgorde die Kevin koos.
+   *
+   * Bewust ná het sorteren en niet met een enorme score: een score die alles
+   * overtreft is een getal dat je later niet meer begrijpt, en bij twee
+   * gepinde artikelen zou de onderlinge volgorde alsnog van het toeval
+   * afhangen.
+   *
+   * Een gepinde sku die niet in de resultaten zit, halen we er niet bij. Wie
+   * "muurverf" typt hoort geen kwast te krijgen omdat iemand die ooit heeft
+   * vastgepind — pinnen bepaalt de volgorde, niet wat er gevonden wordt.
+   */
+  const pinnen = regel?.vastgepind ?? [];
+  if (pinnen.length === 0) return hits;
+
+  const positie = (hit: SearchHit) => {
+    const skus = [hit.product.sku, ...(hit.product.variants ?? []).map((v) => v.sku)];
+    const index = pinnen.findIndex((pin) => skus.includes(pin));
+    return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+  };
+  return hits.sort((a, b) => positie(a) - positie(b));
 }
 
 /**
