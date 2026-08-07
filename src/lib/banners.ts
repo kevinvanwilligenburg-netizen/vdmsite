@@ -67,6 +67,50 @@ export interface Banner {
 }
 
 /**
+ * Welke bestandsmaten er per plek nodig zijn.
+ *
+ * ⚠️ EXTERN CONTRACT — het dashboard toont deze maten in de bannertool, zodat
+ * Kevin en Melissa niet hoeven te gokken. Wijzigt de indeling van de homepage,
+ * dan wijzigen deze getallen mee en niet andersom.
+ *
+ * De getallen zijn gemeten aan de echte pagina (7 augustus 2026) en daarna
+ * verdubbeld voor schermen met een hoge resolutie:
+ *
+ *   groot    1440 px venster → 639×725 (0,88:1)
+ *             375 px venster → 168×308 (0,55:1)
+ *   tegel    altijd vierkant → 284×284
+ *   klein    volgt het bestand, tussen 1,6:1 en 3,6:1
+ *
+ * Dat de grote banner staand is en niet liggend, is nieuw sinds hij naast de
+ * tegels staat in plaats van als strook erboven. Een oud bestand van 930×450
+ * past daar niet in: daar blijft op een telefoon nog een derde van over.
+ *
+ * En daarom twee bestanden voor de grote banner. Van 0,88:1 naar 0,55:1 is
+ * geen bijsnijdje maar een andere foto; met één bestand verlies je links en
+ * rechts precies de rand waar "50% KORTING" staat.
+ */
+export const BANNERFORMATEN = {
+  groot: {
+    naam: "Grote banner (links in de etalage)",
+    desktop: { breedte: 1280, hoogte: 1440 },
+    mobiel: { breedte: 800, hoogte: 1400 },
+    let: "Staand, geen liggende strook. Houd tekst en logo in het midden: op een telefoon is de banner smaller en snijdt hij links en rechts bij.",
+  },
+  tegel: {
+    naam: "Tegel (de vier blokjes rechts)",
+    desktop: { breedte: 800, hoogte: 800 },
+    mobiel: { breedte: 800, hoogte: 800 },
+    let: "Altijd vierkant. Eén artikel of één boodschap per tegel; op een telefoon is dit vak 136 px breed, dus meer past er niet in.",
+  },
+  klein: {
+    naam: "Kleine actiebanner (de strook eronder)",
+    desktop: { breedte: 1200, hoogte: 400 },
+    mobiel: { breedte: 1200, hoogte: 400 },
+    let: "Liggend, tussen 2:1 en 3:1. Hetzelfde bestand voor desktop en mobiel; de strook is twee breed op een telefoon en vier op een groot scherm.",
+  },
+} as const;
+
+/**
  * Breedte en hoogte uit de eerste bytes van een afbeelding.
  *
  * We halen alleen de kop op (64 kB), niet het hele bestand: de afmetingen
