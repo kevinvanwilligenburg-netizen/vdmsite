@@ -30,6 +30,15 @@ export interface Campagne {
   /** Merken waar dit over gaat; bepaalt de link en de producttelling. */
   merken?: string[];
   /**
+   * Losse artikelen, als de actie niet op een heel merk slaat.
+   *
+   * Nodig omdat lang niet elke actie een merk ís. Sanicur staat in de feed
+   * onder "No brand" en "Overige", dus een merkfilter vond nul artikelen — en
+   * dan had de kaart geen knop, geen foto's en geen telling. Kevin: "werkt
+   * niet", en terecht.
+   */
+  skus?: string[];
+  /**
    * Kortingsfractie (0.5 = 50%), ALLEEN als noodbrug.
    *
    * ⚠️ Alleen invullen voor merken waarvan Tilroy de actie ÓÓK kent.
@@ -137,7 +146,8 @@ const STANDAARD: Campagne[] = [
     kop: "2 + 1 gratis",
     waarop: "Sanicur",
     klein: "Op = op",
-    merken: ["Sanicur"],
+    // Sanicur staat niet als merk in de feed; deze drie artikelen zijn het.
+    skus: ["39974444", "39981703", "39981782"],
     van: "2026-08-06",
     tot: TOT_DECEMBER,
     staffel: true,
@@ -146,7 +156,8 @@ const STANDAARD: Campagne[] = [
     id: "sam-tape",
     kop: "1 + 1 gratis",
     waarop: "Sam dubbelzijdig tape en kleefband",
-    merken: ["Sam"],
+    // Alleen de dubbelzijdige, niet alle 53 Sam-artikelen.
+    skus: ["39981298", "39981366"],
     van: "2026-08-06",
     tot: TOT_AUGUSTUS,
     staffel: true,
@@ -173,6 +184,8 @@ const STANDAARD: Campagne[] = [
   },
   {
     id: "metaalspons",
+    // Gratis Sam Schuurspons Metaal (39980843) bij deze spuitbussen.
+    skus: ["39973535", "39973533", "39974202", "39974435", "39974436", "39974830", "39980429", "39980409", "39980484"],
     kop: "Gratis metaalspons",
     waarop: "Bij spuitlakken van BTC, Levis hittebestendig en Fitex metaallak",
     van: "2026-08-06",
@@ -181,6 +194,8 @@ const STANDAARD: Campagne[] = [
   },
   {
     id: "handschoenen",
+    // De vinyl M staat niet in de webshop; alleen de vitril XL bestaat.
+    skus: ["39978094"],
     kop: "€ 4,95 en € 6,95",
     waarop: "Classic vinyl handschoen M (100 st.) en vitril poedervrij blauw XL (100 st.)",
     van: "2026-08-06",
@@ -205,6 +220,9 @@ function leesCampagne(ruw: unknown): Campagne | null {
     ...(tekst(bron.klein, 120) ? { klein: tekst(bron.klein, 120) } : {}),
     ...(Array.isArray(bron.merken)
       ? { merken: bron.merken.map((m) => tekst(m, 60)).filter(Boolean) }
+      : {}),
+    ...(Array.isArray(bron.skus)
+      ? { skus: bron.skus.map((s) => tekst(s, 40)).filter(Boolean) }
       : {}),
     ...(tekst(bron.href, 200) ? { href: tekst(bron.href, 200) } : {}),
     van,
@@ -236,6 +254,25 @@ export function campagneKorting(merk: string | undefined, nu: number = Date.now(
     if (doel.some((m) => m.toLowerCase() === naam)) return campagne.procent;
   }
   return 0;
+}
+
+/**
+ * Valt dit product onder deze campagne?
+ *
+ * Op merk óf op sku — een actie is niet altijd een merk. Sku's worden per
+ * variant vergeleken, want de klant koopt een blik en niet een productgroep.
+ */
+export function campagneRaakt(
+  campagne: Campagne,
+  product: { brand?: string; sku?: string; variants?: { sku: string }[] },
+): boolean {
+  if (campagne.skus?.length) {
+    const van = new Set(campagne.skus);
+    if (product.sku && van.has(product.sku)) return true;
+    return (product.variants ?? []).some((variant) => van.has(variant.sku));
+  }
+  const merk = (product.brand ?? "").trim().toLowerCase();
+  return Boolean(merk) && (campagne.merken ?? []).some((m) => m.toLowerCase() === merk);
 }
 
 /** Loopt of staat gepland; verlopen campagnes verdwijnen vanzelf. */

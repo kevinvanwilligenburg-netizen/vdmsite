@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { getLopendeActies } from "@/lib/actiepagina";
-import { campagneStand, getCampagnes, type Campagne } from "@/lib/campagnes";
+import { campagneRaakt, campagneStand, getCampagnes, type Campagne } from "@/lib/campagnes";
 import { getProducts } from "@/lib/tilroy";
 import type { Product } from "@/lib/types";
 
@@ -133,13 +133,10 @@ export default async function ActieOverzicht() {
   // Aantal artikelen per campagne, zodat de kaart concreet is in plaats van
   // een belofte. Nul betekent: dat merk staat (nog) niet in de catalogus —
   // dan geen knop, want die zou naar een lege pagina gaan.
-  const perMerk = new Map<string, number>();
-  for (const product of producten) {
-    const merk = (product.brand ?? "").trim().toLowerCase();
-    if (merk) perMerk.set(merk, (perMerk.get(merk) ?? 0) + 1);
-  }
-  const telling = (campagne: Campagne) =>
-    (campagne.merken ?? []).reduce((som, merk) => som + (perMerk.get(merk.toLowerCase()) ?? 0), 0);
+  // Per campagne de producten die eronder vallen -- op merk óf op sku.
+  const vanCampagne = (campagne: Campagne) =>
+    producten.filter((product) => campagneRaakt(campagne, product));
+  const telling = (campagne: Campagne) => vanCampagne(campagne).length;
 
   /*
    * Drie voorbeelden per kaart, mét foto.
@@ -149,11 +146,7 @@ export default async function ActieOverzicht() {
    * beter een plaatje van het assortiment dan een leeg vlak.
    */
   const voorbeelden = (campagne: Campagne): Product[] => {
-    const merken = (campagne.merken ?? []).map((m) => m.toLowerCase());
-    if (merken.length === 0) return [];
-    const van = producten.filter(
-      (product) => merken.includes((product.brand ?? "").trim().toLowerCase()) && product.image,
-    );
+    const van = vanCampagne(campagne).filter((product) => product.image);
     const inActie = van.filter((product) => product.actie);
     return (inActie.length >= 3 ? inActie : van).slice(0, 3);
   };

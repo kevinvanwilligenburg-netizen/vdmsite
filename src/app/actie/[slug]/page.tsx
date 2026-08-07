@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ProductCard } from "@/components/ProductCard";
 import { actieLoopt, actieStand, getActiepagina, vulBlokken } from "@/lib/actiepagina";
-import { campagneStand, getCampagnes, type Campagne } from "@/lib/campagnes";
+import { campagneRaakt, campagneStand, getCampagnes, type Campagne } from "@/lib/campagnes";
 import { getProducts } from "@/lib/tilroy";
 
 /**
@@ -64,10 +64,7 @@ function alineas(tekst: string) {
  */
 async function CampagnePagina({ campagne }: { campagne: Campagne }) {
   const alles = await getProducts();
-  const merken = (campagne.merken ?? []).map((m) => m.toLowerCase());
-  const vanCampagne = alles.filter((product) =>
-    merken.includes((product.brand ?? "").trim().toLowerCase()),
-  );
+  const vanCampagne = alles.filter((product) => campagneRaakt(campagne, product));
   const inActie = vanCampagne.filter((product) => product.actie);
   const rest = vanCampagne.filter((product) => !product.actie);
   const stand = campagneStand(campagne);
@@ -119,7 +116,7 @@ async function CampagnePagina({ campagne }: { campagne: Campagne }) {
       {rest.length > 0 && (
         <section>
           <h2 className="mb-4 text-xl font-black uppercase text-ink">
-            Ook van {(campagne.merken ?? []).join(", ")}
+            Ook uit deze actie
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {rest.slice(0, 8).map((product) => (

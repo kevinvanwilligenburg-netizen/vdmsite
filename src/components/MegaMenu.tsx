@@ -191,6 +191,16 @@ export function MegaMenu({ categories }: { categories: MenuCategory[] }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
+          {/* Acties in het rood, naast de categorieën. Rood is in de
+              huisstijlgids het actiekleur (PMS 2347) en het is de enige knop
+              in deze balk die er niet uitziet als navigatie — dat is precies
+              de bedoeling. */}
+          <Link
+            href="/actie"
+            className="inline-flex items-center gap-1.5 rounded-md bg-brand-actie px-3 py-1.5 font-black text-white transition hover:brightness-110"
+          >
+            Acties
+          </Link>
           <Link
             href="/klusadvies"
             className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition hover:text-brand-bright"
