@@ -34,13 +34,18 @@ export interface Banner {
   subkop?: string;
   knopLabel?: string;
   /**
-   * Groot (de slideshow bovenaan) of klein (het rijtje van twee eronder).
+   * Waar de banner op de homepage terechtkomt.
    *
-   * Het dashboard kent dit veld nog niet; tot die tijd is alles groot en
-   * blijft het rijtje kleine banners gewoon leeg. Zodra ze het meesturen,
-   * werkt het hier zonder verdere wijziging.
+   * - `groot`  de slideshow links in de etalage
+   * - `tegel`  het blokje rechts ernaast (vier stuks, vierkant)
+   * - `klein`  de strook met kleinere acties eronder
+   *
+   * ⚠️ EXTERN CONTRACT — het dashboard stuurt dit mee. Kent het `tegel` nog
+   * niet, dan blijven de vier plekken rechts gevuld met actieproducten uit de
+   * catalogus; er ontstaat dus nooit een gat. Zodra Kevin er een tegel
+   * neerzet, wint die van het product.
    */
-  formaat: "groot" | "klein";
+  formaat: "groot" | "tegel" | "klein";
   /**
    * Ware afmetingen van de desktopafbeelding, uit de bestandsheader.
    *
@@ -152,7 +157,11 @@ async function afmetingenVan(url: string): Promise<{ breedte: number; hoogte: nu
  */
 const RATIO_GRENZEN: Record<Banner["formaat"], Record<"mobiel" | "desktop", [number, number, string]>> = {
   //                    [ smalst, breedst, terugval ]
-  groot: { mobiel: [0.8, 2.4, "1 / 1"], desktop: [1.8, 3.2, "3 / 1"] },
+  // De grote banner staat sinds de etalage-indeling naast de tegels en is dus
+  // geen brede strook meer maar een staand tot vierkant vlak — op beide
+  // schermen. Een 3:1-strook naast een blok van vier tegels laat een gat.
+  groot: { mobiel: [0.7, 1.4, "1 / 1"], desktop: [0.8, 1.6, "1 / 1"] },
+  tegel: { mobiel: [0.8, 1.3, "1 / 1"], desktop: [0.8, 1.3, "1 / 1"] },
   klein: { mobiel: [1.6, 3.6, "2 / 1"], desktop: [1.6, 3.6, "2 / 1"] },
 };
 
@@ -225,7 +234,12 @@ export async function getBanners(): Promise<Banner[]> {
           ...(schoon(item.kop) ? { kop: schoon(item.kop).slice(0, 60) } : {}),
           ...(schoon(item.subkop) ? { subkop: schoon(item.subkop).slice(0, 120) } : {}),
           ...(schoon(item.knopLabel) ? { knopLabel: schoon(item.knopLabel).slice(0, 30) } : {}),
-          formaat: schoon(item.formaat).toLowerCase() === "klein" ? "klein" : "groot",
+          formaat:
+            schoon(item.formaat).toLowerCase() === "klein"
+              ? "klein"
+              : schoon(item.formaat).toLowerCase() === "tegel"
+                ? "tegel"
+                : "groot",
         },
       ];
     });
@@ -239,7 +253,7 @@ export async function getBanners(): Promise<Banner[]> {
      * het is alleen zacht, en dat ziet niemand in een logregel terug. Vandaar
      * de waarschuwing: opblazen kunnen we niet oplossen met code.
      */
-    const MINIMUM: Record<Banner["formaat"], number> = { groot: 1600, klein: 800 };
+    const MINIMUM: Record<Banner["formaat"], number> = { groot: 1200, tegel: 600, klein: 800 };
     return Promise.all(
       banners.map(async (banner) => {
         // De telefoonvariant is nu vaak hetzelfde bestand; dan hoeft hij niet

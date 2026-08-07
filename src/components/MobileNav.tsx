@@ -91,6 +91,29 @@ export function MobileNav({
               </button>
             </div>
 
+            {/*
+              Acties bovenaan, en in het rood.
+
+              Op een breed scherm staat deze knop naast de categorieën in de
+              balk; in dit menu stond hij er helemaal niet, terwijl juist op een
+              telefoon álles achter dit ene knopje zit. Kevin: "geen actie
+              button in de mobiele versie website, menu. die mag bovenaan."
+
+              Bovenaan en niet tussen de rubrieken: wie het menu opent tijdens
+              een lopende campagne moet er niet eerst langs elf categorieën
+              voor scrollen.
+            */}
+            <div className="border-b border-ink/10 p-4">
+              <Link
+                href="/actie"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between rounded-xl bg-brand-actie px-4 py-3 font-black uppercase text-white transition hover:brightness-110"
+              >
+                Acties
+                <span aria-hidden>→</span>
+              </Link>
+            </div>
+
             <div className="p-4">
               <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink-soft">
                 Assortiment

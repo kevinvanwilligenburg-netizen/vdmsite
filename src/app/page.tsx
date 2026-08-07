@@ -4,8 +4,8 @@ import { CategoryCard } from "@/components/CategoryCard";
 import { Icon } from "@/components/icons";
 import { ProductCard } from "@/components/ProductCard";
 import { TrustpilotWidget } from "@/components/TrustpilotWidget";
-import { BannerSlideshow } from "@/components/BannerSlideshow";
 import { KleineBanners } from "@/components/KleineBanners";
+import { Etalage } from "@/components/home/Etalage";
 import { getBanners } from "@/lib/banners";
 import { getBanner } from "@/lib/content";
 import { popularRalCodes, ralColors } from "@/lib/ral";
@@ -71,6 +71,7 @@ export default async function HomePage() {
   // onderscheid nog niet, dus tot die tijd is alles groot en blijft het rijtje
   // leeg — beter een lege plek dan een kleine banner op een grote plaats.
   const groteBanners = banners.filter((item) => item.formaat === "groot");
+  const tegelBanners = banners.filter((item) => item.formaat === "tegel");
   const kleineBanners = banners.filter((item) => item.formaat === "klein");
 
   const heroCtaLabel = banner?.ctaLabel ?? "Bekijk de topdeals";
@@ -91,13 +92,20 @@ export default async function HomePage() {
         pas als de posities al weg zijn. Daarom hieronder een smalle regel in
         plaats van het hele oranje blok.
       */}
-      {/* De grote en de kleine banners horen bij elkaar: samen zijn ze de
-          etalage. Stonden ze los in het `space-y-14`-ritme van de pagina, dan
-          zat er 56 px lucht tussen — dat leest als twee losse blokken met een
-          gat, niet als één etalage. Naar buiten toe houdt het blok wél die
-          ruimte, want daaronder begint iets anders. */}
-      <div className="space-y-3">
-        <BannerSlideshow banners={groteBanners} />
+      {/* De etalage: grote banner links, vier tegels rechts, en daaronder de
+          strook met kleinere acties. De indeling die Kevin wilde, naar het
+          voorbeeld van bol — en met opzet dezelfde vorm op een telefoon.
+
+          Ze horen bij elkaar en staan daarom in één blok. Los in het
+          `space-y-14`-ritme van de pagina zat er 56 px lucht tussen, en dat
+          leest als twee losse dingen met een gat. Naar buiten toe houdt het
+          blok die ruimte wél, want daaronder begint iets anders. */}
+      <div className="space-y-2 sm:space-y-3">
+        <Etalage
+          groteBanners={groteBanners}
+          tegelBanners={tegelBanners}
+          producten={deals}
+        />
         <KleineBanners banners={kleineBanners} />
       </div>
       {/* Smalle titelregel in plaats van het oranje heroblok: de homepage

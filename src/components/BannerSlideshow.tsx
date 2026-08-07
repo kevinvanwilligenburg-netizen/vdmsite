@@ -19,7 +19,24 @@ import { bannerRatio, type Banner } from "@/lib/banners";
 
 const WISSEL_MS = 6000;
 
-export function BannerSlideshow({ banners }: { banners: Banner[] }) {
+export function BannerSlideshow({
+  banners,
+  vullend = false,
+}: {
+  banners: Banner[];
+  /**
+   * Het hele vak vullen in plaats van de eigen verhouding aanhouden.
+   *
+   * Nodig sinds de banner in de etalage naast de tegels staat: die kolom is
+   * zo hoog als vier tegels, en een banner die zijn eigen 3:1 aanhoudt laat
+   * daar 300 px wit onder zich staan. Precies waar Kevin eerder over viel bij
+   * Mark ("maak mark vullend nu veel witruimte").
+   *
+   * Op zichzelf staand blijft de verhouding leidend, want dan is er geen vak
+   * om te vullen en zou `h-full` niets betekenen.
+   */
+  vullend?: boolean;
+}) {
   const [actief, setActief] = useState(0);
   const [pauze, setPauze] = useState(false);
   const aantal = banners.length;
@@ -74,8 +91,11 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
   return (
     <section
       aria-roledescription="carousel"
-      aria-label="Acties"
-      className="relative overflow-hidden rounded-2xl shadow-card"
+      // Niet "Acties": dat is de naam van de strook kleine banners eronder, en
+      // twee blokken met dezelfde naam zijn voor een schermlezer niet uit
+      // elkaar te houden.
+      aria-label="Uitgelichte actie"
+      className={`relative overflow-hidden rounded-2xl shadow-card ${vullend ? "h-full" : ""}`}
       style={ratios}
       onMouseEnter={() => setPauze(true)}
       onMouseLeave={() => setPauze(false)}
@@ -116,7 +136,13 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
               De grens uit `bannerRatio` houdt de oude bescherming overeind:
               een gek aangeleverde maat wordt nog steeds bijgesneden.
             */}
-            <div className="relative aspect-[var(--banner-mobiel)] overflow-hidden md:aspect-[var(--banner-desktop)]">
+            <div
+              className={
+                vullend
+                  ? "relative h-full overflow-hidden"
+                  : "relative aspect-[var(--banner-mobiel)] overflow-hidden md:aspect-[var(--banner-desktop)]"
+              }
+            >
               {/* Twee bronnen in één <picture>: de browser kiest, dus er wordt
                   er maar één gedownload. */}
               <picture>
@@ -183,10 +209,15 @@ export function BannerSlideshow({ banners }: { banners: Banner[] }) {
             {...(zichtbaar ? {} : { "aria-hidden": true, inert: true })}
             // `relative` zodat de tekstlaag binnen déze banner valt en niet
             // over de hele slideshow.
-            className={zichtbaar ? "relative block" : "hidden"}
+            className={
+              zichtbaar ? (vullend ? "relative block h-full" : "relative block") : "hidden"
+            }
           >
             {banner.link ? (
-              <Link href={banner.link} className="block">
+              // Ook de link moet de hoogte doorgeven, anders valt de keten van
+              // `h-full` hier stil en blijft het plaatje op zijn eigen
+              // verhouding staan met wit eronder.
+              <Link href={banner.link} className={vullend ? "block h-full" : "block"}>
                 {plaatje}
               </Link>
             ) : (
