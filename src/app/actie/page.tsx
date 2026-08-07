@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Icon } from "@/components/icons";
 import { getLopendeActies } from "@/lib/actiepagina";
 import { campagneStand, getCampagnes, type Campagne } from "@/lib/campagnes";
-import { brandSlug, getProducts } from "@/lib/tilroy";
+import { getProducts } from "@/lib/tilroy";
+import type { Product } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +29,25 @@ const datum = (waarde: string) =>
  * "Alle Mack, Benson en Hofftech" begint laat de klant lezen; een kaart die
  * met "50%" begint laat hem kijken.
  */
-function Actiekaart({ campagne, aantal }: { campagne: Campagne; aantal: number }) {
+function Actiekaart({
+  campagne,
+  aantal,
+  voorbeelden,
+}: {
+  campagne: Campagne;
+  aantal: number;
+  /** Een paar producten uit deze actie, als plaatje op de kaart. */
+  voorbeelden: Product[];
+}) {
   const stand = campagneStand(campagne);
-  const merk = campagne.merken?.[0];
-  const href = campagne.href ?? (merk && aantal > 0 ? `/merk/${brandSlug(merk)}` : undefined);
+  /*
+   * Altijd naar de campagnepagina, niet naar een merkpagina.
+   *
+   * "Alle Mack, Benson en Hofftech" linkte naar /merk/mack en toonde dus één
+   * merk — één kaart kan nu eenmaal maar naar één merkpagina. De
+   * campagnepagina toont ze samen, mét de korting erboven.
+   */
+  const href = campagne.href ?? `/actie/${campagne.id}`;
   // Percentages zijn kort en mogen enorm; "5 halen, 3 betalen" moet passen.
   const kort = campagne.kop.length <= 5;
 
@@ -52,6 +69,36 @@ function Actiekaart({ campagne, aantal }: { campagne: Campagne; aantal: number }
       {campagne.klein && (
         <p className="mt-1 text-sm font-semibold text-white/80">{campagne.klein}</p>
       )}
+      {/*
+        Een paar producten op de kaart. Kevin: "mis producten laten zien wat
+        het is in de afbeelding?" — terecht: "Alle Mack, Benson en Hofftech"
+        zegt een klant die het merk niet kent helemaal niets, en drie foto's
+        wel. Op witte vlakjes, want de productfoto's hebben zelf een witte
+        achtergrond en verdwijnen anders in het rood.
+      */}
+      {voorbeelden.length > 0 && (
+        <div className="mt-4 flex gap-2">
+          {voorbeelden.map((product) => (
+            <span
+              key={product.id}
+              className="relative h-16 w-16 overflow-hidden rounded-lg bg-white"
+            >
+              {product.image ? (
+                <Image
+                  src={product.image}
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="h-full w-full object-contain p-1"
+                  // Puur decoratief naast de tekst; de kaart zegt het al.
+                  aria-hidden
+                />
+              ) : null}
+            </span>
+          ))}
+        </div>
+      )}
+
       <p className="mt-auto pt-4 text-xs font-semibold text-white/70">
         Tot en met {datum(campagne.tot)}
         {aantal > 0 && ` · ${aantal} artikelen`}
@@ -94,6 +141,23 @@ export default async function ActieOverzicht() {
   const telling = (campagne: Campagne) =>
     (campagne.merken ?? []).reduce((som, merk) => som + (perMerk.get(merk.toLowerCase()) ?? 0), 0);
 
+  /*
+   * Drie voorbeelden per kaart, mét foto.
+   *
+   * Bij voorkeur artikelen die écht in de actie zitten — die tonen wat de
+   * klant krijgt. Loopt de actie nog niet, dan gewoon iets van het merk;
+   * beter een plaatje van het assortiment dan een leeg vlak.
+   */
+  const voorbeelden = (campagne: Campagne): Product[] => {
+    const merken = (campagne.merken ?? []).map((m) => m.toLowerCase());
+    if (merken.length === 0) return [];
+    const van = producten.filter(
+      (product) => merken.includes((product.brand ?? "").trim().toLowerCase()) && product.image,
+    );
+    const inActie = van.filter((product) => product.actie);
+    return (inActie.length >= 3 ? inActie : van).slice(0, 3);
+  };
+
   const lopen = campagnes.filter((c) => campagneStand(c) === "loopt");
   const komen = campagnes.filter((c) => campagneStand(c) === "nog-niet");
 
@@ -116,7 +180,12 @@ export default async function ActieOverzicht() {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {lopen.map((campagne) => (
-              <Actiekaart key={campagne.id} campagne={campagne} aantal={telling(campagne)} />
+              <Actiekaart
+                key={campagne.id}
+                campagne={campagne}
+                aantal={telling(campagne)}
+                voorbeelden={voorbeelden(campagne)}
+              />
             ))}
           </div>
         </section>
@@ -132,7 +201,12 @@ export default async function ActieOverzicht() {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {komen.map((campagne) => (
-              <Actiekaart key={campagne.id} campagne={campagne} aantal={telling(campagne)} />
+              <Actiekaart
+                key={campagne.id}
+                campagne={campagne}
+                aantal={telling(campagne)}
+                voorbeelden={voorbeelden(campagne)}
+              />
             ))}
           </div>
         </section>

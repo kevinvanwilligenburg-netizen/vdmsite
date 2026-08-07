@@ -56,7 +56,10 @@ export interface Staffelregel {
  * de bon zegt is een probleem dat je met de hand moet oplossen.
  */
 export function staffelSku(): string {
-  return process.env.TILROY_KORTING_SKU ?? "KORTINGWEBSHO";
+  // KORTINGWEBSHOP, mét de P. De barcode in Kevins bericht was afgekapt tot
+  // "KORTINGWEBSHO"; één teken verschil en de kassa kent de regel niet — zelfde
+  // valkuil als de kleurtester, die bij ons een streepje te veel had.
+  return process.env.TILROY_KORTING_SKU ?? "KORTINGWEBSHOP";
 }
 
 /**
