@@ -19,7 +19,15 @@ import type { CartColor, OrderItem } from "@/lib/types";
  */
 
 export const STAAL_PRODUCT_ID = "kleurtester";
-export const STAAL_SKU = "KLEURTESTER-30ML";
+/**
+ * Het Tilroy-artikel voor een kleurtester.
+ *
+ * ⚠️ Zonder streepje. Hier stond "KLEURTESTER-30ML", maar Kevin heeft het
+ * artikel op 6 augustus 2026 aangemaakt als **KLEURTESTER30ML**. Eén teken
+ * verschil en de kassa kent de orderregel niet — dan strandt elke
+ * testerbestelling, en dat merk je pas bij het inboeken.
+ */
+export const STAAL_SKU = "KLEURTESTER30ML";
 export const STAAL_NAAM = "Kleurtester 30 ml";
 
 /** In centen. Gelijk aan de testerprijs van verfwinkel.nl (€ 2,99). */

@@ -56,7 +56,20 @@ export interface Staffelregel {
  * de bon zegt is een probleem dat je met de hand moet oplossen.
  */
 export function staffelSku(): string {
-  return process.env.TILROY_KORTING_SKU ?? "";
+  return process.env.TILROY_KORTING_SKU ?? "VERZENDKORTING";
+}
+
+/**
+ * Het Tilroy-artikel voor de spoedtoeslag (same-day, € 1,25).
+ *
+ * Waarom dit een artikelregel moet zijn en geen verzendregel: de Order API
+ * weigert elke verzendvariant en rekent uitsluitend zijn eigen DELIVERYCOST.
+ * Onze toeslag bereikte Tilroy dus nooit en élke spoedorder week € 1,25 af —
+ * de klant had méér betaald dan de bon zei. Productregels tellen wél gewoon
+ * op, dus zo klopt het totaal.
+ */
+export function spoedSku(): string {
+  return process.env.TILROY_SPOED_SKU ?? "SPOEDLEVERING";
 }
 
 export interface Staffelregel_Toepassing {
