@@ -56,7 +56,22 @@ export interface Staffelregel {
  * de bon zegt is een probleem dat je met de hand moet oplossen.
  */
 export function staffelSku(): string {
-  return process.env.TILROY_KORTING_SKU ?? "VERZENDKORTING";
+  return process.env.TILROY_KORTING_SKU ?? "KORTINGWEBSHO";
+}
+
+/**
+ * Het Tilroy-artikel voor een verzendkorting.
+ *
+ * Apart van `staffelSku()` omdat het twee verschillende dingen zijn en de
+ * boekhouding dat verschil wil zien: dit heft Tilroys eigen DELIVERYCOST op
+ * (Sikkens gaat franco de deur uit, de kassa rekent toch € 4,95), terwijl
+ * KORTINGWEBSHO korting op de artikelen zelf is.
+ *
+ * Zet ze op hetzelfde artikel als Kevin dat liever heeft — dan is dit één
+ * regel veranderen in plaats van overal.
+ */
+export function verzendkortingSku(): string {
+  return process.env.TILROY_VERZENDKORTING_SKU ?? "VERZENDKORTING";
 }
 
 /**

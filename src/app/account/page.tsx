@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Aankopen } from "@/components/account/Aankopen";
 import { Adresboek } from "@/components/account/Adresboek";
+import { NieuwsbriefVoorkeur } from "@/components/account/NieuwsbriefVoorkeur";
 import { Inloggen } from "@/components/account/Inloggen";
 import { Kluspas } from "@/components/account/Kluspas";
 import { WinkelKeuze } from "@/components/account/WinkelKeuze";
@@ -319,6 +320,10 @@ export default async function AccountPage() {
             bestellingen. Adressen beheer je zelden, maar áls je het doet wil
             je het op één plek kunnen. */}
         <Adresboek />
+
+        {/* Nieuwsbriefvoorkeur naast het adresboek: allebei dingen die je
+            zelden aanpast maar wel op één plek wilt kunnen vinden. */}
+        <NieuwsbriefVoorkeur />
       </div>
     </div>
   );

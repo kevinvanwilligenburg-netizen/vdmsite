@@ -125,7 +125,11 @@ export async function startAanmelding(
  *
  * Faalt stil: dit hangt aan een geslaagde bestelling en mag die nooit raken.
  */
-export async function meldDirectAan(email: string, bron: Aanmeldbron): Promise<void> {
+export async function meldDirectAan(
+  email: string,
+  bron: Aanmeldbron,
+  tekst: string = TOESTEMMINGSTEKST,
+): Promise<void> {
   if (!isKvEnabled() || !email) return;
   try {
     const bestaand = await aanmeldingVan(email);
@@ -134,14 +138,31 @@ export async function meldDirectAan(email: string, bron: Aanmeldbron): Promise<v
       email: normaliseerEmail(email),
       aangemeldOp: bestaand?.aangemeldOp ?? new Date().toISOString(),
       bevestigdOp: new Date().toISOString(),
+      afgemeldOp: undefined,
       bron,
-      toestemmingstekst: TOESTEMMINGSTEKST,
+      toestemmingstekst: tekst,
       inResend: await zetInResend(email),
     } satisfies Aanmelding);
   } catch (error) {
     console.error("[nieuwsbrief] directe aanmelding mislukt:", error);
   }
 }
+
+/**
+ * De toestemmingstekst voor aanmelden vanuit een ingelogd account.
+ *
+ * Geen bevestigingsmail nodig: wie is ingelogd heeft met een code naar dít
+ * adres bewezen dat de mailbox van hem is. Precies dát is wat de dubbele
+ * opt-in elders aantoont, dus die stap nog eens overdoen is ceremonie.
+ *
+ * Maar dan moet het bewijs ook zeggen wáárom hij mocht wegvallen — anders
+ * staat er over een jaar een aanmelding zonder bevestiging en weet niemand
+ * meer of dat een gat was of een keuze.
+ */
+export const TOESTEMMING_ACCOUNT =
+  "Aangemeld vanuit een ingelogd account; het e-mailadres was al bevestigd " +
+  "met een inlogcode naar datzelfde adres. " +
+  TOESTEMMINGSTEKST;
 
 /** Stap 2: de klik uit de mail. Zet hem op de lijst en in Resend. */
 export async function bevestigAanmelding(token: string): Promise<Aanmelding | null> {
