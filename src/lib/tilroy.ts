@@ -316,6 +316,59 @@ export async function getDeals(limit = 8): Promise<Product[]> {
 }
 
 /**
+ * Hetzelfde artikel in een andere kleur.
+ *
+ * Kevin op de Levis Decospray Fluor Green: "kan je hier ook andere producten
+ * in andere kleuren laten zien". Spuitbussen, glitterlak en dat soort
+ * artikelen zijn in Tilroy per kleur een eigen product — er is geen
+ * kleurkiezer zoals bij mengverf, dus zonder deze rij is de groene bus een
+ * doodlopende pagina en ziet niemand dat er ook goud, koper en zilver is.
+ *
+ * Twee stappen, want de productlijn is soms fijner dan de klant denkt.
+ * "Levis Decospray Glitter" en "Levis Decospray Fluor" zijn aparte lijnen,
+ * terwijl het voor de koper één rijtje spuitbussen is. Dus eerst de eigen
+ * lijn; levert dat te weinig op, dan verbreden naar de eerste twee woorden
+ * ervan ("Levis Decospray"). Binnen hetzelfde merk én dezelfde rubriek, want
+ * anders komt er zomaar een emmer tussen.
+ *
+ * Mengverf slaan we over: die heeft geen kleur in de kassa (het blik is
+ * "Transparant" tot het gemengd wordt) en heeft de kleurkiezer al.
+ */
+export async function getKleurBroers(product: Product, limit = 8): Promise<Product[]> {
+  const kleur = product.attributes?.kleur?.trim();
+  const lijn = product.attributes?.productlijn?.trim();
+  if (!kleur || !lijn || product.colorMixable) return [];
+
+  const merk = (product.brand ?? "").trim().toLowerCase();
+  const products = await getProducts();
+  const kandidaten = products.filter(
+    (kandidaat) =>
+      kandidaat.id !== product.id &&
+      (kandidaat.brand ?? "").trim().toLowerCase() === merk &&
+      kandidaat.category === product.category &&
+      Boolean(kandidaat.attributes?.kleur?.trim()) &&
+      kandidaat.inStock !== false,
+  );
+
+  const zelfdeLijn = kandidaten.filter(
+    (kandidaat) => kandidaat.attributes?.productlijn?.trim() === lijn,
+  );
+  if (zelfdeLijn.length >= 3) return zelfdeLijn.slice(0, limit);
+
+  // Verbreden naar de stam van de lijn. Twee woorden is genoeg om binnen één
+  // artikelsoort te blijven en ruim genoeg om de afwerkingen samen te nemen.
+  const stam = lijn.split(/\s+/).slice(0, 2).join(" ").toLowerCase();
+  if (stam.length < 4) return zelfdeLijn.slice(0, limit);
+  const breder = kandidaten.filter((kandidaat) =>
+    (kandidaat.attributes?.productlijn ?? "").trim().toLowerCase().startsWith(stam),
+  );
+  // Eigen lijn eerst; dat is de naaste familie.
+  const uniek = new Map<string, Product>();
+  for (const kandidaat of [...zelfdeLijn, ...breder]) uniek.set(kandidaat.id, kandidaat);
+  return [...uniek.values()].slice(0, limit);
+}
+
+/**
  * De etalage van één merk, voor de homepage.
  *
  * Kevin over de topdeals: "willen we hier niet ook sikkens?" Sikkens staat er

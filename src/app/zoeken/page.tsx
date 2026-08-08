@@ -138,11 +138,20 @@ export default async function SearchPage({ searchParams }: Props) {
       )}
 
       {results.total === 0 ? (
-        <div className="card overflow-hidden">
-          {/* Een leeg zoekresultaat is een doodlopende pagina. Mark maakt er
-              iets van waar iemand achter staat, in plaats van een kale melding. */}
-          <Mark pose="vragend" hoogte="h-40" className="rounded-none" />
-          <div className="p-6">
+        /*
+          Twee kolommen: links wat de klant verder helpt, rechts Mark.
+
+          Hij stond eerst als brede strook bovenaan, en dat was twee keer
+          ongelukkig. Je moest langs een half scherm foto voordat er iets
+          bruikbaars stond, en in zo'n lage strook viel zijn gezicht buiten de
+          uitsnede — Kevin: "je ziet zn gezicht niet". In een staande kolom
+          past hij gewoon helemaal.
+
+          Op een telefoon blijven het gestapelde blokken, met de tekst eerst:
+          daar is een halve schermbreedte foto naast tekst onleesbaar.
+        */
+        <div className="card grid overflow-hidden md:grid-cols-[1fr_240px]">
+          <div className="order-2 p-6 md:order-1">
           <h2 className="font-black text-ink">Niets gevonden</h2>
           {results.suggestions.length > 0 && (
             <>
@@ -180,6 +189,11 @@ export default async function SearchPage({ searchParams }: Props) {
             helpt je graag.
           </p>
           </div>
+          {/* Een leeg zoekresultaat is een doodlopende pagina. Mark maakt er
+              iets van waar iemand achter staat, in plaats van een kale melding.
+              `h-full` in plaats van een vaste hoogte: de kolom is precies zo
+              hoog als de tekst ernaast, en dan hoeft er niets bijgesneden. */}
+          <Mark pose="vragend" hoogte="h-48 md:h-full" className="order-1 rounded-none md:order-2" />
         </div>
       ) : (
         <>

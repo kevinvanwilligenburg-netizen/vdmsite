@@ -1325,6 +1325,9 @@ function buildAttributes(leader: FeedItem, group: FeedItem[]): Record<string, st
   // klikt denkt blanke lak te vinden en krijgt mengbassen. Gemeten: 377 van
   // de mengbare artikelen stonden zo in het kleurfilter.
   if (leader.mengverf !== "Ja") add("kleur", leader.kleur);
+  // De productlijn ("Levis Decospray Glitter") is de sleutel waarmee we
+  // hetzelfde artikel in een andere kleur terugvinden — zie getKleurBroers.
+  add("productlijn", leader.productlijn);
 
   // Soort, dessin en materiaal uit de productnaam, voor rubrieken waar de
   // kassa geen onderverdeling kent. Zie src/lib/soorten.ts voor de meting.
@@ -1998,7 +2001,7 @@ async function fetchFeed(): Promise<Product[]> {
 // v55: actieVan/actieTot erbij voor sale_price_effective_date in de feed.
 // v56: campagnebrug in prijzenVan (zie lib/campagnes.ts).
 // v57: staffel_prijzen (bundelprijzen uit Tilroy) erbij.
-export const KV_KEY = "catalog:products:v58";
+export const KV_KEY = "catalog:products:v59";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

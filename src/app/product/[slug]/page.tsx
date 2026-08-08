@@ -28,6 +28,7 @@ import { aggregateRatingJsonLd, getTrustpilotRating } from "@/lib/trustpilot";
 import {
   getCategory,
   getCompanions,
+  getKleurBroers,
   getProduct,
   getProductById,
   getProducts,
@@ -120,6 +121,7 @@ export default async function ProductPage({ params }: Props) {
     seo,
     testersActief,
     whatsappNummer,
+    kleurBroers,
   ] = await Promise.all([
     getCategory(product.category),
     getRelatedProducts(product),
@@ -131,6 +133,7 @@ export default async function ProductPage({ params }: Props) {
     haalSeoTekst(product),
     kleurtestersActief(),
     getWhatsappNummer(),
+    getKleurBroers(product),
   ]);
 
   // Voorgemengd blik? Dan de echte kleur erbij zoeken, uit dezelfde bron
@@ -460,6 +463,27 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      {/* Dit artikel in een andere kleur.
+
+          Spuitbussen en glitterlak zijn in de kassa per kleur een eigen
+          product, en er is geen kleurkiezer zoals bij mengverf. Zonder deze
+          rij is de groene bus een doodlopende pagina en ziet niemand dat er
+          ook goud, koper en zilver is. Boven "Vergelijkbare artikelen", want
+          dezelfde bus in een andere kleur staat dichter bij wat de klant
+          zoekt dan een ander merk. */}
+      {kleurBroers.length > 0 && (
+        <section aria-labelledby="kleuren-titel">
+          <h2 id="kleuren-titel" className="mb-4 text-xl font-black uppercase text-ink sm:text-2xl">
+            Ook in deze kleuren
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+            {kleurBroers.map((broer) => (
+              <ProductCard key={broer.id} product={broer} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {related.length > 0 && (
         <section aria-labelledby="gerelateerd-titel">
