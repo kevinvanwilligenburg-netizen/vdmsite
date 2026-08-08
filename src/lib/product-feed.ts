@@ -1,7 +1,7 @@
 import { bezorgbaarheid, type TeBezorgenArtikel } from "@/lib/bezorgbaarheid";
 import { toonbareRubriek } from "@/lib/rubrieken";
 import { isKvEnabled, kvGetRaw, kvSetEx } from "@/lib/kv";
-import { campagneKorting } from "@/lib/campagnes";
+import { campagneVastePrijs } from "@/lib/campagnes";
 import { isGeloofwaardigeKluspasPrijs } from "@/lib/kluspas";
 import { parseBase } from "@/lib/paint-bases";
 import { DASHBOARD_API_URL } from "@/lib/site";
@@ -601,6 +601,23 @@ export function prijzenVan(
       ...(item.promo_tot ? { tot: item.promo_tot } : {}),
     };
   }
+  /*
+   * Vaste actieprijs uit de campagnelijst — pas als de feed niets levert.
+   *
+   * Bewust ná de promocontrole hierboven: staat de actie in Tilroy, dan wint
+   * die altijd. Dit is voor de acties die Kevin zelf aankondigt en die in de
+   * kassa (nog) niet als promoprijs staan; Melissa meldde de vitril-handschoen,
+   * die op € 13,95 stond terwijl de folder € 6,95 belooft.
+   *
+   * Zelfde risico als bij de oude noodbrug: dit is een tweede plek waar een
+   * prijs ontstaat. Daarom alleen per sku, met een einddatum, en alleen lager
+   * dan de gewone prijs — een "actie" die duurder uitvalt is een fout.
+   */
+  const vast = campagneVastePrijs(item.id, nu);
+  if (vast > 0 && vast < standaard) {
+    return { prijs: vast, vanaf: standaard, kluspas: 0, actie: true };
+  }
+
   return {
     prijs: standaard,
     vanaf: advies,
@@ -1981,7 +1998,7 @@ async function fetchFeed(): Promise<Product[]> {
 // v55: actieVan/actieTot erbij voor sale_price_effective_date in de feed.
 // v56: campagnebrug in prijzenVan (zie lib/campagnes.ts).
 // v57: staffel_prijzen (bundelprijzen uit Tilroy) erbij.
-export const KV_KEY = "catalog:products:v57";
+export const KV_KEY = "catalog:products:v58";
 /**
  * De catalogus blijft een dag houdbaar, maar wordt na een uur ververst. Zo
  * draait de winkel gewoon door als de feed even niet bereikbaar is (storing,

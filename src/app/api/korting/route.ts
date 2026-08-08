@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { emailVanSessie, haalPas, SESSIE_COOKIE } from "@/lib/account";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
-import { kiesVoordeligste, staffelregels, type MandjeRegel } from "@/lib/staffel";
+import { cadeausVoor, kiesVoordeligste, staffelregels, type MandjeRegel } from "@/lib/staffel";
 import { getProductById } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
@@ -174,10 +174,14 @@ export async function POST(request: Request) {
   );
   const mogelijkeKorting = Math.max(0, teHalen(metKluspas) - teHalen(zonderPas));
 
+  // Cadeaus staan los van de korting: er gaat geen geld af, er komt iets bij.
+  const cadeaus = await cadeausVoor(mandje);
+
   return NextResponse.json({
     korting: paskorting,
     mogelijkeKorting,
     regels: perRegel,
+    cadeaus: cadeaus.map((c) => ({ naam: c.naam, campagne: c.campagne })),
     pas,
     staffelKorting,
     staffels: toepassingen.map((toepassing) => ({

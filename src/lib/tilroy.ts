@@ -2,6 +2,7 @@ import { demoCategories, demoProducts, demoStockFor } from "@/lib/catalog";
 import { hardloperScore } from "@/lib/facets";
 import { isEchtMerk, merknaam } from "@/lib/merken";
 import { categorieenUit, loadFeedProducts } from "@/lib/product-feed";
+import { campagneLabel } from "@/lib/campagnes";
 import { toonbareRubriek } from "@/lib/rubrieken";
 import { scoreProducts, suggestTerms } from "@/lib/search";
 import { noteerMagereHit, zoekregels } from "@/lib/zoekregels";
@@ -259,19 +260,39 @@ export async function getMenu(): Promise<MenuCategory[]> {
  */
 export async function getDeals(limit = 8): Promise<Product[]> {
   const products = await getProducts();
-  const gesorteerd = products
-    .filter(
-      (product) =>
-        product.compareAtPrice &&
-        product.compareAtPrice > product.price &&
-        product.image &&
-        product.inStock !== false,
-    )
-    .sort(
-      (a, b) =>
-        (b.compareAtPrice! - b.price) / b.compareAtPrice! -
-        (a.compareAtPrice! - a.price) / a.compareAtPrice!,
-    );
+  /*
+   * Alleen artikelen waar écht een actie op loopt.
+   *
+   * Kevin: "topdeals van de week moeten natuurlijk wel de actie producten."
+   * Hier stond puur het verschil met de adviesprijs, en daarmee stonden er twee
+   * Attralux-spaarlampen van € 5,81 → € 0,29 bovenaan: −95%. Dat is geen actie
+   * maar een adviesprijs die al jaren nergens op slaat, en ernaast las een
+   * echte korting van 50% als het mindere aanbod.
+   *
+   * "Echt" is: een lopende Tilroy-actie (`actie`), of een artikel dat onder een
+   * aangekondigde campagne valt — ook de aantal-acties, want een lamp van
+   * "5 halen, 3 betalen" is een topdeal zonder dat zijn stuksprijs daalt.
+   */
+  const inCampagne = (product: Product) => Boolean(campagneLabel(product));
+  const echteActie = (product: Product) => Boolean(product.actie) || inCampagne(product);
+
+  const bruikbaar = products.filter(
+    (product) => product.image && product.inStock !== false,
+  );
+  const metActie = bruikbaar.filter(echteActie);
+  const voordeel = (product: Product) =>
+    product.compareAtPrice && product.compareAtPrice > product.price
+      ? (product.compareAtPrice - product.price) / product.compareAtPrice
+      : 0;
+
+  const gesorteerd = [
+    ...metActie.sort((a, b) => voordeel(b) - voordeel(a)),
+    // Te weinig acties voor een gevulde rij? Dan pas de adviesprijs-koopjes,
+    // zodat de homepage geen halve rij toont.
+    ...bruikbaar
+      .filter((product) => !echteActie(product) && voordeel(product) > 0)
+      .sort((a, b) => voordeel(b) - voordeel(a)),
+  ];
 
   const perMerk = new Map<string, number>();
   const gekozen: Product[] = [];

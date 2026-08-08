@@ -33,9 +33,23 @@ export interface Regelstand {
   staffel?: string;
 }
 
+export interface Cadeaustand {
+  naam: string;
+  /** De actie waar het vandaan komt, bv. "Gratis metaalspons". */
+  campagne: string;
+}
+
 export interface Kortingstand {
   /** Bedrag in centen. */
   bedrag: number;
+  /**
+   * Artikelen die gratis meegaan bij dit mandje.
+   *
+   * Ze liggen niet in de winkelwagen — we voegen niets ongevraagd toe — maar
+   * gaan bij het afrekenen als regel van € 0,00 mee de order in. Hier staan ze
+   * puur om te tonen dát ze meekomen.
+   */
+  cadeaus: Cadeaustand[];
   /**
    * Wat er per artikel bij hoort te staan: van/voor en de actienaam.
    *
@@ -72,6 +86,7 @@ const LEEG: Kortingstand = {
   bedrag: 0,
   mogelijkeKorting: 0,
   regels: {},
+  cadeaus: [],
   pas: "geen",
   staffels: [],
   staffelKorting: 0,
@@ -110,6 +125,7 @@ export function useKorting(items: CartItem[]): Kortingstand {
             korting?: number;
             mogelijkeKorting?: number;
             regels?: Regelstand[];
+            cadeaus?: Cadeaustand[];
             pas?: string;
             staffelKorting?: number;
             staffels?: Staffelstand[];
@@ -128,6 +144,7 @@ export function useKorting(items: CartItem[]): Kortingstand {
                 regel,
               ]),
             ),
+            cadeaus: Array.isArray(data.cadeaus) ? data.cadeaus : [],
             pas,
             staffels: Array.isArray(data.staffels) ? data.staffels : [],
             staffelKorting:

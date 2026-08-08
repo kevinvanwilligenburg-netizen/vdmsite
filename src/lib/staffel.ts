@@ -151,11 +151,20 @@ export function leesRegel(ruw: unknown): Staffelregel | null {
   if (!ruw || typeof ruw !== "object") return null;
   const bron = ruw as Record<string, unknown>;
   const koop = Math.floor(Number(bron.koop));
+  if (!Number.isFinite(koop) || koop < 2) return null;
+
+  // Een bundelprijs vervangt `betaal`: je rekent één bedrag voor de groep af
+  // in plaats van een aantal stuks.
+  const bundelRuw = Math.round(Number(bron.bundelPrijs));
+  const bundelPrijs = Number.isFinite(bundelRuw) && bundelRuw > 0 ? bundelRuw : 0;
+
   const betaal = Math.floor(Number(bron.betaal));
-  // Koop 3 betaal 2 mag; koop 2 betaal 2 is geen korting en koop 2 betaal 3 is
-  // een prijsverhoging. Allebei weigeren in plaats van uitrekenen.
-  if (!Number.isFinite(koop) || !Number.isFinite(betaal)) return null;
-  if (koop < 2 || betaal < 1 || betaal >= koop) return null;
+  if (!bundelPrijs) {
+    // Koop 3 betaal 2 mag; koop 2 betaal 2 is geen korting en koop 2 betaal 3
+    // is een prijsverhoging. Allebei weigeren in plaats van uitrekenen.
+    if (!Number.isFinite(betaal)) return null;
+    if (betaal < 1 || betaal >= koop) return null;
+  }
 
   const skus = Array.isArray(bron.skus)
     ? bron.skus.map((s) => tekst(s, 40)).filter(Boolean)
@@ -164,12 +173,19 @@ export function leesRegel(ruw: unknown): Staffelregel | null {
   const categorie = tekst(bron.categorie, 60) || undefined;
   if (!skus?.length && !merk && !categorie) return null;
 
-  const naam = tekst(bron.naam, 80) || `${koop} halen, ${betaal} betalen`;
+  const naam =
+    tekst(bron.naam, 80) ||
+    (bundelPrijs
+      ? `${koop} voor € ${(bundelPrijs / 100).toFixed(2).replace(".", ",")}`
+      : `${koop} halen, ${betaal} betalen`);
   return {
     id: tekst(bron.id, 60) || naam,
     naam,
     koop,
-    betaal,
+    // Bij een bundel telt `betaal` niet mee; nul houdt de vorm heel zonder
+    // dat er ergens per ongeluk mee gerekend wordt.
+    betaal: bundelPrijs ? 0 : betaal,
+    ...(bundelPrijs ? { bundelPrijs } : {}),
     ...(tekst(bron.bron, 40) ? { bron: tekst(bron.bron, 40) } : {}),
     ...(skus?.length ? { skus } : {}),
     ...(merk ? { merk } : {}),
@@ -203,13 +219,18 @@ export async function staffelUitCampagnes(nu: number = Date.now()): Promise<Staf
   const campagnes = await getCampagnes();
   const regels: Staffelregel[] = [];
   for (const campagne of campagnes) {
-    if (!campagne.koop || !campagne.betaal) continue;
+    // Twee vormen: koop/betaal ("2 + 1 gratis") of een groepsprijs ("3 voor
+    // € 4,95"). Een campagne zonder allebei is alleen een aankondiging.
+    const heeftAantallen = Boolean(campagne.koop && campagne.betaal);
+    const heeftBundel = Boolean(campagne.bundel?.aantal && campagne.bundel?.prijs);
+    if (!heeftAantallen && !heeftBundel) continue;
     if (campagneStand(campagne, nu) !== "loopt") continue;
     const regel = leesRegel({
       id: `campagne:${campagne.id}`,
       naam: campagne.kop,
-      koop: campagne.koop,
+      koop: heeftBundel ? campagne.bundel!.aantal : campagne.koop,
       betaal: campagne.betaal,
+      ...(heeftBundel ? { bundelPrijs: campagne.bundel!.prijs } : {}),
       skus: campagne.skus,
       // Eén merk per staffelregel; `regelGeldtVoor` vergelijkt op één naam.
       // Alle huidige aantal-acties slaan op één merk of op een sku-lijst.
@@ -332,7 +353,11 @@ export function pasStaffelToe(
    * twee keer zo gunstig is. Het gaat om de verhouding — de helft gratis
    * tegenover een derde.
    */
-  const aandeelGratis = (regel: Staffelregel) => (regel.koop - regel.betaal) / regel.koop;
+  const aandeelGratis = (regel: Staffelregel) =>
+    // Bij een bundel weten we de verhouding nog niet — die hangt van de
+    // prijzen af. Achteraan zetten dus; in de praktijk overlappen een bundel
+    // en een aantal-actie niet op hetzelfde artikel.
+    regel.bundelPrijs ? -1 : (regel.koop - regel.betaal) / regel.koop;
   const gesorteerd = [...regels].sort((a, b) => aandeelGratis(b) - aandeelGratis(a));
 
   for (const regel of gesorteerd) {
@@ -348,6 +373,29 @@ export function pasStaffelToe(
     if (stuks.length < regel.koop) continue;
 
     const groepen = Math.floor(stuks.length / regel.koop);
+    if (groepen <= 0) continue;
+
+    /*
+     * Bundelprijs: elke volle groep kost samen `bundelPrijs`.
+     *
+     * De duurste stuks eerst in de groep. Bij "3 voor € 4,95" op tapes van
+     * € 2,64 en € 3,70 levert dat de klant het meeste op, en dat is ook wat
+     * een kassa doet. Valt een groep goedkoper uit dan de bundelprijs, dan is
+     * er geen korting — een "bundel" die duurder is dan los is geen aanbieding.
+     */
+    if (regel.bundelPrijs) {
+      const aflopend = [...stuks].sort((a, b) => b - a);
+      let korting = 0;
+      for (let groep = 0; groep < groepen; groep++) {
+        const inGroep = aflopend.slice(groep * regel.koop, (groep + 1) * regel.koop);
+        korting += Math.max(0, inGroep.reduce((som, prijs) => som + prijs, 0) - regel.bundelPrijs);
+      }
+      if (korting <= 0) continue;
+      for (const index of raakt) alGebruikt.add(index);
+      toepassingen.push({ regel, gratis: 0, korting, indices: raakt });
+      continue;
+    }
+
     const gratis = groepen * (regel.koop - regel.betaal);
     if (gratis <= 0) continue;
 
@@ -367,6 +415,71 @@ export function pasStaffelToe(
     toepassingen,
     totaleKorting: toepassingen.reduce((som, t) => som + t.korting, 0),
   };
+}
+
+export interface Cadeau {
+  /** Tilroy-sku van het artikel dat gratis meegaat. */
+  sku: string;
+  naam: string;
+  /** Hoeveel stuks; nu altijd één, maar de order wil een aantal. */
+  aantal: number;
+  /** Waar het vandaan komt, voor de tekst bij de klant. */
+  campagne: string;
+}
+
+/**
+ * Welke cadeaus dit mandje verdient: "gratis metaalspons bij een spuitbus".
+ *
+ * ⚠️ Bewust géén staffelregel. Een staffel rekent binnen dezelfde artikelen —
+ * bij "5 halen, 3 betalen" zijn de gratis stuks van hetzelfde soort. Hier is
+ * het cadeau een ánder artikel, en die twee door elkaar halen zou bij de
+ * spuitbusactie een spuitbus weggeven in plaats van een spons van € 1,77.
+ *
+ * Het cadeau komt niet in de winkelwagen te liggen. Dat zou betekenen dat we
+ * ongevraagd iets aan andermans mandje toevoegen, en het verdwijnt weer zodra
+ * het koopartikel eruit gaat. In plaats daarvan rekenen we het hier uit, tonen
+ * we het als belofte, en zet de checkout het als regel van € 0,00 op de order
+ * — dan boekt de kassa de voorraad af en weet de winkel dat hij hem inpakt.
+ *
+ * Eén cadeau per campagne, hoeveel spuitbussen er ook in het mandje liggen.
+ * Twee sponzen bij twee bussen is niet wat er staat, en "op = op" hoort bij
+ * dit soort acties.
+ */
+export async function cadeausVoor(
+  mandje: { sku?: string; merk?: string }[],
+  nu: number = Date.now(),
+): Promise<Cadeau[]> {
+  if (mandje.length === 0) return [];
+  const campagnes = await getCampagnes();
+  const cadeaus: Cadeau[] = [];
+  for (const campagne of campagnes) {
+    if (!campagne.cadeau) continue;
+    if (campagneStand(campagne, nu) !== "loopt") continue;
+    const drempel = Math.max(1, campagne.cadeau.vanaf ?? 1);
+
+    const raakt = mandje.filter((regel) => {
+      if (campagne.skus?.length) return Boolean(regel.sku && campagne.skus.includes(regel.sku));
+      const merk = (regel.merk ?? "").trim().toLowerCase();
+      return Boolean(merk) && (campagne.merken ?? []).some((m) => m.toLowerCase() === merk);
+    });
+    if (raakt.length < drempel) continue;
+
+    // Niet het cadeau weggeven als de klant het artikel zélf al koopt: dan
+    // rekent hij ervoor en krijgt hij er een tweede gratis bij, en dat is een
+    // andere actie dan hier staat.
+    if (mandje.some((regel) => regel.sku === campagne.cadeau!.sku)) continue;
+
+    cadeaus.push({
+      sku: campagne.cadeau.sku,
+      naam: campagne.cadeau.naam,
+      aantal: 1,
+      campagne: campagne.kop,
+    });
+  }
+  // Eén exemplaar per artikel, ook als twee acties hetzelfde cadeau geven —
+  // de metaalspons zit zowel bij de spuitbussen als bij de bbq-reiniger.
+  const gezien = new Set<string>();
+  return cadeaus.filter((c) => (gezien.has(c.sku) ? false : gezien.add(c.sku) !== undefined));
 }
 
 export interface MandjeRegel {

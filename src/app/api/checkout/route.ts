@@ -16,7 +16,7 @@ import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
 import { kleurKanInProduct } from "@/lib/paint-bases";
-import { kiesVoordeligste, staffelregels, staffelSku } from "@/lib/staffel";
+import { cadeausVoor, kiesVoordeligste, staffelregels, staffelSku } from "@/lib/staffel";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { leesAdres, onthoudAdres } from "@/lib/adressen";
 import { meldDirectAan } from "@/lib/nieuwsbrief";
@@ -679,6 +679,37 @@ export async function POST(request: Request) {
     0,
   );
 
+  /*
+   * Cadeaus: gratis artikelen die bij dit mandje horen.
+   *
+   * Als regel van € 0,00 op de order, niet als iets wat we in de winkelwagen
+   * leggen. Zo weet de winkel dat er een spons bij moet én boekt de kassa hem
+   * af — een cadeau dat nergens op de bon staat, verdwijnt uit de voorraad
+   * zonder dat iemand weet waarheen.
+   *
+   * Ze veranderen het bedrag niet, dus ze tellen niet mee in `subtotalCents`.
+   */
+  const cadeauRegels: OrderItem[] = (
+    await cadeausVoor(
+      items.map((item, index) => ({
+        sku: item.sku,
+        merk: item.brand,
+        categorie: prijsregels[index]?.categorie,
+      })),
+    )
+  ).map((cadeau, index) => ({
+    key: `cadeau:${index}`,
+    productId: cadeau.sku,
+    sku: cadeau.sku,
+    title: `${cadeau.naam} (gratis)`,
+    quantity: cadeau.aantal,
+    price: 0,
+    image: "",
+    slug: "",
+    icon: "gift",
+    hue: 25,
+  }));
+
   // Afhalen is altijd gratis; bij bezorgen gelden de landtarieven, tenzij er
   // een merk in het mandje ligt dat we franco versturen (Sikkens). Dat
   // bepalen we hier en niet op de client: anders kan iemand het meesturen.
@@ -731,7 +762,7 @@ export async function POST(request: Request) {
     // De kortingsregels achteraan, ná de artikelen. Ze horen wél in de order
     // (anders kent Tilroy de korting niet) maar niet in de voorraad- en
     // afhaalcontroles hierboven, want een kortingsartikel ligt nergens.
-    items: [...items, ...kortingRegels],
+    items: [...items, ...cadeauRegels, ...kortingRegels],
     subtotal,
     shipping: verzendkostenCents / 100,
     total: (subtotalCents - kortingCents + verzendkostenCents) / 100,

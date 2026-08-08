@@ -62,8 +62,15 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
 
   // Wat de korting op dit mandje waard is; de server rekent het uit de
   // catalogus, niet uit de prijzen die in de winkelwagen zijn blijven staan.
-  const { bedrag: kluspasKorting, mogelijkeKorting, regels, pas, staffels, staffelKorting } =
-    useKorting(items);
+  const {
+    bedrag: kluspasKorting,
+    mogelijkeKorting,
+    regels,
+    cadeaus,
+    pas,
+    staffels,
+    staffelKorting,
+  } = useKorting(items);
   // De pas bij naam noemen. Er stond hardcoded "Kluspas-korting", ook boven de
   // korting van iemand met een ProfPas — die heeft helemaal geen Kluspas.
   const kortingLabel = pas === "profpas" ? "ProfPas-korting" : "Kluspas-korting";
@@ -261,6 +268,15 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
               <dd className="font-bold text-green-700">− {euro(kluspasKorting)}</dd>
             </div>
           )}
+          {/* Cadeaus: er gaat geen geld af, er komt iets bij. Daarom geen
+              minbedrag maar "Gratis" — en pas hier, onder de kortingen, want
+              het is een extraatje en geen korting op het totaal. */}
+          {cadeaus.map((cadeau) => (
+            <div key={cadeau.naam} className="flex justify-between">
+              <dt className="text-ink-soft">{cadeau.naam}</dt>
+              <dd className="font-bold text-green-700">Gratis</dd>
+            </div>
+          ))}
           <div className="flex justify-between">
             <dt className="text-ink-soft">Afhalen in de winkel</dt>
             <dd className="font-bold text-green-700">Gratis</dd>

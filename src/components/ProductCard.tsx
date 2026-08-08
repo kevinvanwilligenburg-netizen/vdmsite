@@ -4,6 +4,7 @@ import { Icon } from "@/components/icons";
 import { KortingBadge } from "@/components/KortingBadge";
 import { Price } from "@/components/Price";
 import { ProductArt } from "@/components/ProductArt";
+import { campagneLabel } from "@/lib/campagnes";
 import type { Product } from "@/lib/types";
 
 /**
@@ -19,6 +20,7 @@ export function ProductCard({ product }: { product: Product }) {
   const hasDiscount = Boolean(
     product.compareAtPrice && product.compareAtPrice > product.price,
   );
+  const actielabel = campagneLabel(product);
   const kenmerken = KENMERKEN.map((sleutel) => product.attributes?.[sleutel]).filter(
     (waarde): waarde is string => Boolean(waarde),
   );
@@ -65,6 +67,16 @@ export function ProductCard({ product }: { product: Product }) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
+        {/* Aantal-acties, bundels en cadeaus blijken niet uit de prijs — die
+            staat gewoon op € 3,05. Zonder dit label lijkt er niets aan de hand
+            en neemt niemand er vijf. Kevin: "ik zie niet bij de giftacties iets
+            van een icoontje". */}
+        {actielabel && (
+          <span className="inline-flex w-fit items-center gap-1 rounded-md bg-brand-actie px-2 py-0.5 text-xs font-black uppercase text-white">
+            <Icon name="tag" className="h-3.5 w-3.5" />
+            {actielabel}
+          </span>
+        )}
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
           {product.brand}
         </p>
