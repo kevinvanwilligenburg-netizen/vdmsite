@@ -39,10 +39,25 @@ export function Mark({
       alt=""
       width={900}
       height={1350}
-      // Beeldpunt op ~een vijfde van boven: de studiofoto's hebben veel lucht
-      // boven Marks hoofd, en met object-top bleef er in een laag blok alleen
-      // een pluk haar over.
-      className={`${hoogte} w-full rounded-xl object-cover object-[50%_20%] ${className}`}
+      /*
+       * Beeldpunt op 30%, want daar zit zijn gezicht.
+       *
+       * Stond op 20% met precies de goede reden — er is veel lucht boven zijn
+       * hoofd — maar het getal was te laag gekozen. Kevin op de zoekpagina:
+       * "je ziet zn gezicht niet", en er stond inderdaad alleen een pluk haar.
+       *
+       * Nagerekend op het echte beeld (900×1350): zijn gezicht zit op y≈450,
+       * dus op 33% van de hoogte. Bij `object-cover` bepaalt het percentage
+       * waar het zichtbare strookje begint — in een blok van 1100×192 loopt
+       * dat bij 20% van y=239 tot y=396, en dat eindigt net boven zijn kin.
+       * Op 30% loopt het van 358 tot 515 en staat zijn gezicht in het midden.
+       *
+       * Eén waarde voor alle blokken: in een smal vak (leeg mandje, 512 px
+       * breed) komt hetzelfde punt op 28% uit, dus 30% valt daar ook goed.
+       * Bij een staand vak doet het percentage niets — dan snijdt cover op de
+       * breedte.
+       */
+      className={`${hoogte} w-full rounded-xl object-cover object-[50%_30%] ${className}`}
     />
   );
 }
