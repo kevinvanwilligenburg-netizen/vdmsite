@@ -100,32 +100,15 @@ export function maakFactuur(order: Order): Factuur {
     });
   }
 
-  // Een aantal-actie ("5 halen, 3 betalen") gaat er niet per stuk af maar over
-  // de groep, dus hij past niet in de artikelregels en hoort hier als eigen
-  // minregel. Zonder deze regel is de factuur hoger dan wat er is afgeschreven.
-  if (order.staffelKorting) {
-    const korting = splitsBtw(-order.staffelKorting);
-    regels.push({
-      omschrijving: order.staffelNamen?.length
-        ? order.staffelNamen.join(" · ")
-        : "Actiekorting",
-      aantal: 1,
-      stukprijsExcl: korting.exclusief,
-      totaalExcl: korting.exclusief,
-    });
-  }
-
-  // Een verzilverde staal-voucher staat als minregel op de factuur; zonder die
-  // regel telt de kolom niet op tot het afgeschreven bedrag.
-  if (order.voucherKorting) {
-    const korting = splitsBtw(-order.voucherKorting);
-    regels.push({
-      omschrijving: `Staal-voucher${order.voucherCode ? ` ${order.voucherCode}` : ""}`,
-      aantal: 1,
-      stukprijsExcl: korting.exclusief,
-      totaalExcl: korting.exclusief,
-    });
-  }
+  /*
+   * Geen aparte kortingsregels meer.
+   *
+   * De staffelkorting en de staal-voucher zitten sinds de conceptorder-fix als
+   * échte orderregel in `order.items`, met een negatief bedrag — anders kent
+   * Tilroy ze niet en komt de order daar binnen als concept. Ze lopen dus al
+   * mee in de lus hierboven; ze hier nóg een keer opvoeren zou de factuur
+   * dubbel laten aftrekken en lager uitkomen dan wat er is afgeschreven.
+   */
 
   const totaal = splitsBtw(order.total);
   const subtotaalExcl = regels.reduce((som, regel) => som + regel.totaalExcl, 0);

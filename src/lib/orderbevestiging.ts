@@ -223,22 +223,12 @@ function totalen(order: Order): string {
       ? totaalregel("Artikelen (adviesprijs)", euros(order.subtotal + kluspas))
       : totaalregel("Artikelen", euros(order.subtotal)),
     kluspas > 0 ? totaalregel("Kluspas-korting", `− ${euros(kluspas)}`, { groen: true }) : "",
-    // Aantal-acties gaan over de groep en zitten dus niet in de regelprijzen;
-    // zonder deze regel telt de mail niet op tot het betaalde bedrag.
-    order.staffelKorting
-      ? totaalregel(
-          esc(order.staffelNamen?.join(" · ") || "Actiekorting"),
-          `− ${euros(order.staffelKorting)}`,
-          { groen: true },
-        )
-      : "",
-    order.voucherKorting
-      ? totaalregel(
-          `Staal-voucher${order.voucherCode ? ` (${esc(order.voucherCode)})` : ""}`,
-          `− ${euros(order.voucherKorting)}`,
-          { groen: true },
-        )
-      : "",
+    /*
+     * De actiekorting en de staal-voucher staan hier niet meer als eigen
+     * totaalregel: ze zijn sinds de conceptorder-fix echte orderregels met een
+     * negatief bedrag, en staan dus al in de artikellijst hierboven. Twee keer
+     * tonen leest als twee keer korting.
+     */
     totaalregel(
       order.fulfilment === "delivery" ? "Bezorging" : "Afhalen in de winkel",
       order.shipping > 0 ? euros(order.shipping) : "Gratis",
@@ -635,17 +625,10 @@ export async function stuurOrderbevestiging(order: Order): Promise<boolean> {
     ...(order.kluspasSavings
       ? [`Kluspas-korting: − ${euros(order.kluspasSavings)}`]
       : []),
-    ...(order.staffelKorting
-      ? [
-          `${order.staffelNamen?.join(" · ") || "Actiekorting"}: − ${euros(order.staffelKorting)}`,
-        ]
-      : []),
     `${order.fulfilment === "delivery" ? "Bezorging" : "Afhalen"}: ${
       order.shipping > 0 ? euros(order.shipping) : "gratis"
     }`,
-    ...(order.voucherKorting
-      ? [`Staal-voucher${order.voucherCode ? ` ${order.voucherCode}` : ""}: − ${euros(order.voucherKorting)}`]
-      : []),
+    // Ook hier geen aparte kortingsregels: ze staan al in de artikellijst.
     `Totaal betaald: ${euros(order.total)} (incl. btw)`,
     "",
     ...(KLUSPUNTEN_ONLINE && order.kluspasNumber && !order.profpas

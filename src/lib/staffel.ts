@@ -39,6 +39,15 @@ export interface Staffelregel {
   koop: number;
   /** …en betaal er zoveel. Bij "2+1 gratis": koop 3, betaal 2. */
   betaal: number;
+  /**
+   * Vaste groepsprijs in centen: "3 voor € 4,95".
+   *
+   * Staat dit erin, dan telt `betaal` niet mee — je rekent niet een aantal
+   * stuks af maar één bedrag voor de hele groep. Nodig voor de
+   * schilderstape-actie, die Melissa terecht als "werkt nog niet" doorgaf:
+   * er was geen enkele manier om een groepsprijs uit te drukken.
+   */
+  bundelPrijs?: number;
   /** Op welke artikelen. Minstens één van deze drie moet gevuld zijn. */
   skus?: string[];
   merk?: string;
@@ -57,10 +66,22 @@ export interface Staffelregel {
  * de bon zegt is een probleem dat je met de hand moet oplossen.
  */
 export function staffelSku(): string {
-  // KORTINGWEBSHOP, mét de P. De barcode in Kevins bericht was afgekapt tot
-  // "KORTINGWEBSHO"; één teken verschil en de kassa kent de regel niet — zelfde
-  // valkuil als de kleurtester, die bij ons een streepje te veel had.
-  return process.env.TILROY_KORTING_SKU ?? "KORTINGWEBSHOP";
+  /*
+   * ⚠️ Leeg tot Kevin het ARTIKELNUMMER invult, niet de barcode.
+   *
+   * Hier stond "KORTINGWEBSHOP" als terugval, en dat is de barcode die Kevin
+   * doorgaf. Maar de orderregels die naar Tilroy gaan dragen een numeriek
+   * artikel-id (39972657 en dergelijke), en het dashboard zet onze sku
+   * ongewijzigd in `sku: { tilroyId }`. Een barcode op die plek herkent Tilroy
+   * niet, en dan faalt niet alleen de kortingsregel maar de hele push — de
+   * order komt dan hélemaal niet aan, wat erger is dan een concept.
+   *
+   * Zolang dit leeg is worden er geen aantal-acties toegepast en gaat er geen
+   * kortingsregel mee. Dat is dezelfde afweging als hiervoor: liever geen
+   * korting dan een bestelling die niemand kan verwerken. Zet
+   * TILROY_KORTING_SKU op het artikelnummer en alles werkt.
+   */
+  return process.env.TILROY_KORTING_SKU ?? "";
 }
 
 /**

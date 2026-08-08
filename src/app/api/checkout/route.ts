@@ -16,7 +16,7 @@ import { combinePromises, deliveryPromise } from "@/lib/delivery";
 import { franco, shippingCost, shippingCountry } from "@/lib/shipping";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
 import { kleurKanInProduct } from "@/lib/paint-bases";
-import { kiesVoordeligste, staffelregels } from "@/lib/staffel";
+import { kiesVoordeligste, staffelregels, staffelSku } from "@/lib/staffel";
 import { createMolliePayment, mollieEnabled, mollieTestMode } from "@/lib/mollie";
 import { leesAdres, onthoudAdres } from "@/lib/adressen";
 import { meldDirectAan } from "@/lib/nieuwsbrief";
@@ -589,8 +589,6 @@ export async function POST(request: Request) {
     regel.unit = regel.list;
   }
 
-  const subtotal = subtotalCents / 100;
-
   /*
    * Staal-voucher: het testerbedrag terug, maar alleen op een bestelling mét
    * mengverf — de voucher is een aanbetaling op de klus, geen kortingscode
@@ -616,6 +614,71 @@ export async function POST(request: Request) {
     voucherCode = oordeel.voucher.code;
   }
 
+  /*
+   * Kortingen als échte orderregel, niet als aftrek op het ordertotaal.
+   *
+   * ⚠️ Dit is de reden dat Melissa conceptorders in Tilroy zag staan:
+   * "Tilroy rekent € 54,78 maar er is € 49,83 betaald — verwerk hem aan de
+   * kassa." Het dashboard stuurt onze regelprijzen wél door (`priceSell`),
+   * maar alles wat wij van het tótaal aftrekken zonder eigen regel bestaat
+   * voor Tilroy niet. De order komt dan binnen als concept en het inpakteam
+   * kan er niets mee.
+   *
+   * Een staffelkorting en een staal-voucher zijn precies zulke aftrekposten.
+   * Als losse regel op het kortingsartikel tellen ze gewoon mee in het
+   * ordertotaal dat Tilroy zelf uitrekent, en klopt de bon vanzelf.
+   *
+   * Bewust NIET in `items` geduwd maar apart gehouden: die lijst gaat door de
+   * voorraad- en afhaalcontroles heen, en een kortingsartikel heeft geen
+   * voorraad. Ze komen er pas bij als de order wordt samengesteld.
+   *
+   * Zonder kortingsartikel geen kortingsregel — dan liever de korting laten
+   * vervallen dan een order die niemand kan verwerken. Zie lib/staffel.ts.
+   */
+  const kortingRegels: OrderItem[] = [];
+  const kortingSku = staffelSku();
+  if (kortingSku) {
+    const posten: { titel: string; centen: number }[] = [
+      ...(staffelKortingCents > 0
+        ? [
+            {
+              titel:
+                staffelToepassingen.map((t) => t.regel.naam).join(" · ") || "Actiekorting",
+              centen: staffelKortingCents,
+            },
+          ]
+        : []),
+      ...(voucherKortingCents > 0
+        ? [
+            {
+              titel: `Staal-voucher${voucherCode ? ` ${voucherCode}` : ""}`,
+              centen: voucherKortingCents,
+            },
+          ]
+        : []),
+    ];
+    for (const [index, post] of posten.entries()) {
+      kortingRegels.push({
+        key: `korting:${index}`,
+        productId: kortingSku,
+        sku: kortingSku,
+        title: post.titel,
+        quantity: 1,
+        price: -post.centen / 100,
+        image: "",
+        slug: "",
+        icon: "tag",
+        hue: 25,
+      });
+    }
+  }
+  // Wat er daadwerkelijk van het artikeltotaal af gaat. Zonder kortingsartikel
+  // is dat niets: dan is er geen regel om het op te boeken.
+  const kortingCents = kortingRegels.reduce(
+    (som, regel) => som + Math.round(-regel.price * 100),
+    0,
+  );
+
   // Afhalen is altijd gratis; bij bezorgen gelden de landtarieven, tenzij er
   // een merk in het mandje ligt dat we franco versturen (Sikkens). Dat
   // bepalen we hier en niet op de client: anders kan iemand het meesturen.
@@ -627,11 +690,12 @@ export async function POST(request: Request) {
   const verzendkostenCents =
     fulfilment === "pickup"
       ? 0
-      : shippingCost(
-          subtotalCents - voucherKortingCents - staffelKortingCents,
-          land,
-          gratisOngeachtBedrag,
-        );
+      : shippingCost(subtotalCents - kortingCents, land, gratisOngeachtBedrag);
+
+  // Het artikeltotaal ná de kortingsregels, zodat subtotaal + verzending altijd
+  // gelijk is aan wat de klant betaalt. Dat is precies de optelling die Tilroy
+  // ook maakt; loopt hij uiteen, dan wordt de order daar een concept.
+  const subtotal = (subtotalCents - kortingCents) / 100;
 
   const orderInput: CreateOrderInput = {
     customer: {
@@ -664,11 +728,13 @@ export async function POST(request: Request) {
      * met een straat zonder huisnummer.
      */
     ...(factuuradres ? { billing: factuuradres } : {}),
-    items,
+    // De kortingsregels achteraan, ná de artikelen. Ze horen wél in de order
+    // (anders kent Tilroy de korting niet) maar niet in de voorraad- en
+    // afhaalcontroles hierboven, want een kortingsartikel ligt nergens.
+    items: [...items, ...kortingRegels],
     subtotal,
     shipping: verzendkostenCents / 100,
-    total:
-      (subtotalCents - voucherKortingCents - staffelKortingCents + verzendkostenCents) / 100,
+    total: (subtotalCents - kortingCents + verzendkostenCents) / 100,
     /*
      * De aantal-actie als eigen bedrag op de order.
      *
