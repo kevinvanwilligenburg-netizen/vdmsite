@@ -124,6 +124,85 @@ export function kleurKanInProduct(
   return pickVariant(product, size, color) !== undefined;
 }
 
+/** Een maat als liters: "2,5 L" → 2.5, "375 ml" → 0.375. Null zonder eenheid. */
+function naarLiter(tekst: string): number | null {
+  const m = tekst.match(/(\d+(?:[.,]\d+)?)\s*(ml|milliliter|liter|ltr|l)\b/i);
+  if (!m) return null;
+  const getal = Number(m[1].replace(",", "."));
+  if (!Number.isFinite(getal) || getal <= 0) return null;
+  return /^m/i.test(m[2]) ? getal / 1000 : getal;
+}
+
+/**
+ * De maat die in de productnaam staat, als die bij een van de maten hoort.
+ *
+ * ⚠️ Dit repareert een prijsverschil dat Google al aanmerkte. Maatvarianten
+ * zijn samengevoegd tot één product, maar de naam komt van de groepsleider —
+ * en die noemt vaak één maat: "Fitex Creative+ Trappenlak Mat Dekkend 2,5
+ * liter". De pagina koos daarnaast gewoon `sizes[0]`, en dat is de kleinste.
+ * Resultaat: een kop die 2,5 liter belooft boven de prijs van 375 ml
+ * (€ 14,52 in plaats van € 92,45), terwijl de Shopping-feed voor diezelfde URL
+ * het grote blik opgeeft. Voor Google is dat een prijsafwijking op de
+ * landingspagina; voor de klant een verrassing in de winkelwagen.
+ *
+ * Vergelijken op liters en niet op tekst: de naam schrijft "2,5 liter" en de
+ * maatknop "2,5 L". Staat er geen inhoud in de naam (schroeven, tape, kwasten
+ * — daar gaat het over millimeters), dan vergelijken we op de tekst zelf met
+ * een woordgrens; zonder die grens zou "1 L" ook in "11 L" passen.
+ */
+export function maatUitNaam(naam: string, maten: string[]): string | undefined {
+  if (maten.length === 0) return undefined;
+
+  const doel = naarLiter(naam);
+  if (doel !== null) {
+    const opLiter = maten.find((maat) => {
+      const liter = naarLiter(maat);
+      return liter !== null && Math.abs(liter - doel) < 0.0005;
+    });
+    if (opLiter) return opLiter;
+  }
+
+  const schoon = (tekst: string) => tekst.toLowerCase().replace(/\s+/g, " ").replace(",", ".").trim();
+  const naamSchoon = schoon(naam);
+  return maten.find((maat) => {
+    const m = schoon(maat);
+    if (m.length < 2) return false;
+    // Woordgrenzen aan beide kanten, anders matcht "1 l" binnen "11 l".
+    return new RegExp(`(^|[^0-9a-z.])${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9a-z]|$)`).test(
+      naamSchoon,
+    );
+  });
+}
+
+/**
+ * De prijs van de maat die de productnaam noemt; anders de gewone prijs.
+ *
+ * ⚠️ Voor metadata en JSON-LD, niet voor productkaarten. Op een kaart is
+ * `product.price` de "vanaf"-prijs en dat klopt daar. Maar op de productpagina
+ * zélf staat één maat geselecteerd — die uit de naam — en dan mag de titel,
+ * de OG-tag en het Offer-blok niet de prijs van het kleinste blikje noemen.
+ *
+ * Dat verschil was precies wat Google aanmerkte: de Shopping-feed gaf € 92,45
+ * voor de 2,5 liter, de pagina zei € 13,80 in de titel en € 14,52 in beeld.
+ * Drie bedragen voor één URL.
+ */
+export function prijsVanNaamMaat(product: Product): {
+  prijs: number;
+  vanaf?: number;
+  variant?: ProductVariant;
+} {
+  const maat = maatUitNaam(product.name, sizesOf(product));
+  const variant = maat
+    ? (product.variants ?? []).find((v) => (v.size ?? v.name) === maat)
+    : undefined;
+  if (!variant) return { prijs: product.price, ...(product.compareAtPrice ? { vanaf: product.compareAtPrice } : {}) };
+  return {
+    prijs: variant.price,
+    ...(variant.compareAtPrice ? { vanaf: variant.compareAtPrice } : {}),
+    variant,
+  };
+}
+
 /** De beschikbare inhoudsmaten van een product, in de volgorde van de feed. */
 export function sizesOf(product: Product): string[] {
   const sizes: string[] = [];

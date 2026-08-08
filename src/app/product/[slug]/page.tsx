@@ -12,6 +12,7 @@ import { Companions } from "@/components/product/Companions";
 import { KleurBroers } from "@/components/product/KleurBroers";
 import { Mark } from "@/components/Mark";
 import { VloerRekenhulp } from "@/components/product/VloerRekenhulp";
+import { prijsVanNaamMaat } from "@/lib/paint-bases";
 import { pakInhoudVan } from "@/lib/vloer";
 import { PurchasePanel } from "@/components/product/PurchasePanel";
 import { StickyBuyBar } from "@/components/product/StickyBuyBar";
@@ -60,14 +61,18 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await getProduct(params.slug);
   if (!product) return {};
-  const prijs = euro(product.price);
+  // De prijs van de maat die de titel noemt. Anders belooft de zoekresultaat-
+  // regel het kleinste blikje terwijl de pagina het grote blik toont — precies
+  // de afwijking die Google op deze pagina aanmerkte.
+  const { prijs: kopprijs, vanaf: kopVanaf } = prijsVanNaamMaat(product);
+  const prijs = euro(kopprijs);
   const title = `${product.name} kopen: ${prijs}`;
   // Juist hier telt een eigen tekst: de meta-description is wat Google toont,
   // en die was voor duizenden artikelen dezelfde zin.
   const seo = await haalSeoTekst(product);
   const description = [
     (seo?.kort ?? product.shortDescription).slice(0, 110),
-    `Nu ${prijs}${product.compareAtPrice ? ` (van ${euro(product.compareAtPrice)})` : ""}.`,
+    `Nu ${prijs}${kopVanaf && kopVanaf > kopprijs ? ` (van ${euro(kopVanaf)})` : ""}.`,
     `Gratis bezorgd vanaf ${GRATIS_VANAF_TEKST}, afhalen is altijd gratis.`,
   ].join(" ");
   return {
@@ -87,7 +92,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
     },
     other: {
-      "product:price:amount": (product.price / 100).toFixed(2),
+      "product:price:amount": (kopprijs / 100).toFixed(2),
       "product:price:currency": "EUR",
       "product:brand": product.brand,
       "product:availability": product.inStock === false ? "oos" : "instock",

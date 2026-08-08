@@ -14,6 +14,7 @@ import { Voorraadmelding } from "@/components/product/Voorraadmelding";
 import {
   coveragePerLiter,
   hasBases,
+  maatUitNaam,
   PAINT_BASES,
   pickVariant,
   sizesInLiters,
@@ -38,7 +39,17 @@ export function PurchasePanel({
   const variants = product.variants ?? [];
   const basesInPlay = hasBases(product);
   const sizes = sizesOf(product);
-  const [size, setSize] = useState<string | undefined>(sizes[0]);
+  /*
+   * De maat uit de productnaam voorselecteren, niet blind de eerste.
+   *
+   * De naam komt van de groepsleider en noemt vaak één maat ("… 2,5 liter"),
+   * terwijl `sizes[0]` de kleinste is. Dan stond er 375 ml geselecteerd onder
+   * een kop die 2,5 liter belooft — met de prijs van het kleine blikje.
+   * Google merkte dat aan als prijsafwijking op de landingspagina.
+   */
+  const [size, setSize] = useState<string | undefined>(
+    maatUitNaam(product.name, sizes) ?? sizes[0],
+  );
   const [variantId, setVariantId] = useState<string | undefined>(variants[0]?.id);
   const [qty, setQtyState] = useState(1);
   const [added, setAdded] = useState(false);
