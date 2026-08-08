@@ -228,6 +228,49 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
             </div>
           </li>
         ))}
+        {/*
+          Cadeaus als echte regel tussen de artikelen.
+
+          Kevin: "de gratis spullen ook in de winkelwagen anders snappen mensen
+          t niet." Alleen een regeltje in het overzicht is te makkelijk te
+          missen, en dan zit er straks onaangekondigd een spons in de doos.
+
+          Geen aantalknoppen en geen kruisje: het cadeau hangt aan wat er in de
+          wagen ligt. Wie hem kwijt wil, haalt het koopartikel eruit — een
+          verwijderknop die na één klik weer terugkomt is erger dan geen knop.
+        */}
+        {cadeaus.map((cadeau) => (
+          <li
+            key={cadeau.sku}
+            className="card grid grid-cols-[4rem_1fr] items-center gap-x-4 border-2 border-green-700/20 bg-green-50/40 p-4 sm:flex sm:flex-nowrap"
+          >
+            <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-black/5">
+              <ProductArt icon="bucket" hue={25} image={cadeau.image} size="sm" label={cadeau.naam} />
+            </span>
+            <div className="min-w-0 sm:flex-1">
+              <p className="font-bold text-ink">
+                {cadeau.slug ? (
+                  <Link href={`/product/${cadeau.slug}`} className="hover:text-brand">
+                    {cadeau.naam}
+                  </Link>
+                ) : (
+                  cadeau.naam
+                )}
+              </p>
+              <p className="mt-1">
+                <span className="inline-flex items-center rounded-md bg-brand-actie px-1.5 py-0.5 text-xs font-black uppercase text-white">
+                  {cadeau.campagne}
+                </span>
+              </p>
+            </div>
+            <span className="hidden w-8 text-center font-bold text-ink-soft sm:block">
+              {cadeau.aantal}
+            </span>
+            <span className="justify-self-end font-black text-green-700 sm:w-24 sm:text-right">
+              Gratis
+            </span>
+          </li>
+        ))}
       </ul>
 
       <aside className="card h-fit p-6">
@@ -269,10 +312,11 @@ export function CartPageClient({ ingelogd = false }: { ingelogd?: boolean } = {}
             </div>
           )}
           {/* Cadeaus: er gaat geen geld af, er komt iets bij. Daarom geen
-              minbedrag maar "Gratis" — en pas hier, onder de kortingen, want
-              het is een extraatje en geen korting op het totaal. */}
+              minbedrag maar "Gratis". Ze staan óók als regel tussen de
+              artikelen — zie hierboven; hier alleen nog als bevestiging in de
+              optelling. */}
           {cadeaus.map((cadeau) => (
-            <div key={cadeau.naam} className="flex justify-between">
+            <div key={cadeau.sku} className="flex justify-between">
               <dt className="text-ink-soft">{cadeau.naam}</dt>
               <dd className="font-bold text-green-700">Gratis</dd>
             </div>

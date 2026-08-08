@@ -34,9 +34,14 @@ export interface Regelstand {
 }
 
 export interface Cadeaustand {
+  /** Tilroy-sku; ook de sleutel van de regel in de winkelwagen. */
+  sku: string;
   naam: string;
   /** De actie waar het vandaan komt, bv. "Gratis metaalspons". */
   campagne: string;
+  aantal: number;
+  image?: string;
+  slug?: string;
 }
 
 export interface Kortingstand {

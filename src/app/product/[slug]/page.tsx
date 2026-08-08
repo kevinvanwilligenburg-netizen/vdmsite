@@ -9,6 +9,7 @@ import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
 import { CampagneBalk } from "@/components/campagne/CampagneBalk";
 import { Companions } from "@/components/product/Companions";
+import { KleurBroers } from "@/components/product/KleurBroers";
 import { Mark } from "@/components/Mark";
 import { VloerRekenhulp } from "@/components/product/VloerRekenhulp";
 import { pakInhoudVan } from "@/lib/vloer";
@@ -381,6 +382,10 @@ export default async function ProductPage({ params }: Props) {
             <h1 className="mt-1 text-2xl font-black text-ink sm:text-3xl">{product.name}</h1>
             <p className="mt-3 text-ink-soft">{korteTekst}</p>
           </div>
+          {/* Kleurkeuze bij de prijs, niet onderaan de pagina: daar zoekt een
+              klant hem. Losse artikelen met een eigen prijs en voorraad, dus
+              gewone links en geen keuzemenu. */}
+          <KleurBroers huidige={product} broers={kleurBroers} />
           {/* Koopblok en voorraadblok kijken naar dezelfde maatkeuze: de
               voorraad per winkel is die van de gekozen sku, niet de optelsom
               van alle maten. */}
@@ -464,26 +469,6 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Dit artikel in een andere kleur.
-
-          Spuitbussen en glitterlak zijn in de kassa per kleur een eigen
-          product, en er is geen kleurkiezer zoals bij mengverf. Zonder deze
-          rij is de groene bus een doodlopende pagina en ziet niemand dat er
-          ook goud, koper en zilver is. Boven "Vergelijkbare artikelen", want
-          dezelfde bus in een andere kleur staat dichter bij wat de klant
-          zoekt dan een ander merk. */}
-      {kleurBroers.length > 0 && (
-        <section aria-labelledby="kleuren-titel">
-          <h2 id="kleuren-titel" className="mb-4 text-xl font-black uppercase text-ink sm:text-2xl">
-            Ook in deze kleuren
-          </h2>
-          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-            {kleurBroers.map((broer) => (
-              <ProductCard key={broer.id} product={broer} />
-            ))}
-          </div>
-        </section>
-      )}
 
       {related.length > 0 && (
         <section aria-labelledby="gerelateerd-titel">

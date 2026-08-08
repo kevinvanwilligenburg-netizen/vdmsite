@@ -3,8 +3,14 @@ import { NextResponse } from "next/server";
 
 import { emailVanSessie, haalPas, SESSIE_COOKIE } from "@/lib/account";
 import { kluspasUnitPrice, profpasUnitPrice } from "@/lib/kluspas";
-import { cadeausVoor, kiesVoordeligste, staffelregels, type MandjeRegel } from "@/lib/staffel";
-import { getProductById } from "@/lib/tilroy";
+import {
+  cadeausVoor,
+  kiesVoordeligste,
+  setKortingenVoor,
+  staffelregels,
+  type MandjeRegel,
+} from "@/lib/staffel";
+import { getProductById, getProductBySku } from "@/lib/tilroy";
 
 export const dynamic = "force-dynamic";
 
@@ -174,20 +180,44 @@ export async function POST(request: Request) {
   );
   const mogelijkeKorting = Math.max(0, teHalen(metKluspas) - teHalen(zonderPas));
 
-  // Cadeaus staan los van de korting: er gaat geen geld af, er komt iets bij.
-  const cadeaus = await cadeausVoor(mandje);
+  /*
+   * Cadeaus staan los van de korting: er gaat geen geld af, er komt iets bij.
+   *
+   * Mét foto en naam uit de catalogus, want ze krijgen een eigen regel in de
+   * winkelwagen. Kevin: "de gratis spullen ook in de winkelwagen anders
+   * snappen mensen t niet" — als losse regel in het overzicht is te makkelijk
+   * te missen, en dan komt er onaangekondigd een spons in de doos.
+   */
+  const cadeaus = await Promise.all(
+    (await cadeausVoor(mandje)).map(async (cadeau) => {
+      const product = await getProductBySku(cadeau.sku);
+      return {
+        sku: cadeau.sku,
+        naam: product?.name ?? cadeau.naam,
+        campagne: cadeau.campagne,
+        aantal: cadeau.aantal,
+        ...(product?.image ? { image: product.image } : {}),
+        ...(product?.slug ? { slug: product.slug } : {}),
+      };
+    }),
+  );
+  // Sets tellen wél als korting, net als een staffel.
+  const sets = await setKortingenVoor(mandje);
 
   return NextResponse.json({
     korting: paskorting,
     mogelijkeKorting,
     regels: perRegel,
-    cadeaus: cadeaus.map((c) => ({ naam: c.naam, campagne: c.campagne })),
+    cadeaus,
     pas,
-    staffelKorting,
-    staffels: toepassingen.map((toepassing) => ({
+    staffelKorting: staffelKorting + sets.reduce((som, set) => som + set.korting, 0),
+    staffels: [
+      ...sets.map((set) => ({ naam: set.naam, gratis: 0, korting: set.korting })),
+      ...toepassingen.map((toepassing) => ({
       naam: toepassing.regel.naam,
       gratis: toepassing.gratis,
       korting: toepassing.korting,
-    })),
+      })),
+    ],
   });
 }

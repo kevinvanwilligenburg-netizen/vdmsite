@@ -417,6 +417,61 @@ export function pasStaffelToe(
   };
 }
 
+export interface Setkorting {
+  naam: string;
+  /** Hoeveel volledige sets er in het mandje liggen. */
+  sets: number;
+  /** Kortingsbedrag in centen. */
+  korting: number;
+}
+
+/**
+ * Sets: verschillende artikelen samen voor één prijs ("schoonmaakset € 9,95").
+ *
+ * Anders dan een bundel, die stuks van hetzelfde artikel groepeert. Hier moet
+ * er van élk artikel minstens één in het mandje liggen. Ligt er één niet in,
+ * dan is het geen set en gebeurt er niets — een halve set voor de setprijs zou
+ * weggeven zijn.
+ *
+ * Het aantal volledige sets is het laagste aantal over de artikelen heen: drie
+ * flessen azijn en één spons is één set, niet drie.
+ *
+ * Levert de set niets op omdat de losse prijzen al lager liggen, dan geen
+ * korting — zelfde regel als bij een bundel. Zonder kortingsartikel ook niet;
+ * dan is er geen regel om het op te boeken en zou de order in Tilroy stranden.
+ */
+export async function setKortingenVoor(
+  mandje: { sku?: string; prijs: number; aantal: number }[],
+  nu: number = Date.now(),
+): Promise<Setkorting[]> {
+  if (mandje.length === 0 || !staffelSku()) return [];
+  const campagnes = await getCampagnes();
+  const uit: Setkorting[] = [];
+
+  for (const campagne of campagnes) {
+    const set = campagne.set;
+    if (!set?.skus?.length || !(set.prijs > 0)) continue;
+    if (campagneStand(campagne, nu) !== "loopt") continue;
+
+    // Per set-artikel de goedkoopste regel die erbij hoort, en hoeveel er zijn.
+    const perSku = set.skus.map((sku) => {
+      const regels = mandje.filter((regel) => regel.sku === sku);
+      const aantal = regels.reduce((som, regel) => som + regel.aantal, 0);
+      const prijs = regels.length ? Math.min(...regels.map((regel) => regel.prijs)) : 0;
+      return { aantal, prijs };
+    });
+    if (perSku.some((regel) => regel.aantal === 0)) continue;
+
+    const sets = Math.min(...perSku.map((regel) => regel.aantal));
+    const losPerSet = perSku.reduce((som, regel) => som + regel.prijs, 0);
+    const korting = Math.max(0, (losPerSet - set.prijs) * sets);
+    if (korting <= 0) continue;
+
+    uit.push({ naam: campagne.kop, sets, korting });
+  }
+  return uit;
+}
+
 export interface Cadeau {
   /** Tilroy-sku van het artikel dat gratis meegaat. */
   sku: string;

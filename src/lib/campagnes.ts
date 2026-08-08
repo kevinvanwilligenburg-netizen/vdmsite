@@ -119,6 +119,18 @@ export interface Campagne {
    */
   cadeau?: { sku: string; naam: string; vanaf?: number };
   /**
+   * Set: verschillende artikelen samen voor één prijs ("schoonmaakset € 9,95").
+   *
+   * Anders dan `bundel`, die `aantal` stuks van hetzelfde artikel groepeert.
+   * Hier moet er van élk artikel in `skus` minstens één in het mandje liggen;
+   * dan kost dat rijtje samen `prijs` centen en gaat het verschil er als
+   * korting af. Ligt er één niet in, dan is het geen set en gebeurt er niets —
+   * een halve set voor de setprijs zou weggeven zijn.
+   *
+   * Meerdere volledige sets in één mandje tellen los mee.
+   */
+  set?: { skus: string[]; prijs: number };
+  /**
    * Vaste actieprijs per sku, in centen: "€ 6,95".
    *
    * ⚠️ Zelfde waarschuwing als bij `procent`: dit is een prijs die wij zelf
